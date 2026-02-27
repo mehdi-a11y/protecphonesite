@@ -12,7 +12,6 @@
 
 import express from 'express'
 import cors from 'cors'
-import crypto from 'crypto'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
@@ -45,8 +44,6 @@ app.use(express.urlencoded({ extended: true }))
 const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
 const API_TOKEN = process.env.YALIDINE_API_TOKEN || ''
-const USE_API_ID_FOR_CRC = process.env.YALIDINE_WEBHOOK_USE_API_ID === '1' || process.env.YALIDINE_WEBHOOK_USE_API_ID === 'true'
-const WEBHOOK_SECRET = process.env.YALIDINE_WEBHOOK_SECRET || (USE_API_ID_FOR_CRC ? API_ID : API_TOKEN)
 
 app.post('/api/yalidine/parcels', async (req, res) => {
   if (!API_ID || !API_TOKEN) {
@@ -133,39 +130,30 @@ app.get('/api/yalidine/parcels/status', async (req, res) => {
   }
 })
 
-// Webhook Yalidine : validation crc_token — on renvoie les deux formats de clés au cas où
-function computeCrcResponseToken(crcToken, secret) {
-  const hash = crypto.createHmac('sha256', secret).update(crcToken).digest('base64')
-  return { withPrefix: `sha256=${hash}`, raw: hash }
-}
-
-function sendCrcResponse(res, crcToken) {
-  if (!crcToken || !WEBHOOK_SECRET) {
-    return res.status(400).json({ error: 'crc_token ou secret webhook manquant' })
-  }
-  const { withPrefix, raw } = computeCrcResponseToken(String(crcToken), WEBHOOK_SECRET)
-  res.status(200).json({
-    response_token: withPrefix,
-    crc_token: withPrefix,
-    token: raw,
-  })
-}
-
+// Webhook Yalidine — validation CRC : Yalidine envoie GET avec subscribe + crc_token, on doit ÉCHO le crc_token
 app.get('/api/yalidine/webhook', (req, res) => {
-  const crcToken = (req.query && (req.query.crc_token ?? req.query['crc_token'])) || ''
-  sendCrcResponse(res, crcToken)
+  const subscribe = req.query?.subscribe ?? req.query?.['subscribe']
+  const crcToken = req.query?.crc_token ?? req.query?.['crc_token']
+  if (subscribe !== undefined && subscribe !== null && crcToken) {
+    return res.status(200).json({ crc_token: String(crcToken) })
+  }
+  res.status(200).send('OK')
 })
 
 app.post('/api/yalidine/webhook', (req, res) => {
-  const body = req.body || {}
-  const crcToken = body.crc_token ?? req.query?.crc_token ?? req.query?.['crc_token']
-  if (crcToken) {
-    return sendCrcResponse(res, crcToken)
-  }
   res.status(200).send('OK')
-  const tracking = body.tracking ?? body.tracking_number ?? body.parcel_id
-  const status = (body.status ?? body.state ?? body.etat ?? '').toString().trim()
-  if (tracking || status) console.log('[Yalidine webhook]', tracking, status)
+  const body = req.body || {}
+  const type = body.type
+  const events = body.events || []
+  if (type || events.length) {
+    console.log('[Yalidine webhook]', type, events.length, 'event(s)')
+    for (const ev of events) {
+      const data = ev.data || {}
+      const tracking = data.tracking ?? data.tracking_number
+      const status = data.status ?? data.state
+      if (tracking || status) console.log('  ', tracking, status)
+    }
+  }
 })
 
 // En production : servir le frontend (Vite build) et le SPA
