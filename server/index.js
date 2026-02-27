@@ -131,24 +131,42 @@ app.get('/api/yalidine/parcels/status', async (req, res) => {
 })
 
 // Webhook Yalidine — validation CRC : GET avec subscribe + crc_token → répondre avec la valeur du crc_token
-app.get('/api/yalidine/webhook', (req, res) => {
+function getCrcFromRequest(req) {
   const q = req.query || {}
-  const subscribe = q.subscribe ?? q.Subscribe
-  const crcToken = q.crc_token ?? q['crc_token'] ?? q.Crc_Token ?? q.CRC_TOKEN
+  const body = req.body || {}
+  const subscribe = q.subscribe ?? q.Subscribe ?? body.subscribe ?? body.Subscribe
+  const crcToken = q.crc_token ?? q['crc_token'] ?? q.Crc_Token ?? body.crc_token ?? body['crc_token'] ?? body.Crc_Token
   const hasSubscribe = subscribe !== undefined && subscribe !== null
   const crcValue = crcToken !== undefined && crcToken !== null ? String(crcToken).trim() : ''
-  if (hasSubscribe && crcValue) {
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ crc_token: crcValue }))
-    return
-  }
+  return { hasSubscribe, crcValue }
+}
+
+function sendCrcValidation(res, crcValue) {
+  res.status(200)
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+  res.set('Content-Type', 'application/json')
+  res.send(JSON.stringify({ crc_token: crcValue, response: crcValue }))
+}
+
+app.get('/api/yalidine/webhook', (req, res) => {
+  const { hasSubscribe, crcValue } = getCrcFromRequest(req)
   if (crcValue) {
-    res.status(200).set('Content-Type', 'text/plain').send(crcValue)
-    return
+    return sendCrcValidation(res, crcValue)
   }
   res.status(200).send('OK')
 })
 
+app.get('/api/yalidine/webhook/', (req, res) => {
+  const { crcValue } = getCrcFromRequest(req)
+  if (crcValue) return sendCrcValidation(res, crcValue)
+  res.status(200).send('OK')
+})
+
 app.post('/api/yalidine/webhook', (req, res) => {
+  const { hasSubscribe, crcValue } = getCrcFromRequest(req)
+  if (crcValue) {
+    return sendCrcValidation(res, crcValue)
+  }
   res.status(200).send('OK')
   const body = req.body || {}
   const type = body.type
