@@ -40,11 +40,13 @@ loadEnv()
 const app = express()
 app.use(cors())
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
 const API_TOKEN = process.env.YALIDINE_API_TOKEN || ''
-const WEBHOOK_SECRET = process.env.YALIDINE_WEBHOOK_SECRET || API_TOKEN
+const USE_API_ID_FOR_CRC = process.env.YALIDINE_WEBHOOK_USE_API_ID === '1' || process.env.YALIDINE_WEBHOOK_USE_API_ID === 'true'
+const WEBHOOK_SECRET = process.env.YALIDINE_WEBHOOK_SECRET || (USE_API_ID_FOR_CRC ? API_ID : API_TOKEN)
 
 app.post('/api/yalidine/parcels', async (req, res) => {
   if (!API_ID || !API_TOKEN) {
@@ -131,27 +133,34 @@ app.get('/api/yalidine/parcels/status', async (req, res) => {
   }
 })
 
-// Webhook Yalidine : validation crc_token (format type Twitter: response_token = "sha256=" + base64(HMAC-SHA256))
+// Webhook Yalidine : validation crc_token — on renvoie les deux formats de clés au cas où
 function computeCrcResponseToken(crcToken, secret) {
   const hash = crypto.createHmac('sha256', secret).update(crcToken).digest('base64')
-  return `sha256=${hash}`
+  return { withPrefix: `sha256=${hash}`, raw: hash }
+}
+
+function sendCrcResponse(res, crcToken) {
+  if (!crcToken || !WEBHOOK_SECRET) {
+    return res.status(400).json({ error: 'crc_token ou secret webhook manquant' })
+  }
+  const { withPrefix, raw } = computeCrcResponseToken(String(crcToken), WEBHOOK_SECRET)
+  res.status(200).json({
+    response_token: withPrefix,
+    crc_token: withPrefix,
+    token: raw,
+  })
 }
 
 app.get('/api/yalidine/webhook', (req, res) => {
   const crcToken = (req.query && (req.query.crc_token ?? req.query['crc_token'])) || ''
-  if (!crcToken || !WEBHOOK_SECRET) {
-    return res.status(400).json({ error: 'crc_token ou secret webhook manquant' })
-  }
-  const responseToken = computeCrcResponseToken(String(crcToken), WEBHOOK_SECRET)
-  res.status(200).json({ response_token: responseToken })
+  sendCrcResponse(res, crcToken)
 })
 
 app.post('/api/yalidine/webhook', (req, res) => {
   const body = req.body || {}
   const crcToken = body.crc_token ?? req.query?.crc_token ?? req.query?.['crc_token']
-  if (crcToken && WEBHOOK_SECRET) {
-    const responseToken = computeCrcResponseToken(String(crcToken), WEBHOOK_SECRET)
-    return res.status(200).json({ response_token: responseToken })
+  if (crcToken) {
+    return sendCrcResponse(res, crcToken)
   }
   res.status(200).send('OK')
   const tracking = body.tracking ?? body.tracking_number ?? body.parcel_id
