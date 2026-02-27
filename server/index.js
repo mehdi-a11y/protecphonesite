@@ -130,12 +130,20 @@ app.get('/api/yalidine/parcels/status', async (req, res) => {
   }
 })
 
-// Webhook Yalidine — validation CRC : Yalidine envoie GET avec subscribe + crc_token, on doit ÉCHO le crc_token
+// Webhook Yalidine — validation CRC : GET avec subscribe + crc_token → répondre avec la valeur du crc_token
 app.get('/api/yalidine/webhook', (req, res) => {
-  const subscribe = req.query?.subscribe ?? req.query?.['subscribe']
-  const crcToken = req.query?.crc_token ?? req.query?.['crc_token']
-  if (subscribe !== undefined && subscribe !== null && crcToken) {
-    return res.status(200).json({ crc_token: String(crcToken) })
+  const q = req.query || {}
+  const subscribe = q.subscribe ?? q.Subscribe
+  const crcToken = q.crc_token ?? q['crc_token'] ?? q.Crc_Token ?? q.CRC_TOKEN
+  const hasSubscribe = subscribe !== undefined && subscribe !== null
+  const crcValue = crcToken !== undefined && crcToken !== null ? String(crcToken).trim() : ''
+  if (hasSubscribe && crcValue) {
+    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ crc_token: crcValue }))
+    return
+  }
+  if (crcValue) {
+    res.status(200).set('Content-Type', 'text/plain').send(crcValue)
+    return
   }
   res.status(200).send('OK')
 })
