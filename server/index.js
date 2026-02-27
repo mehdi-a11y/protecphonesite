@@ -44,6 +44,7 @@ app.use(express.json())
 const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
 const API_TOKEN = process.env.YALIDINE_API_TOKEN || ''
+const WEBHOOK_SECRET = process.env.YALIDINE_WEBHOOK_SECRET || API_TOKEN
 
 app.post('/api/yalidine/parcels', async (req, res) => {
   if (!API_ID || !API_TOKEN) {
@@ -130,25 +131,26 @@ app.get('/api/yalidine/parcels/status', async (req, res) => {
   }
 })
 
-// Webhook Yalidine : validation crc_token + réception des événements (livré, retourné, etc.)
+// Webhook Yalidine : validation crc_token (format type Twitter: response_token = "sha256=" + base64(HMAC-SHA256))
 function computeCrcResponseToken(crcToken, secret) {
-  return crypto.createHmac('sha256', secret).update(crcToken).digest('base64')
+  const hash = crypto.createHmac('sha256', secret).update(crcToken).digest('base64')
+  return `sha256=${hash}`
 }
 
 app.get('/api/yalidine/webhook', (req, res) => {
-  const crcToken = req.query.crc_token || req.query.crc_token?.toString?.()
-  if (!crcToken || !API_TOKEN) {
-    return res.status(400).json({ error: 'crc_token ou YALIDINE_API_TOKEN manquant' })
+  const crcToken = (req.query && (req.query.crc_token ?? req.query['crc_token'])) || ''
+  if (!crcToken || !WEBHOOK_SECRET) {
+    return res.status(400).json({ error: 'crc_token ou secret webhook manquant' })
   }
-  const responseToken = computeCrcResponseToken(crcToken, API_TOKEN)
+  const responseToken = computeCrcResponseToken(String(crcToken), WEBHOOK_SECRET)
   res.status(200).json({ response_token: responseToken })
 })
 
 app.post('/api/yalidine/webhook', (req, res) => {
   const body = req.body || {}
-  const crcToken = body.crc_token ?? req.query?.crc_token
-  if (crcToken && API_TOKEN) {
-    const responseToken = computeCrcResponseToken(String(crcToken), API_TOKEN)
+  const crcToken = body.crc_token ?? req.query?.crc_token ?? req.query?.['crc_token']
+  if (crcToken && WEBHOOK_SECRET) {
+    const responseToken = computeCrcResponseToken(String(crcToken), WEBHOOK_SECRET)
     return res.status(200).json({ response_token: responseToken })
   }
   res.status(200).send('OK')
