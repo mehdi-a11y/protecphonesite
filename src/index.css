@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-dark: #0a0a0f;
+  --color-brand-card: #12121a;
+  --color-brand-accent: #00d4aa;
+  --color-brand-accentDim: #00a884;
+  --color-brand-gold: #f5b546;
+  --color-brand-muted: #6b7280;
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: #0a0a0f;
+  color: #e5e5e5;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
