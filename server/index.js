@@ -12,6 +12,7 @@
 
 import express from 'express'
 import cors from 'cors'
+import crypto from 'crypto'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
@@ -129,10 +130,28 @@ app.get('/api/yalidine/parcels/status', async (req, res) => {
   }
 })
 
-// Webhook Yalidine : appelé par Yalidine quand un colis change de statut (à configurer dans le portail Yalidine)
+// Webhook Yalidine : validation crc_token + réception des événements (livré, retourné, etc.)
+function computeCrcResponseToken(crcToken, secret) {
+  return crypto.createHmac('sha256', secret).update(crcToken).digest('base64')
+}
+
+app.get('/api/yalidine/webhook', (req, res) => {
+  const crcToken = req.query.crc_token || req.query.crc_token?.toString?.()
+  if (!crcToken || !API_TOKEN) {
+    return res.status(400).json({ error: 'crc_token ou YALIDINE_API_TOKEN manquant' })
+  }
+  const responseToken = computeCrcResponseToken(crcToken, API_TOKEN)
+  res.status(200).json({ response_token: responseToken })
+})
+
 app.post('/api/yalidine/webhook', (req, res) => {
-  res.status(200).send('OK')
   const body = req.body || {}
+  const crcToken = body.crc_token ?? req.query?.crc_token
+  if (crcToken && API_TOKEN) {
+    const responseToken = computeCrcResponseToken(String(crcToken), API_TOKEN)
+    return res.status(200).json({ response_token: responseToken })
+  }
+  res.status(200).send('OK')
   const tracking = body.tracking ?? body.tracking_number ?? body.parcel_id
   const status = (body.status ?? body.state ?? body.etat ?? '').toString().trim()
   if (tracking || status) console.log('[Yalidine webhook]', tracking, status)
