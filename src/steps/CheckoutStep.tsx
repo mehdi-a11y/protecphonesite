@@ -40,12 +40,29 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       setSelectedStopdeskName('')
       return
     }
+    const code = wilaya.length === 1 ? '0' + wilaya : wilaya
     setStopdesksLoading(true)
     setSelectedStopdeskId('')
     setSelectedStopdeskName('')
+
+    const useFallback = (): Promise<YalidineStopdesk[]> =>
+      fetch('/yalidine-bureaux.json')
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((data: Record<string, { id: number; name: string; address: string }[]>) => {
+          const list = data[code] ?? data[wilaya] ?? []
+          return list.map((s) => ({ id: s.id, name: s.name, address: s.address ?? '', wilaya: code }))
+        })
+        .catch(() => [])
+
     apiGetYalidineStopdesks(wilaya)
-      .then((list) => setStopdesks(list))
-      .catch(() => setStopdesks([]))
+      .then((list) => {
+        if (list.length > 0) {
+          setStopdesks(list)
+        } else {
+          useFallback().then(setStopdesks)
+        }
+      })
+      .catch(() => useFallback().then(setStopdesks))
       .finally(() => setStopdesksLoading(false))
   }, [deliveryType, wilaya])
 
@@ -266,17 +283,23 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                     setSelectedStopdeskName(opt?.textContent ?? '')
                   }}
                   className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                  aria-label="Choisir un bureau Yalidine"
                 >
                   <option value="">
-                    {stopdesksLoading ? 'Chargement des bureaux…' : 'Choisir un bureau'}
+                    {stopdesksLoading ? 'Chargement des bureaux…' : stopdesks.length === 0 ? 'Aucun bureau pour cette wilaya' : 'Choisir un bureau'}
                   </option>
                   {stopdesks.map((s) => (
-                    <option key={String(s.id)} value={String(s.id)}>
+                    <option key={`${s.id}-${s.name}`} value={String(s.id)}>
                       {s.name}
                       {s.address ? ` — ${s.address}` : ''}
                     </option>
                   ))}
                 </select>
+                {!stopdesksLoading && stopdesks.length === 0 && wilaya && (
+                  <p className="text-amber-400/90 text-xs mt-1">
+                    Aucun bureau trouvé pour cette wilaya. Réessayez ou choisissez une autre wilaya.
+                  </p>
+                )}
               </div>
             )}
             {wilaya && (

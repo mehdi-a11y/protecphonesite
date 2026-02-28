@@ -119,20 +119,26 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
         })
         const data = await response.json().catch(() => ({}))
         if (response.ok) {
-          const stopdesks = normalize(data, wilaya)
-          if (stopdesks.length > 0) return res.json({ stopdesks })
+          const fromApi = normalize(data, wilaya)
+          if (fromApi.length > 0) return res.json({ stopdesks: fromApi })
         }
         if (response.status !== 404) return res.status(response.status).json(data)
       } catch (_) {}
     }
   }
 
-  const stopdesks = getBureauxByWilaya(wilaya).map((s) => ({
-    id: s.id,
-    name: s.name,
-    address: s.address ?? '',
-    wilaya: s.wilaya ?? wilaya ?? '',
-  }))
+  // Liste statique (toujours utilisée si l’API ne renvoie rien ou n’est pas configurée)
+  let stopdesks = []
+  try {
+    stopdesks = getBureauxByWilaya(wilaya).map((s) => ({
+      id: s.id,
+      name: s.name,
+      address: s.address ?? '',
+      wilaya: s.wilaya ?? wilaya ?? '',
+    }))
+  } catch (e) {
+    console.warn('[Yalidine stopdesks]', e.message)
+  }
   return res.json({ stopdesks })
 })
 

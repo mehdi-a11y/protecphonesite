@@ -239,7 +239,8 @@ const BUREAUX_RAW = [
 ]
 
 function getBureauxByWilaya(wilayaCode) {
-  const code = String(wilayaCode || '').trim()
+  let code = String(wilayaCode || '').trim()
+  if (code && code.length === 1) code = '0' + code
   if (!code) return BUREAUX_RAW.map(([id, , name, address]) => ({ id, name, address, wilaya: '' }))
   return BUREAUX_RAW.filter(([, wName]) => WILAYA_NAME_TO_CODE[wName] === code).map(
     ([id, wName, name, address]) => ({
