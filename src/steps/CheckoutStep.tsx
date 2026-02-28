@@ -251,7 +251,12 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
             </div>
             {deliveryType === 'yalidine' && wilaya && (
               <div className="mt-3">
-                <label className="block text-sm text-brand-muted mb-1">Bureau Yalidine (obligatoire)</label>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Choisir le bureau de retrait <span className="text-brand-muted font-normal">(obligatoire)</span>
+                </label>
+                <p className="text-xs text-brand-muted mb-2">
+                  Sélectionnez le bureau Yalidine où vous voulez retirer votre colis.
+                </p>
                 <select
                   required={deliveryType === 'yalidine'}
                   value={selectedStopdeskId}
