@@ -19,13 +19,12 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
       ) as IPhoneModelId[],
     [product.compatibleWith],
   )
-  const colorOptions = useMemo(
-    () =>
-      (product.colorIds?.length ? product.colorIds : ANTICHOC_COLORS.map((c) => c.id)).map(
-        (id) => ANTICHOC_COLORS.find((c) => c.id === id)!,
-      ),
-    [product.colorIds],
-  )
+  const colorOptions = useMemo(() => {
+    if (!product.colorIds?.length) return []
+    return product.colorIds
+      .map((id) => ANTICHOC_COLORS.find((c) => c.id === id))
+      .filter(Boolean) as { id: string; name: string; emoji: string }[]
+  }, [product.colorIds])
   const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>(
     phoneOptions.length === 1 ? phoneOptions[0] : '',
   )
@@ -40,11 +39,13 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     ANTICHOC_COLORS.find((c) => c.id === id),
   ).filter(Boolean)
 
-  const canCommander = selectedPhoneId !== '' && selectedColorId !== ''
+  const canCommander =
+    selectedPhoneId !== '' && (colorOptions.length === 0 || selectedColorId !== '')
 
   const handleCommander = () => {
-    if (!canCommander || !selectedPhoneId || !selectedColorId) return
-    onCommander(selectedPhoneId, selectedColorId)
+    if (!selectedPhoneId) return
+    if (colorOptions.length > 0 && !selectedColorId) return
+    onCommander(selectedPhoneId, colorOptions.length >= 1 ? selectedColorId : '')
   }
 
   return (
@@ -128,25 +129,27 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               </select>
             </div>
 
-            {/* Choix couleur (obligatoire) */}
-            <div className="mb-6">
-              <label className="block text-xs font-medium text-brand-muted uppercase tracking-wider mb-2">
-                Couleur <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={selectedColorId}
-                onChange={(e) => setSelectedColorId(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-              >
-                <option value="">Choisir une couleur</option>
-                {colorOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.emoji} {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Choix couleur (uniquement si le produit a des couleurs définies) */}
+            {colorOptions.length > 0 ? (
+              <div className="mb-6">
+                <label className="block text-xs font-medium text-brand-muted uppercase tracking-wider mb-2">
+                  Couleur <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={selectedColorId}
+                  onChange={(e) => setSelectedColorId(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                >
+                  <option value="">Choisir une couleur</option>
+                  {colorOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.emoji} {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
 
             <button
               type="button"

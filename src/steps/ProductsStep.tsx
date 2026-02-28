@@ -21,25 +21,26 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
   const [addedFeedback, setAddedFeedback] = useState(false)
 
   const colorOptions = useMemo(() => {
-    if (!selected) return []
-    const ids = selected.colorIds?.length ? selected.colorIds : ANTICHOC_COLORS.map((c) => c.id)
-    return ids.map((id) => ANTICHOC_COLORS.find((c) => c.id === id)!).filter(Boolean)
+    if (!selected || !selected.colorIds?.length) return []
+    return selected.colorIds
+      .map((id) => ANTICHOC_COLORS.find((c) => c.id === id))
+      .filter((c): c is NonNullable<typeof c> => c != null)
   }, [selected])
 
   useEffect(() => {
     if (selected && colorOptions.length === 1) setSelectedColorId(colorOptions[0].id)
-    else if (selected && colorOptions.length > 1) setSelectedColorId('')
+    else if (selected && (colorOptions.length > 1 || colorOptions.length === 0)) setSelectedColorId('')
   }, [selected?.id, colorOptions.length])
 
-  const canAddToCart = selected && (colorOptions.length <= 1 ? true : selectedColorId !== '')
+  const canAddToCart = selected && (colorOptions.length === 0 || colorOptions.length === 1 || selectedColorId !== '')
 
   const handleAddToCart = () => {
     if (!selected || !canAddToCart) return
-    const colorId = colorOptions.length === 1 ? colorOptions[0].id : selectedColorId
+    const colorId = colorOptions.length === 1 ? colorOptions[0].id : colorOptions.length > 1 ? selectedColorId : undefined
     onAddToCart({
       antichoc: selected,
       selectedPhoneId: phoneId,
-      selectedColorId: colorId,
+      ...(colorId ? { selectedColorId: colorId } : {}),
     })
     setAddedFeedback(true)
     setTimeout(() => setAddedFeedback(false), 1500)
