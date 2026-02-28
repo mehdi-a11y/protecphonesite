@@ -52,6 +52,12 @@ export async function apiUpdateOrderYalidine(
   })
 }
 
+export async function apiDeleteOrder(orderId: string): Promise<void> {
+  await fetchJson(`/api/orders/${encodeURIComponent(orderId)}`, {
+    method: 'DELETE',
+  })
+}
+
 export interface YalidineStopdesk {
   id: number | string
   name: string

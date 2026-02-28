@@ -5,6 +5,7 @@ import {
   confirmOrder,
   setOrderStatus,
   updateOrderYalidine,
+  deleteOrder,
   isAdminAuthenticated,
   setAdminAuthenticated,
   ADMIN_PASSWORD,
@@ -180,6 +181,12 @@ export function AdminPage() {
 
   const handleSetOrderStatus = async (orderId: string, status: Order['status']) => {
     await setOrderStatus(orderId, status)
+    getOrders().then(setOrders)
+  }
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Supprimer définitivement cette commande ?')) return
+    await deleteOrder(orderId)
     getOrders().then(setOrders)
   }
 
@@ -486,6 +493,7 @@ export function AdminPage() {
                       key={order.id}
                       order={order}
                       onConfirm={handleConfirm}
+                      onDelete={handleDeleteOrder}
                       onSendToYalidine={handleSendToYalidine}
                       yalidineSending={yalidineSendingId === order.id}
                       yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
@@ -507,6 +515,7 @@ export function AdminPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      onDelete={handleDeleteOrder}
                       onSendToYalidine={handleSendToYalidine}
                       onSetOrderStatus={handleSetOrderStatus}
                       yalidineSending={yalidineSendingId === order.id}
@@ -528,6 +537,7 @@ export function AdminPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      onDelete={handleDeleteOrder}
                       yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
                     />
                   ))}
@@ -546,6 +556,7 @@ export function AdminPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      onDelete={handleDeleteOrder}
                       yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
                     />
                   ))}
@@ -561,7 +572,7 @@ export function AdminPage() {
               ) : (
                 <ul className="space-y-4">
                   {cancelledOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} />
+                    <OrderCard key={order.id} order={order} onDelete={handleDeleteOrder} />
                   ))}
                 </ul>
               )}
@@ -1475,6 +1486,7 @@ export function AdminPage() {
 function OrderCard({
   order,
   onConfirm,
+  onDelete,
   onSetOrderStatus,
   onSendToYalidine,
   yalidineSending,
@@ -1482,6 +1494,7 @@ function OrderCard({
 }: {
   order: Order
   onConfirm?: (id: string) => void
+  onDelete?: (id: string) => void
   onSetOrderStatus?: (orderId: string, status: Order['status']) => void
   onSendToYalidine?: (order: Order) => void
   yalidineSending?: boolean
@@ -1559,6 +1572,16 @@ function OrderCard({
             <span className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs font-medium">
               Annulée
             </span>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(order.id)}
+              className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 border border-red-500/30"
+              title="Supprimer la commande"
+            >
+              Supprimer
+            </button>
           )}
         </div>
       </div>

@@ -21,6 +21,7 @@ import {
   dbSaveOrder,
   dbSetOrderStatus,
   dbUpdateOrderYalidine,
+  dbDeleteOrder,
   dbFindOrderByYalidineTracking,
   dbGetProducts,
   dbSaveProducts,
@@ -342,6 +343,16 @@ app.patch('/api/orders/:id/yalidine', async (req, res) => {
     const { tracking, sentAt } = req.body
     if (!tracking || !sentAt) return res.status(400).json({ error: 'tracking et sentAt requis' })
     await dbUpdateOrderYalidine(id, tracking, sentAt)
+    res.status(200).json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.delete('/api/orders/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    await dbDeleteOrder(id)
     res.status(200).json({ ok: true })
   } catch (e) {
     res.status(500).json({ error: e.message })

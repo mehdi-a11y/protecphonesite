@@ -78,6 +78,10 @@ export async function updateOrderYalidine(
   await api.apiUpdateOrderYalidine(orderId, data)
 }
 
+export async function deleteOrder(orderId: string): Promise<void> {
+  await api.apiDeleteOrder(orderId)
+}
+
 export function isAdminAuthenticated(): boolean {
   return sessionStorage.getItem(ADMIN_AUTH_KEY) === '1'
 }

@@ -156,6 +156,15 @@ export async function dbUpdateOrderYalidine(orderId, tracking, sentAt) {
   }
 }
 
+export async function dbDeleteOrder(orderId) {
+  if (pool) {
+    await pool.query('DELETE FROM orders WHERE id = $1', [orderId])
+    return
+  }
+  const i = memoryOrders.findIndex((x) => x.id === orderId)
+  if (i >= 0) memoryOrders.splice(i, 1)
+}
+
 export async function dbFindOrderByYalidineTracking(tracking) {
   if (pool) {
     const { rows } = await pool.query(

@@ -3,6 +3,8 @@
 @theme {
   --color-brand-dark: #0a0a0f;
   --color-brand-card: #12121a;
+  --color-brand-header: #1a1a1f;
+  --color-brand-topbar: #f5f5f5;
   --color-brand-accent: #00d4aa;
   --color-brand-accentDim: #00a884;
   --color-brand-gold: #f5b546;
