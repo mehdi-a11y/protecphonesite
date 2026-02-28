@@ -8,6 +8,7 @@ import type { CartItem } from '../types'
 import { ProductDetailView } from '../components/ProductDetailView'
 import { CheckoutStep } from '../steps/CheckoutStep'
 import { ConfirmationStep } from '../steps/ConfirmationStep'
+import { trackAddToCart } from '../facebookPixel'
 
 type Step = 'product' | 'checkout' | 'confirmation'
 
@@ -49,7 +50,9 @@ export function ProductPage() {
 
   const [cart, setCart] = useState<CartItem[]>([])
   const goToCheckout = (selectedPhoneId: IPhoneModelId, selectedColorId: string) => {
-    setCart([{ antichoc: product!, selectedPhoneId, selectedColorId }])
+    const p = product!
+    setCart([{ antichoc: p, selectedPhoneId, selectedColorId }])
+    trackAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
   }
   const goBack = () => setStep('product')

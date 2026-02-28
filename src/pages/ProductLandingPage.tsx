@@ -9,6 +9,7 @@ import { apiGetLandingBySlug } from '../api'
 import { ProductDetailView } from '../components/ProductDetailView'
 import { CheckoutStep } from '../steps/CheckoutStep'
 import { ConfirmationStep } from '../steps/ConfirmationStep'
+import { trackAddToCart } from '../facebookPixel'
 
 type Step = 'landing' | 'checkout' | 'confirmation'
 
@@ -64,7 +65,9 @@ export function ProductLandingPage() {
 
   const [cart, setCart] = useState<CartItem[]>([])
   const goToCheckout = (selectedPhoneId: IPhoneModelId, selectedColorId: string) => {
-    setCart([{ antichoc: antichoc!, selectedPhoneId, selectedColorId }])
+    const p = antichoc!
+    setCart([{ antichoc: p, selectedPhoneId, selectedColorId }])
+    trackAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
   }
   const goBack = () => setStep('landing')

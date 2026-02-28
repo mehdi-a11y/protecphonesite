@@ -8,6 +8,7 @@ import type { Antichoc } from '../data'
 import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
 import { apiGetYalidineStopdesks, type YalidineStopdesk } from '../api'
+import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
 
 const UPSELL_DISCOUNT = 0.5 // -50%
 
@@ -84,6 +85,11 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
   const canSubmitBureau = deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)
 
+  useEffect(() => {
+    const numItems = cart.length + (acceptUpsell ? 1 : 0)
+    if (numItems > 0) trackInitiateCheckout(total, 'DZD', numItems)
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!canSubmitBureau) return
@@ -110,6 +116,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
         ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
         : {}),
     })
+    trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
     onConfirm(orderId, confirmationCode)
   }
 

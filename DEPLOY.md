@@ -62,6 +62,7 @@ Dans l’onglet **Environment** du service :
 | `DATABASE_URL`       | URL PostgreSQL (voir §3) |
 | `YALIDINE_API_ID`    | votre API ID Yalidine    |
 | `YALIDINE_API_TOKEN` | votre API Token Yalidine |
+| `VITE_FB_PIXEL_ID`   | (optionnel) ID du Pixel Facebook / Meta pour Facebook Ads. À définir **avant** le build pour que le pixel soit actif. |
 
 (Pas besoin de `PORT`, Render le définit tout seul.)
 

@@ -5,6 +5,7 @@ import { ANTICHOC_COLORS } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
+import { trackAddToCart } from '../facebookPixel'
 
 interface Props {
   phoneId: IPhoneModelId
@@ -42,6 +43,7 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
       selectedPhoneId: phoneId,
       ...(colorId ? { selectedColorId: colorId } : {}),
     })
+    trackAddToCart(selected.name, [selected.id], selected.price, 'DZD')
     setAddedFeedback(true)
     setTimeout(() => setAddedFeedback(false), 1500)
   }

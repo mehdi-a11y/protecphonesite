@@ -6,7 +6,10 @@ import { AdminPage } from './pages/AdminPage.tsx'
 import { ConfirmPage } from './pages/ConfirmPage.tsx'
 import { ProductLandingPage } from './pages/ProductLandingPage.tsx'
 import { ProductPage } from './pages/ProductPage.tsx'
+import { initFacebookPixel } from './facebookPixel'
 import './index.css'
+
+initFacebookPixel()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

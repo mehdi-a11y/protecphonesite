@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
 import { IPHONE_MODELS, ANTICHOC_COLORS } from '../data'
+import { trackViewContent } from '../facebookPixel'
 
 interface Props {
   product: Antichoc
@@ -41,6 +42,10 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
 
   const canCommander =
     selectedPhoneId !== '' && (colorOptions.length === 0 || selectedColorId !== '')
+
+  useEffect(() => {
+    trackViewContent(product.name, [product.id], product.price, 'DZD')
+  }, [product.id, product.name, product.price])
 
   const handleCommander = () => {
     if (!selectedPhoneId) return
