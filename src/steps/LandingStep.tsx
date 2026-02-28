@@ -1,3 +1,41 @@
+const CATEGORIES = [
+  {
+    id: 'antichocs',
+    name: 'Antichocs iPhone',
+    description: 'Coques antichoc à prix cassés',
+    icon: '📱',
+    available: true,
+  },
+  {
+    id: 'smartwatch',
+    name: 'Smartwatch',
+    description: 'Montres connectées',
+    icon: '⌚',
+    available: false,
+  },
+  {
+    id: 'chargeur',
+    name: 'Chargeurs',
+    description: 'Chargeurs et câbles',
+    icon: '🔌',
+    available: false,
+  },
+  {
+    id: 'ecouteurs',
+    name: 'Écouteurs',
+    description: 'Écouteurs et casques',
+    icon: '🎧',
+    available: false,
+  },
+  {
+    id: 'support',
+    name: 'Supports',
+    description: 'Supports voiture & bureau',
+    icon: '📲',
+    available: false,
+  },
+] as const
+
 interface Props {
   onNext: () => void
 }
@@ -39,6 +77,51 @@ export function LandingStep({ onNext }: Props) {
               <span className="text-6xl opacity-50">📱</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Catégories */}
+      <section className="w-full max-w-6xl mx-auto px-4 pb-16">
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center">
+          Nos catégories
+        </h2>
+        <p className="text-brand-muted text-sm text-center mb-8 max-w-xl mx-auto">
+          Antichocs, smartwatch, chargeurs, écouteurs, supports… tout en liquidation.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {CATEGORIES.map((cat) => (
+            <div
+              key={cat.id}
+              role={cat.available ? 'button' : undefined}
+              tabIndex={cat.available ? 0 : undefined}
+              onClick={cat.available ? onNext : undefined}
+              onKeyDown={cat.available ? (e) => e.key === 'Enter' && onNext() : undefined}
+              className={`rounded-2xl border p-5 flex flex-col items-center text-center transition-all ${
+                cat.available
+                  ? 'bg-brand-card border-white/10 hover:border-brand-accent/50 cursor-pointer'
+                  : 'bg-brand-card/50 border-white/5 opacity-80'
+              }`}
+            >
+              <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
+                {cat.icon}
+              </div>
+              <h3 className="font-semibold text-white text-sm sm:text-base mb-1">
+                {cat.name}
+              </h3>
+              <p className="text-brand-muted text-xs mb-4 flex-1">
+                {cat.description}
+              </p>
+              {cat.available ? (
+                <span className="w-full py-2.5 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm hover:bg-brand-accentDim transition-colors inline-block">
+                  Voir les offres
+                </span>
+              ) : (
+                <span className="text-xs text-brand-muted py-2.5">
+                  Bientôt disponible
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       </section>
     </div>
