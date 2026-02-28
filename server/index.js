@@ -161,8 +161,8 @@ function getCrcFromRequest(req) {
 function sendCrcValidation(res, crcValue) {
   res.status(200)
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate')
-  res.set('Content-Type', 'application/json')
-  res.send(JSON.stringify({ crc_token: crcValue, response: crcValue }))
+  res.set('Content-Type', 'text/plain')
+  res.send(crcValue)
 }
 
 app.get('/api/yalidine/webhook', (req, res) => {

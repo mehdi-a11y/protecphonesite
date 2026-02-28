@@ -85,6 +85,23 @@ Render vous donne une URL du type :
   `https://protecphone-xxxx.onrender.com/api/yalidine/webhook`  
   (en remplaçant par votre vraie URL Render).
 
+### 7. Connecter le webhook Yalidine (site en production)
+
+Si votre site est en ligne à **https://www.protecphone.shop/** (ou tout autre domaine pointant vers le même serveur) :
+
+1. Connectez-vous à l’espace **Yalidine** (dashboard / paramètres développeur).
+2. Trouvez la section **Webhook** ou **Lien de réception des notifications**.
+3. Saisissez l’URL du webhook :
+   ```
+   https://www.protecphone.shop/api/yalidine/webhook
+   ```
+4. Enregistrez. Yalidine enverra parfois une requête **GET** avec `subscribe` et `crc_token` pour valider l’URL : le serveur répond avec le `crc_token` (déjà géré par le code).
+5. Ensuite, à chaque changement de statut d’un colis (livré, retourné, annulé), Yalidine enverra une **POST** sur cette URL ; le serveur mettra à jour le statut de la commande en base (PostgreSQL).
+
+**Vérification** : vous pouvez tester l’URL dans un navigateur :  
+`https://www.protecphone.shop/api/yalidine/webhook`  
+→ doit répondre `OK` (200). Avec des paramètres `?subscribe=1&crc_token=xxx`, la réponse doit être du JSON contenant `crc_token`.
+
 ---
 
 ## Autres hébergeurs
