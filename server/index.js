@@ -15,6 +15,22 @@ import cors from 'cors'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
+import {
+  initDb,
+  dbGetOrders,
+  dbSaveOrder,
+  dbSetOrderStatus,
+  dbUpdateOrderYalidine,
+  dbFindOrderByYalidineTracking,
+  dbGetProducts,
+  dbSaveProducts,
+  dbGetDeliveryPrices,
+  dbSaveDeliveryPrices,
+  dbGetLandingPages,
+  dbGetLandingBySlug,
+  dbSaveLanding,
+  dbDeleteLanding,
+} from './db.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -38,8 +54,9 @@ loadEnv()
 
 const app = express()
 app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// Limite très élevée pour l'enregistrement des produits avec photos en base64 (compressées côté client)
+app.use(express.json({ limit: '100mb' }))
+app.use(express.urlencoded({ extended: true, limit: '100mb' }))
 
 const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
@@ -162,7 +179,7 @@ app.get('/api/yalidine/webhook/', (req, res) => {
   res.status(200).send('OK')
 })
 
-app.post('/api/yalidine/webhook', (req, res) => {
+app.post('/api/yalidine/webhook', async (req, res) => {
   const { hasSubscribe, crcValue } = getCrcFromRequest(req)
   if (crcValue) {
     return sendCrcValidation(res, crcValue)
@@ -171,14 +188,210 @@ app.post('/api/yalidine/webhook', (req, res) => {
   const body = req.body || {}
   const type = body.type
   const events = body.events || []
-  if (type || events.length) {
-    console.log('[Yalidine webhook]', type, events.length, 'event(s)')
+  if (type === 'parcel_status_updated' && Array.isArray(events)) {
     for (const ev of events) {
       const data = ev.data || {}
-      const tracking = data.tracking ?? data.tracking_number
-      const status = data.status ?? data.state
-      if (tracking || status) console.log('  ', tracking, status)
+      const tracking = (data.tracking ?? data.tracking_number ?? '').toString().trim()
+      const status = (data.status ?? data.state ?? '').toString().trim().toLowerCase()
+      if (!tracking) continue
+      try {
+        const order = await dbFindOrderByYalidineTracking(tracking)
+        if (!order) continue
+        if (/livr[eé]|delivered/.test(status)) await dbSetOrderStatus(order.id, 'livre')
+        else if (/retour|return/.test(status)) await dbSetOrderStatus(order.id, 'retourne')
+        else if (/annul|cancel|refus/.test(status)) await dbSetOrderStatus(order.id, 'cancelled')
+      } catch (e) {
+        console.warn('[Yalidine webhook]', e.message)
+      }
     }
+  }
+  if (type || events.length) {
+    console.log('[Yalidine webhook]', type, events.length, 'event(s)')
+  }
+})
+
+// --- API base de données partagée ---
+function orderToApi(o) {
+  return {
+    id: o.id,
+    customerName: o.customerName,
+    phone: o.phone,
+    address: o.address,
+    wilaya: o.wilaya,
+    deliveryType: o.deliveryType,
+    deliveryPrice: o.deliveryPrice,
+    items: o.items,
+    total: o.total,
+    status: o.status,
+    createdAt: o.createdAt,
+    confirmationCode: o.confirmationCode,
+    yalidineTracking: o.yalidineTracking,
+    yalidineSentAt: o.yalidineSentAt,
+  }
+}
+
+function apiToOrder(a) {
+  return {
+    id: a.id,
+    customerName: a.customerName,
+    phone: a.phone,
+    address: a.address,
+    wilaya: a.wilaya,
+    deliveryType: a.deliveryType,
+    deliveryPrice: a.deliveryPrice,
+    items: a.items || [],
+    total: a.total,
+    status: a.status,
+    createdAt: a.createdAt,
+    confirmationCode: a.confirmationCode,
+    yalidineTracking: a.yalidineTracking,
+    yalidineSentAt: a.yalidineSentAt,
+  }
+}
+
+app.get('/api/orders', async (_req, res) => {
+  try {
+    const orders = await dbGetOrders()
+    res.json(orders.map(orderToApi))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    const a = req.body
+    const order = apiToOrder(a)
+    if (!order.id || !order.confirmationCode) {
+      return res.status(400).json({ error: 'id et confirmationCode requis' })
+    }
+    await dbSaveOrder(order)
+    res.status(201).json(orderToApi(order))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.patch('/api/orders/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    if (!status) return res.status(400).json({ error: 'status requis' })
+    await dbSetOrderStatus(id, status)
+    res.status(200).json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.patch('/api/orders/:id/yalidine', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tracking, sentAt } = req.body
+    if (!tracking || !sentAt) return res.status(400).json({ error: 'tracking et sentAt requis' })
+    await dbUpdateOrderYalidine(id, tracking, sentAt)
+    res.status(200).json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/products', async (_req, res) => {
+  try {
+    const products = await dbGetProducts()
+    res.json(products)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/products', async (req, res) => {
+  try {
+    const products = Array.isArray(req.body) ? req.body : [req.body]
+    if (!products.length) return res.status(400).json({ error: 'products requis' })
+    await dbSaveProducts(products)
+    res.json(await dbGetProducts())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Ajoute un seul produit (évite d'envoyer toute la liste = Payload Too Large)
+app.post('/api/products/add', async (req, res) => {
+  try {
+    const product = req.body
+    if (!product || !product.id) return res.status(400).json({ error: 'product avec id requis' })
+    const current = await dbGetProducts()
+    const existing = current.find((p) => p.id === product.id)
+    const next = existing
+      ? current.map((p) => (p.id === product.id ? product : p))
+      : [...current, product]
+    await dbSaveProducts(next)
+    res.json(await dbGetProducts())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/delivery-prices', async (_req, res) => {
+  try {
+    const prices = await dbGetDeliveryPrices()
+    res.json(prices)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/delivery-prices', async (req, res) => {
+  try {
+    const prices = req.body
+    if (!prices || typeof prices !== 'object') return res.status(400).json({ error: 'body requis' })
+    await dbSaveDeliveryPrices(prices)
+    res.json(await dbGetDeliveryPrices())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/landing-pages', async (_req, res) => {
+  try {
+    res.json(await dbGetLandingPages())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/landing-pages/:slug', async (req, res) => {
+  try {
+    const landing = await dbGetLandingBySlug(req.params.slug)
+    if (!landing) return res.status(404).json({ error: 'Landing page introuvable' })
+    res.json(landing)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.post('/api/landing-pages', async (req, res) => {
+  try {
+    const { slug, antichocId, title } = req.body || {}
+    if (!slug || !antichocId || typeof slug !== 'string' || typeof antichocId !== 'string') {
+      return res.status(400).json({ error: 'slug et antichocId requis' })
+    }
+    const cleanSlug = slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
+    if (!cleanSlug) return res.status(400).json({ error: 'slug invalide' })
+    await dbSaveLanding({ slug: cleanSlug, antichocId: antichocId.trim(), title: title ? String(title).trim() : null })
+    res.json(await dbGetLandingBySlug(cleanSlug))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.delete('/api/landing-pages/:slug', async (req, res) => {
+  try {
+    await dbDeleteLanding(req.params.slug)
+    res.status(204).send()
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 
@@ -193,9 +406,12 @@ if (isProduction && existsSync(distPath)) {
 }
 
 const PORT = Number(process.env.PORT) || 3001
-app.listen(PORT, () => {
-  console.log(isProduction ? `Serveur démarré sur le port ${PORT}` : `Proxy Yalidine démarré sur http://localhost:${PORT}`)
-  if (!API_ID || !API_TOKEN) {
-    console.warn('Attention : YALIDINE_API_ID ou YALIDINE_API_TOKEN manquant. Définissez-les (variables d\'environnement ou .env).')
-  }
-})
+;(async () => {
+  await initDb()
+  app.listen(PORT, () => {
+    console.log(isProduction ? `Serveur démarré sur le port ${PORT}` : `Proxy Yalidine démarré sur http://localhost:${PORT}`)
+    if (!API_ID || !API_TOKEN) {
+      console.warn('Attention : YALIDINE_API_ID ou YALIDINE_API_TOKEN manquant. Définissez-les (variables d\'environnement ou .env).')
+    }
+  })
+})()

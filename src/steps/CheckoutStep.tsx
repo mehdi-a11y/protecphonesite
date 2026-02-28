@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { getAntichocsForPhone } from '../data'
+import { IPHONE_MODELS, ANTICHOC_COLORS } from '../data'
 import { saveOrder } from '../types'
 import type { CartItem } from '../types'
 import type { IPhoneModelId } from '../data'
@@ -43,7 +44,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   )
   const total = totalMain + totalUpsell + deliveryPrice
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const orderId = 'CMD-' + Date.now()
     const confirmationCode = generateConfirmationCode()
@@ -51,7 +52,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       ...cart,
       ...(acceptUpsell ? [{ antichoc: acceptUpsell, isUpsell: true }] : []),
     ]
-    saveOrder({
+    await saveOrder({
       id: orderId,
       customerName: name,
       phone,
@@ -88,12 +89,27 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
         {/* Récap panier */}
         <div className="rounded-xl bg-brand-card border border-white/10 p-4 mb-6">
           <p className="text-sm text-brand-muted mb-2">Votre commande</p>
-          {cart.map((item) => (
-            <div key={item.antichoc.id} className="flex justify-between text-white">
-              <span>{item.antichoc.name}</span>
-              <span>{item.antichoc.price} DA</span>
-            </div>
-          ))}
+          {cart.map((item) => {
+            const phoneName = item.selectedPhoneId
+              ? IPHONE_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? item.selectedPhoneId
+              : null
+            const colorName = item.selectedColorId
+              ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
+              : null
+            return (
+              <div key={item.antichoc.id + (item.isUpsell ? '-upsell' : '')} className="flex justify-between text-white">
+                <span>
+                  {item.antichoc.name}
+                  {(phoneName || colorName) && (
+                    <span className="block text-xs text-brand-muted font-normal mt-0.5">
+                      {[phoneName, colorName].filter(Boolean).join(' — ')}
+                    </span>
+                  )}
+                </span>
+                <span>{item.antichoc.price} DA</span>
+              </div>
+            )
+          })}
           {acceptUpsell && upsellOffer && (
             <div className="flex justify-between text-brand-gold mt-2 pt-2 border-t border-white/10">
               <span>{upsellOffer.name} (offre -50%)</span>

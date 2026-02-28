@@ -39,19 +39,33 @@ Une fois hébergée, vous aurez une **URL fixe** pour le webhook Yalidine (plus 
      `node server/index.js`
    - **Instance Type** : Free.
 
-### 3. Variables d’environnement (Render)
+### 3. Base de données PostgreSQL (recommandé)
+
+Pour une **base partagée** (commandes, produits, tarifs livraison) :
+
+1. Sur Render : **New** → **PostgreSQL**.
+2. Créez une base (ex. `protecphone_db`), région proche de votre Web Service.
+3. Une fois créée, copiez l’**Internal Database URL** (ou **External** si vous hébergez l’app ailleurs).
+4. Dans votre **Web Service** : onglet **Environment** → **Add Environment Variable** :
+   - Key : `DATABASE_URL`
+   - Value : coller l’URL (ex. `postgres://user:pass@host/dbname?sslmode=require`).
+
+Sans `DATABASE_URL`, le serveur utilise un stockage **en mémoire** (données perdues à chaque redémarrage).
+
+### 4. Variables d’environnement (Render)
 
 Dans l’onglet **Environment** du service :
 
-| Key                | Value                    |
-|--------------------|--------------------------|
-| `NODE_ENV`         | `production`             |
-| `YALIDINE_API_ID`  | votre API ID Yalidine    |
+| Key                  | Value                    |
+|----------------------|--------------------------|
+| `NODE_ENV`           | `production`             |
+| `DATABASE_URL`       | URL PostgreSQL (voir §3) |
+| `YALIDINE_API_ID`    | votre API ID Yalidine    |
 | `YALIDINE_API_TOKEN` | votre API Token Yalidine |
 
 (Pas besoin de `PORT`, Render le définit tout seul.)
 
-### 4. Déployer
+### 5. Déployer
 
 Cliquez sur **Create Web Service**. Render va :
 
@@ -60,7 +74,7 @@ Cliquez sur **Create Web Service**. Render va :
 
 Quand le déploiement est vert, votre site est en ligne.
 
-### 5. URL de la plateforme
+### 6. URL de la plateforme
 
 Render vous donne une URL du type :
 
@@ -82,5 +96,5 @@ Render vous donne une URL du type :
 
 ## Rappel
 
-- Les **commandes** sont stockées dans le **localStorage** du navigateur. Chaque visiteur a ses propres données. Pour une vraie base de données partagée, il faudrait ajouter un backend avec une BDD (plus tard).
+- Avec **DATABASE_URL** (PostgreSQL sur Render), les **commandes**, **produits** et **tarifs de livraison** sont stockés dans une base partagée. Sans `DATABASE_URL`, le serveur utilise un stockage en mémoire (données perdues au redémarrage).
 - En production, changez le **mot de passe admin** dans le code (`src/types.ts` → `ADMIN_PASSWORD`) ou prévoyez une variable d’environnement.

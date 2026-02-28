@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { IPhoneModelId } from './data'
+import { loadDeliveryPrices } from './delivery'
+import { loadProducts } from './data'
 import type { Antichoc } from './data'
 import type { CartItem } from './types'
 import { LandingStep } from './steps/LandingStep'
@@ -16,6 +18,11 @@ export function App() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [orderId, setOrderId] = useState<string>('')
   const [confirmationCode, setConfirmationCode] = useState<string>('')
+
+  useEffect(() => {
+    loadDeliveryPrices().catch(() => {})
+    loadProducts().catch(() => {})
+  }, [])
 
   const goToIphone = () => setStep('iphone')
   const goToProducts = (phoneId: IPhoneModelId) => {

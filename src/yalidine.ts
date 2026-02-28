@@ -170,7 +170,7 @@ function yalidineStatusToOrderStatus(yalidineStatus: string): Order['status'] | 
 export async function syncOrdersWithYalidine(): Promise<
   { success: true; updated: number } | { success: false; error: string }
 > {
-  const orders = getOrders()
+  const orders = await getOrders()
   const withTracking = orders.filter((o) => o.yalidineTracking?.trim())
   if (withTracking.length === 0) return { success: true, updated: 0 }
 
@@ -187,7 +187,7 @@ export async function syncOrdersWithYalidine(): Promise<
     if (!yStatus) continue
     const newStatus = yalidineStatusToOrderStatus(yStatus)
     if (!newStatus || newStatus === order.status) continue
-    setOrderStatus(order.id, newStatus)
+    await setOrderStatus(order.id, newStatus)
     updated++
   }
   return { success: true, updated }

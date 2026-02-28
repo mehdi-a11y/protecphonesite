@@ -131,28 +131,34 @@ const DEFAULT_DELIVERY_PRICES: DeliveryPrices = {
   '58': { domicile: 1500, yalidine: 1300 }, // In Guezzam
 }
 
-const DELIVERY_KEY = 'protecphone_delivery_prices'
+let deliveryCache: DeliveryPrices | null = null
 
-export function getDeliveryPrices(): DeliveryPrices {
+export async function loadDeliveryPrices(): Promise<DeliveryPrices> {
   try {
-    const raw = localStorage.getItem(DELIVERY_KEY)
-    const stored: DeliveryPrices = raw ? JSON.parse(raw) : {}
-    // Fusion : valeurs enregistrées par l'admin priment, sinon défaut
-    const result: DeliveryPrices = {}
-    for (const w of WILAYAS) {
-      result[w.code] = {
-        domicile: stored[w.code]?.domicile ?? DEFAULT_DELIVERY_PRICES[w.code]?.domicile ?? 0,
-        yalidine: stored[w.code]?.yalidine ?? DEFAULT_DELIVERY_PRICES[w.code]?.yalidine ?? 0,
-      }
-    }
-    return result
+    const { apiGetDeliveryPrices } = await import('./api')
+    deliveryCache = await apiGetDeliveryPrices()
   } catch {
-    return { ...DEFAULT_DELIVERY_PRICES }
+    deliveryCache = {}
   }
+  return getDeliveryPrices()
 }
 
-export function saveDeliveryPrices(prices: DeliveryPrices): void {
-  localStorage.setItem(DELIVERY_KEY, JSON.stringify(prices))
+export function getDeliveryPrices(): DeliveryPrices {
+  const stored = deliveryCache ?? {}
+  const result: DeliveryPrices = {}
+  for (const w of WILAYAS) {
+    result[w.code] = {
+      domicile: stored[w.code]?.domicile ?? DEFAULT_DELIVERY_PRICES[w.code]?.domicile ?? 0,
+      yalidine: stored[w.code]?.yalidine ?? DEFAULT_DELIVERY_PRICES[w.code]?.yalidine ?? 0,
+    }
+  }
+  return result
+}
+
+export async function saveDeliveryPrices(prices: DeliveryPrices): Promise<void> {
+  const { apiSaveDeliveryPrices } = await import('./api')
+  await apiSaveDeliveryPrices(prices)
+  deliveryCache = prices
 }
 
 export function getDeliveryPriceForWilaya(

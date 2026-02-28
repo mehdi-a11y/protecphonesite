@@ -51,14 +51,14 @@ export function ConfirmPage() {
   const [yalidineSyncMsg, setYalidineSyncMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    setOrders(getOrders())
+    getOrders().then(setOrders)
     syncOrdersWithYalidine().then((r) => {
-      if (r.success && r.updated > 0) setOrders(getOrders())
+      if (r.success && r.updated > 0) getOrders().then(setOrders)
     })
   }, [])
 
   const refreshOrders = () => {
-    setOrders(getOrders())
+    getOrders().then(setOrders)
   }
 
   const handleSyncYalidine = async () => {
@@ -66,9 +66,9 @@ export function ConfirmPage() {
     setYalidineSyncMsg(null)
     const result = await syncOrdersWithYalidine()
     setYalidineSyncing(false)
-    setOrders(getOrders())
-    const refreshed = getOrders().find((o) => o.id === selectedOrder?.id) ?? null
-    setSelectedOrder(refreshed)
+    const orders = await getOrders()
+    setOrders(orders)
+    setSelectedOrder(orders.find((o) => o.id === selectedOrder?.id) ?? null)
     if (result.success) {
       setYalidineSyncMsg(result.updated > 0 ? `${result.updated} commande(s) mise(s) à jour.` : 'À jour.')
     } else {
@@ -98,11 +98,11 @@ export function ConfirmPage() {
     setSelectedOrder(found)
   }
 
-  const handleStatusChange = (order: Order, status: Order['status']) => {
-    setOrderStatus(order.id, status)
-    refreshOrders()
-    const refreshed = getOrders().find((o) => o.id === order.id) ?? null
-    setSelectedOrder(refreshed)
+  const handleStatusChange = async (order: Order, status: Order['status']) => {
+    await setOrderStatus(order.id, status)
+    const orders = await getOrders()
+    setOrders(orders)
+    setSelectedOrder(orders.find((o) => o.id === order.id) ?? null)
     setInfo(`Commande ${order.id} mise à jour en "${getStatusLabel(status)}".`)
   }
 
@@ -116,10 +116,10 @@ export function ConfirmPage() {
     const result = await createParcelOnYalidine(order)
     setYalidineSending(false)
     if (result.success) {
-      updateOrderYalidine(order.id, { tracking: result.tracking, sentAt: new Date().toISOString() })
-      refreshOrders()
-      const refreshed = getOrders().find((o) => o.id === order.id) ?? null
-      setSelectedOrder(refreshed)
+      await updateOrderYalidine(order.id, { tracking: result.tracking, sentAt: new Date().toISOString() })
+      const orders = await getOrders()
+      setOrders(orders)
+      setSelectedOrder(orders.find((o) => o.id === order.id) ?? null)
       setYalidineMsg({ type: 'success', text: `Suivi : ${result.tracking}` })
     } else {
       setYalidineMsg({ type: 'error', text: result.error })

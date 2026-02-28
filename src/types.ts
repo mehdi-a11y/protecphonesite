@@ -1,8 +1,13 @@
 import type { Antichoc } from './data'
+import type { IPhoneModelId } from './data'
 
 export interface CartItem {
   antichoc: Antichoc
   isUpsell?: boolean
+  /** Modèle iPhone choisi par le client (obligatoire pour commander) */
+  selectedPhoneId?: IPhoneModelId
+  /** Couleur choisie par le client (obligatoire pour commander) */
+  selectedColorId?: string
 }
 
 export type DeliveryType = 'domicile' | 'yalidine'
@@ -38,53 +43,35 @@ export interface Order {
 
 export const ADMIN_PASSWORD = 'admin' // à changer en production
 
-const ORDERS_KEY = 'protecphone_orders'
 const ADMIN_AUTH_KEY = 'protecphone_admin_auth'
 
-export function getOrders(): Order[] {
+import * as api from './api'
+
+export async function getOrders(): Promise<Order[]> {
   try {
-    const raw = localStorage.getItem(ORDERS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as any[]
-    // Migration douce des anciens statuts vers le nouveau modèle
-    return parsed.map((o) => {
-      if (o.status === 'pending') {
-        return { ...o, status: 'tentative1' }
-      }
-      return o
-    }) as Order[]
+    return await api.apiGetOrders()
   } catch {
     return []
   }
 }
 
-export function saveOrder(order: Order): void {
-  const orders = getOrders()
-  orders.unshift(order)
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
+export async function saveOrder(order: Order): Promise<void> {
+  await api.apiSaveOrder(order)
 }
 
-export function setOrderStatus(orderId: string, status: Order['status']): void {
-  const orders = getOrders().map((o) =>
-    o.id === orderId ? { ...o, status } : o
-  )
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
+export async function setOrderStatus(orderId: string, status: Order['status']): Promise<void> {
+  await api.apiSetOrderStatus(orderId, status)
 }
 
-export function confirmOrder(orderId: string): void {
-  setOrderStatus(orderId, 'confirmed')
+export function confirmOrder(orderId: string): Promise<void> {
+  return setOrderStatus(orderId, 'confirmed')
 }
 
-export function updateOrderYalidine(
+export async function updateOrderYalidine(
   orderId: string,
   data: { tracking: string; sentAt: string },
-): void {
-  const orders = getOrders().map((o) =>
-    o.id === orderId
-      ? { ...o, yalidineTracking: data.tracking, yalidineSentAt: data.sentAt }
-      : o,
-  )
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
+): Promise<void> {
+  await api.apiUpdateOrderYalidine(orderId, data)
 }
 
 export function isAdminAuthenticated(): boolean {

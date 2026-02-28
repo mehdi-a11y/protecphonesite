@@ -33,21 +33,26 @@ export interface Antichoc {
   price: number; // prix détail
   wholesalePrice?: number; // prix gros
   quantity?: number; // stock disponible
-  image: string; // emoji ou pictogramme
-  photoUrl: string; // vraie photo (URL) si disponible
-  compatibleWith: IPhoneModelId[]; // collections (modèles d'iPhone)
+  image: string; // emoji(s) ou pictogramme
+  colorIds?: string[]; // couleurs sélectionnées (ids ANTICHOC_COLORS)
+  photoUrl: string; // première photo (URL ou base64)
+  photoGallery?: string[]; // plusieurs photos (la première = photoUrl si une seule)
+  compatibleWith: IPhoneModelId[]; // modèles d'iPhone compatibles
 }
 
-const colors = [
-  { name: 'Noir mat', emoji: '⬛', hex: '#1a1a1a' },
-  { name: 'Bleu nuit', emoji: '🔵', hex: '#1e3a5f' },
-  { name: 'Rouge', emoji: '🔴', hex: '#b91c1c' },
-  { name: 'Vert forêt', emoji: '🟢', hex: '#166534' },
-  { name: 'Transparent', emoji: '🔲', hex: '#e5e5e5' },
-  { name: 'Lavande', emoji: '🟣', hex: '#6b21a8' },
-  { name: 'Rose gold', emoji: '🌸', hex: '#e8b4b8' },
-  { name: 'Camouflage', emoji: '🟫', hex: '#4a5568' },
-];
+/** Couleurs disponibles pour les antichocs (sélection dans l'admin) */
+export const ANTICHOC_COLORS = [
+  { id: 'noir-mat', name: 'Noir mat', emoji: '⬛', hex: '#1a1a1a' },
+  { id: 'bleu-nuit', name: 'Bleu nuit', emoji: '🔵', hex: '#1e3a5f' },
+  { id: 'rouge', name: 'Rouge', emoji: '🔴', hex: '#b91c1c' },
+  { id: 'vert-foret', name: 'Vert forêt', emoji: '🟢', hex: '#166534' },
+  { id: 'transparent', name: 'Transparent', emoji: '🔲', hex: '#e5e5e5' },
+  { id: 'lavande', name: 'Lavande', emoji: '🟣', hex: '#6b21a8' },
+  { id: 'rose-gold', name: 'Rose gold', emoji: '🌸', hex: '#e8b4b8' },
+  { id: 'camouflage', name: 'Camouflage', emoji: '🟫', hex: '#4a5568' },
+] as const;
+
+const colors = ANTICHOC_COLORS;
 
 const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id);
 
@@ -66,24 +71,31 @@ export const ANTICHOCS: Antichoc[] = colors.map((c, i) => ({
   compatibleWith: allIphoneIds,
 }));
 
-const PRODUCTS_KEY = 'protecphone_products'
+let productsCache: Antichoc[] | null = null
 
-export function getStoredProducts(): Antichoc[] | null {
+export async function loadProducts(): Promise<Antichoc[]> {
   try {
-    const raw = localStorage.getItem(PRODUCTS_KEY)
-    return raw ? JSON.parse(raw) : null
+    const { apiGetProducts } = await import('./api')
+    productsCache = await apiGetProducts()
+    return productsCache.length ? productsCache : ANTICHOCS
   } catch {
-    return null
+    productsCache = ANTICHOCS
+    return ANTICHOCS
   }
 }
 
-export function saveProducts(products: Antichoc[]): void {
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products))
+export function getStoredProducts(): Antichoc[] | null {
+  return productsCache
+}
+
+export async function saveProducts(products: Antichoc[]): Promise<void> {
+  const { apiSaveProducts } = await import('./api')
+  await apiSaveProducts(products)
+  productsCache = products
 }
 
 function getCatalog(): Antichoc[] {
-  const stored = getStoredProducts()
-  return stored ?? ANTICHOCS
+  return productsCache ?? ANTICHOCS
 }
 
 export function getAntichocsForPhone(phoneId: IPhoneModelId): Antichoc[] {
@@ -92,4 +104,8 @@ export function getAntichocsForPhone(phoneId: IPhoneModelId): Antichoc[] {
 
 export function getAllAntichocs(): Antichoc[] {
   return getCatalog()
+}
+
+export function getAntichocById(id: string): Antichoc | null {
+  return getCatalog().find((a) => a.id === id) ?? null
 }

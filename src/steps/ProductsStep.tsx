@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getAntichocsForPhone } from '../data'
+import { ANTICHOC_COLORS } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
@@ -15,11 +17,30 @@ interface Props {
 export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }: Props) {
   const products = getAntichocsForPhone(phoneId)
   const [selected, setSelected] = useState<Antichoc | null>(null)
+  const [selectedColorId, setSelectedColorId] = useState<string>('')
   const [addedFeedback, setAddedFeedback] = useState(false)
 
+  const colorOptions = useMemo(() => {
+    if (!selected) return []
+    const ids = selected.colorIds?.length ? selected.colorIds : ANTICHOC_COLORS.map((c) => c.id)
+    return ids.map((id) => ANTICHOC_COLORS.find((c) => c.id === id)!).filter(Boolean)
+  }, [selected])
+
+  useEffect(() => {
+    if (selected && colorOptions.length === 1) setSelectedColorId(colorOptions[0].id)
+    else if (selected && colorOptions.length > 1) setSelectedColorId('')
+  }, [selected?.id, colorOptions.length])
+
+  const canAddToCart = selected && (colorOptions.length <= 1 ? true : selectedColorId !== '')
+
   const handleAddToCart = () => {
-    if (!selected) return
-    onAddToCart({ antichoc: selected })
+    if (!selected || !canAddToCart) return
+    const colorId = colorOptions.length === 1 ? colorOptions[0].id : selectedColorId
+    onAddToCart({
+      antichoc: selected,
+      selectedPhoneId: phoneId,
+      selectedColorId: colorId,
+    })
     setAddedFeedback(true)
     setTimeout(() => setAddedFeedback(false), 1500)
   }
@@ -53,9 +74,9 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
               }`}
             >
               <div className="mb-2 flex items-center justify-center">
-                {p.photoUrl ? (
+                {(p.photoGallery?.[0] ?? p.photoUrl) ? (
                   <img
-                    src={p.photoUrl}
+                    src={p.photoGallery?.[0] ?? p.photoUrl}
                     alt={p.name}
                     className="w-20 h-20 object-cover rounded-md border border-white/10"
                   />
@@ -69,53 +90,85 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
               <p className="text-xs text-brand-muted line-clamp-3">
                 {p.description}
               </p>
-              <div className="text-brand-accent font-semibold">{p.price} DA</div>
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <span className="text-brand-accent font-semibold">{p.price} DA</span>
+                <Link
+                  to={`/product/${p.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs text-brand-muted hover:text-brand-accent"
+                >
+                  Voir la fiche →
+                </Link>
+              </div>
             </button>
           ))}
         </div>
-        {(selected || cart.length > 0) && (
+        {(selected || cart.length > 0) ? (
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-brand-dark/95 border-t border-white/10 animate-slide-up">
-            <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                {selected && (
-                  <p className="text-white truncate">
-                    <span className="text-brand-muted">Sélection :</span>{' '}
-                    {selected.name} — {selected.price} DA
-                  </p>
-                )}
-                {cart.length > 0 && (
-                  <p className="text-brand-muted text-sm mt-0.5">
-                    Panier : {cart.length} article{cart.length > 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                {selected && (
-                  <button
-                    type="button"
-                    onClick={handleAddToCart}
-                    className={`flex-1 sm:flex-none px-5 py-3 rounded-xl font-semibold transition-colors ${
-                      addedFeedback
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                        : 'bg-brand-accent text-brand-dark hover:bg-brand-accentDim'
-                    }`}
+            <div className="max-w-4xl mx-auto flex flex-col gap-3">
+              {selected && colorOptions.length > 1 ? (
+                <div>
+                  <label className="block text-xs text-brand-muted mb-1">Couleur (obligatoire)</label>
+                  <select
+                    value={selectedColorId}
+                    onChange={(e) => setSelectedColorId(e.target.value)}
+                    className="w-full sm:w-48 px-3 py-2 rounded-lg bg-brand-card border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
                   >
-                    {addedFeedback ? '✓ Ajouté !' : 'Ajouter au panier'}
-                  </button>
-                )}
-                {cart.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={onCheckout}
-                    className="flex-1 sm:flex-none px-5 py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 border border-white/20 transition-colors"
-                  >
-                    Voir le panier ({cart.length}) →
-                  </button>
-                )}
+                    <option value="">Choisir une couleur</option>
+                    {colorOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.emoji} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  {selected ? (
+                    <p className="text-white truncate">
+                      <span className="text-brand-muted">Sélection :</span>{' '}
+                      {selected.name} — {selected.price} DA
+                      {colorOptions.length === 1 ? (
+                        <span className="text-brand-muted text-sm"> — {colorOptions[0].name}</span>
+                      ) : null}
+                    </p>
+                  ) : null}
+                  {cart.length > 0 ? (
+                    <p className="text-brand-muted text-sm mt-0.5">
+                      Panier : {cart.length} article{cart.length > 1 ? 's' : ''}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                  {selected ? (
+                    <button
+                      type="button"
+                      onClick={handleAddToCart}
+                      disabled={!canAddToCart}
+                      className={`flex-1 sm:flex-none px-5 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        addedFeedback
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                          : 'bg-brand-accent text-brand-dark hover:bg-brand-accentDim'
+                      }`}
+                    >
+                      {addedFeedback ? '✓ Ajouté !' : 'Ajouter au panier'}
+                    </button>
+                  ) : null}
+                  {cart.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={onCheckout}
+                      className="flex-1 sm:flex-none px-5 py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 border border-white/20 transition-colors"
+                    >
+                      Voir le panier ({cart.length}) →
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
