@@ -109,7 +109,7 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
       id: s.id ?? s.stopdesk_id ?? s.center_id,
       name: s.name ?? s.stopdesk_name ?? s.center_name ?? s.address ?? String(s.id ?? ''),
       address: s.address ?? s.adresse ?? '',
-      wilaya: s.wilaya ?? s.wilaya_name ?? wilaya || '',
+      wilaya: s.wilaya ?? s.wilaya_name ?? wilaya ?? '',
     })).filter((s) => s.id != null)
   }
 
