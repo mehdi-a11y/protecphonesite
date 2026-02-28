@@ -56,6 +56,19 @@ const colors = ANTICHOC_COLORS;
 
 const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id);
 
+/** Produit upsell : protecteur d'écran incassable (affiché sur la page produit, -50% en offre). */
+export const SCREEN_PROTECTOR_UPSELL: Antichoc = {
+  id: 'upsell-protecteur-ecran-incassable',
+  name: "Protecteur d'écran incassable",
+  description: 'Protection en verre trempé, résistant aux chocs.',
+  price: 1200,
+  wholesalePrice: 0,
+  quantity: 0,
+  image: '🛡️',
+  photoUrl: '',
+  compatibleWith: [...allIphoneIds],
+};
+
 // Générer un catalogue d'antichocs.
 // Chaque design (couleur) est un produit qui peut exister sur plusieurs modèles d'iPhone (collections).
 export const ANTICHOCS: Antichoc[] = colors.map((c, i) => ({

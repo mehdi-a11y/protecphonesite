@@ -75,7 +75,11 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const upsellOffer = upsellCandidates[0] ?? null
   const upsellPrice = upsellOffer ? Math.round(upsellOffer.price * (1 - UPSELL_DISCOUNT)) : 0
 
-  const totalMain = cart.reduce((sum, i) => sum + (i.isUpsell ? 0 : i.antichoc.price), 0)
+  const totalMain = cart.reduce(
+    (sum, i) =>
+      sum + (i.isUpsell ? Math.round(i.antichoc.price * (1 - UPSELL_DISCOUNT)) : i.antichoc.price),
+    0,
+  )
   const totalUpsell = acceptUpsell ? upsellPrice : 0
   const deliveryPrice = useMemo(
     () => (wilaya ? getDeliveryPriceForWilaya(wilaya, deliveryType) : 0),
@@ -147,17 +151,23 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
             const colorName = item.selectedColorId
               ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
               : null
+            const itemPrice = item.isUpsell
+              ? Math.round(item.antichoc.price * (1 - UPSELL_DISCOUNT))
+              : item.antichoc.price
             return (
               <div key={item.antichoc.id + (item.isUpsell ? '-upsell' : '')} className="flex justify-between text-white">
                 <span>
                   {item.antichoc.name}
+                  {item.isUpsell && (
+                    <span className="text-amber-400 text-xs ml-1">(offre -50%)</span>
+                  )}
                   {(phoneName || colorName) && (
                     <span className="block text-xs text-brand-muted font-normal mt-0.5">
                       {[phoneName, colorName].filter(Boolean).join(' — ')}
                     </span>
                   )}
                 </span>
-                <span>{item.antichoc.price} DA</span>
+                <span>{itemPrice} DA</span>
               </div>
             )
           })}
