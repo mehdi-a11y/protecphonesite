@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { getAntichocsForPhone } from '../data'
 import { IPHONE_MODELS, ANTICHOC_COLORS } from '../data'
 import { saveOrder } from '../types'
@@ -7,6 +7,7 @@ import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
+import { apiGetYalidineStopdesks, type YalidineStopdesk } from '../api'
 
 const UPSELL_DISCOUNT = 0.5 // -50%
 
@@ -26,7 +27,27 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [wilaya, setWilaya] = useState('')
   const [address, setAddress] = useState('')
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('domicile')
+  const [stopdesks, setStopdesks] = useState<YalidineStopdesk[]>([])
+  const [stopdesksLoading, setStopdesksLoading] = useState(false)
+  const [selectedStopdeskId, setSelectedStopdeskId] = useState('')
+  const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
   const [acceptUpsell, setAcceptUpsell] = useState<Antichoc | null>(null)
+
+  useEffect(() => {
+    if (deliveryType !== 'yalidine' || !wilaya) {
+      setStopdesks([])
+      setSelectedStopdeskId('')
+      setSelectedStopdeskName('')
+      return
+    }
+    setStopdesksLoading(true)
+    setSelectedStopdeskId('')
+    setSelectedStopdeskName('')
+    apiGetYalidineStopdesks(wilaya)
+      .then((list) => setStopdesks(list))
+      .catch(() => setStopdesks([]))
+      .finally(() => setStopdesksLoading(false))
+  }, [deliveryType, wilaya])
 
   const mainItem = cart[0]
   const phoneId = mainItem?.antichoc.compatibleWith[0] as IPhoneModelId | undefined
@@ -44,8 +65,11 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   )
   const total = totalMain + totalUpsell + deliveryPrice
 
+  const canSubmitBureau = deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!canSubmitBureau) return
     const orderId = 'CMD-' + Date.now()
     const confirmationCode = generateConfirmationCode()
     const finalCart: CartItem[] = [
@@ -65,6 +89,9 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       status: 'tentative1',
       createdAt: new Date().toISOString(),
       confirmationCode,
+      ...(deliveryType === 'yalidine' && selectedStopdeskId
+        ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
+        : {}),
     })
     onConfirm(orderId, confirmationCode)
   }
@@ -222,6 +249,31 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                 <span className="text-white">Bureau Yalidine</span>
               </label>
             </div>
+            {deliveryType === 'yalidine' && wilaya && (
+              <div className="mt-3">
+                <label className="block text-sm text-brand-muted mb-1">Bureau Yalidine (obligatoire)</label>
+                <select
+                  required={deliveryType === 'yalidine'}
+                  value={selectedStopdeskId}
+                  onChange={(e) => {
+                    const opt = e.target.options[e.target.selectedIndex]
+                    setSelectedStopdeskId(e.target.value)
+                    setSelectedStopdeskName(opt?.textContent ?? '')
+                  }}
+                  className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                >
+                  <option value="">
+                    {stopdesksLoading ? 'Chargement des bureaux…' : 'Choisir un bureau'}
+                  </option>
+                  {stopdesks.map((s) => (
+                    <option key={String(s.id)} value={String(s.id)}>
+                      {s.name}
+                      {s.address ? ` — ${s.address}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {wilaya && (
               <p className="text-brand-muted text-xs mt-1">
                 Livraison : {deliveryPrice} DA
@@ -244,7 +296,8 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
           <button
             type="submit"
-            className="w-full py-4 bg-brand-accent text-brand-dark font-semibold rounded-xl hover:bg-brand-accentDim transition-colors mt-4"
+            disabled={!canSubmitBureau}
+            className="w-full py-4 bg-brand-accent text-brand-dark font-semibold rounded-xl hover:bg-brand-accentDim transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirmer la commande (COD)
           </button>

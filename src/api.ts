@@ -52,6 +52,21 @@ export async function apiUpdateOrderYalidine(
   })
 }
 
+export interface YalidineStopdesk {
+  id: number | string
+  name: string
+  address?: string
+  wilaya?: string
+}
+
+export async function apiGetYalidineStopdesks(wilaya?: string): Promise<YalidineStopdesk[]> {
+  const url = wilaya ? `/api/yalidine/stopdesks?wilaya=${encodeURIComponent(wilaya)}` : '/api/yalidine/stopdesks'
+  const res = await fetch(BASE + url)
+  if (!res.ok) return []
+  const data = await res.json().catch(() => ({}))
+  return data.stopdesks ?? []
+}
+
 export async function apiGetProducts(): Promise<Antichoc[]> {
   const list = await fetchJson<Antichoc[]>('/api/products')
   return list || []

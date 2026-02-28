@@ -1594,7 +1594,7 @@ function OrderCard({
       <p className="text-brand-muted text-sm">{order.phone}</p>
       <p className="text-brand-muted text-sm">
         {order.wilaya
-          ? `${order.address} — ${order.wilaya}${order.deliveryType ? ` (${order.deliveryType === 'domicile' ? 'À domicile' : 'Bureau Yalidine'})` : ''}`
+          ? `${order.address} — ${order.wilaya}${order.deliveryType ? ` (${order.deliveryType === 'domicile' ? 'À domicile' : order.yalidineStopdeskName ? `Bureau: ${order.yalidineStopdeskName}` : 'Bureau Yalidine'})` : ''}`
           : `${order.address}${order.city ? `, ${order.city}` : ''}`}
       </p>
       {order.deliveryPrice != null && order.deliveryPrice > 0 && (

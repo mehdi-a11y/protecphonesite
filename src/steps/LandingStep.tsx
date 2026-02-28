@@ -33,9 +33,15 @@ export function LandingStep({ onNext }: Props) {
           <span>•</span>
           <span>✓ Stock limité</span>
         </span>
-        <Link to="/admin" className="text-white/40 hover:text-white/60 text-xs">
-          Admin
-        </Link>
+        <span className="flex items-center gap-3">
+          <Link to="/admin" className="text-white/40 hover:text-white/60 text-xs">
+            Admin
+          </Link>
+          <span className="text-white/20">|</span>
+          <Link to="/confirmateur" className="text-white/40 hover:text-white/60 text-xs">
+            Confirmation
+          </Link>
+        </span>
       </div>
     </div>
   )

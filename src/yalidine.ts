@@ -41,6 +41,7 @@ interface YalidineParcelPayload {
   price: number
   freeshipping: boolean
   is_stopdesk: boolean
+  stopdesk_id?: number
   has_exchange: number
   product_to_collect: string | null
 }
@@ -55,6 +56,15 @@ function orderToParcelPayload(order: Order): YalidineParcelPayload {
     .map((i) => `${i.antichoc.name}${i.isUpsell ? ' (offre)' : ''}`)
     .join(', ')
 
+  const isStopdesk = order.deliveryType === 'yalidine'
+  const stopdeskIdRaw = order.yalidineStopdeskId
+  const stopdeskId =
+    stopdeskIdRaw != null && stopdeskIdRaw !== ''
+      ? typeof stopdeskIdRaw === 'string' && /^\d+$/.test(stopdeskIdRaw)
+        ? parseInt(stopdeskIdRaw, 10)
+        : (stopdeskIdRaw as number)
+      : undefined
+
   return {
     order_id: order.id,
     firstname,
@@ -66,7 +76,8 @@ function orderToParcelPayload(order: Order): YalidineParcelPayload {
     product_list: productList || 'Commande Protecphone',
     price: order.total ?? 0,
     freeshipping: false,
-    is_stopdesk: order.deliveryType === 'yalidine',
+    is_stopdesk: isStopdesk,
+    ...(isStopdesk && stopdeskId != null ? { stopdesk_id: stopdeskId } : {}),
     has_exchange: 0,
     product_to_collect: null,
   }

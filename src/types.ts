@@ -39,6 +39,10 @@ export interface Order {
   yalidineTracking?: string
   /** Date d'envoi vers Yalidine */
   yalidineSentAt?: string
+  /** ID du bureau Yalidine (stop desk) choisi par le client */
+  yalidineStopdeskId?: string
+  /** Nom du bureau pour affichage */
+  yalidineStopdeskName?: string
 }
 
 export const ADMIN_PASSWORD = 'admin' // à changer en production

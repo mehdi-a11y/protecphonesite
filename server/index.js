@@ -94,6 +94,43 @@ app.post('/api/yalidine/parcels', async (req, res) => {
   }
 })
 
+// Liste des bureaux Yalidine (stop desks) par wilaya — proxy vers l'API Yalidine
+app.get('/api/yalidine/stopdesks', async (req, res) => {
+  if (!API_ID || !API_TOKEN) {
+    return res.status(500).json({
+      error: 'YALIDINE_API_ID et YALIDINE_API_TOKEN doivent être définis.',
+    })
+  }
+  const wilaya = (req.query.wilaya || req.query.wilaya_id || '').toString().trim()
+
+  const normalize = (data, baseUrl) => {
+    const list = Array.isArray(data) ? data : (data.data ?? data.stopdesks ?? data.centers ?? [])
+    return list.map((s) => ({
+      id: s.id ?? s.stopdesk_id ?? s.center_id,
+      name: s.name ?? s.stopdesk_name ?? s.center_name ?? s.address ?? String(s.id ?? ''),
+      address: s.address ?? s.adresse ?? '',
+      wilaya: s.wilaya ?? s.wilaya_name ?? wilaya || '',
+    })).filter((s) => s.id != null)
+  }
+
+  for (const endpoint of ['stopdesks', 'centers']) {
+    try {
+      const url = new URL(endpoint, YALIDINE_API_BASE)
+      if (wilaya) url.searchParams.set('wilaya_id', wilaya)
+      const response = await fetch(url.toString(), {
+        headers: { 'X-API-ID': API_ID, 'X-API-TOKEN': API_TOKEN },
+      })
+      const data = await response.json().catch(() => ({}))
+      if (response.ok) {
+        const stopdesks = normalize(data)
+        return res.json({ stopdesks })
+      }
+      if (response.status !== 404) return res.status(response.status).json(data)
+    } catch (_) {}
+  }
+  return res.json({ stopdesks: [] })
+})
+
 // Récupérer le statut de colis (pour synchronisation livré / retourné / annulé)
 app.get('/api/yalidine/parcels/status', async (req, res) => {
   if (!API_ID || !API_TOKEN) {
@@ -227,6 +264,8 @@ function orderToApi(o) {
     confirmationCode: o.confirmationCode,
     yalidineTracking: o.yalidineTracking,
     yalidineSentAt: o.yalidineSentAt,
+    yalidineStopdeskId: o.yalidineStopdeskId,
+    yalidineStopdeskName: o.yalidineStopdeskName,
   }
 }
 
@@ -246,6 +285,8 @@ function apiToOrder(a) {
     confirmationCode: a.confirmationCode,
     yalidineTracking: a.yalidineTracking,
     yalidineSentAt: a.yalidineSentAt,
+    yalidineStopdeskId: a.yalidineStopdeskId,
+    yalidineStopdeskName: a.yalidineStopdeskName,
   }
 }
 

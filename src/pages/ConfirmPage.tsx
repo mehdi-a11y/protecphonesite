@@ -222,7 +222,7 @@ export function ConfirmPage() {
               <p className="text-brand-muted text-sm">{selectedOrder.phone}</p>
               <p className="text-brand-muted text-sm">
                 {selectedOrder.wilaya
-                  ? `${selectedOrder.address} — Wilaya ${selectedOrder.wilaya}${selectedOrder.deliveryType ? ` (${selectedOrder.deliveryType === 'domicile' ? 'À domicile' : 'Bureau Yalidine'})` : ''}`
+                  ? `${selectedOrder.address} — Wilaya ${selectedOrder.wilaya}${selectedOrder.deliveryType ? ` (${selectedOrder.deliveryType === 'domicile' ? 'À domicile' : selectedOrder.yalidineStopdeskName ? `Bureau: ${selectedOrder.yalidineStopdeskName}` : 'Bureau Yalidine'})` : ''}`
                   : `${selectedOrder.address}${selectedOrder.city ? `, ${selectedOrder.city}` : ''}`}
               </p>
               {selectedOrder.deliveryPrice != null && selectedOrder.deliveryPrice > 0 && (
