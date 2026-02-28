@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { SiteLayout } from './components/SiteLayout'
 import { App } from './App.tsx'
 import { AdminPage } from './pages/AdminPage.tsx'
 import { ConfirmPage } from './pages/ConfirmPage.tsx'
@@ -15,11 +16,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/confirmateur" element={<ConfirmPage />} />
-        <Route path="/p/:slug" element={<ProductLandingPage />} />
-        <Route path="/product/:id" element={<ProductPage />} />
+        <Route element={<SiteLayout />}>
+          <Route path="/" element={<App />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/confirmateur" element={<ConfirmPage />} />
+          <Route path="/p/:slug" element={<ProductLandingPage />} />
+          <Route path="/product/:id" element={<ProductPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   </StrictMode>,

@@ -182,29 +182,8 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={handleCommander}
-              disabled={!canCommander}
-              className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 transition-all duration-200 border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-            >
-              Commander maintenant
-            </button>
-
-            <div className="mt-6 flex flex-col gap-2 text-sm text-brand-muted">
-              <p className="flex items-center gap-2">
-                <span className="text-brand-accent">✓</span> Paiement à la livraison (COD)
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-brand-accent">✓</span> Livraison partout en Algérie
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-brand-accent">✓</span> Protection antichoc qualité
-              </p>
-            </div>
-
-            {/* Upsell : Protecteur d'écran incassable */}
-            <section className="mt-8 pt-8 border-t border-white/10">
+            {/* Upsell : Protecteur d'écran incassable (avant le bouton Commander) */}
+            <section className="mb-6">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
                   Économisez avec les accessoires
@@ -247,6 +226,27 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 </p>
               </div>
             </section>
+
+            <button
+              type="button"
+              onClick={handleCommander}
+              disabled={!canCommander}
+              className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 transition-all duration-200 border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+            >
+              Commander maintenant
+            </button>
+
+            <div className="mt-6 flex flex-col gap-2 text-sm text-brand-muted">
+              <p className="flex items-center gap-2">
+                <span className="text-brand-accent">✓</span> Paiement à la livraison (COD)
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-brand-accent">✓</span> Livraison partout en Algérie
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-brand-accent">✓</span> Protection antichoc qualité
+              </p>
+            </div>
           </div>
         </div>
 

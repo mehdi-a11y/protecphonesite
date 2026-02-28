@@ -1,46 +1,12 @@
-import { Link } from 'react-router-dom'
-
 interface Props {
   onNext: () => void
 }
 
 export function LandingStep({ onNext }: Props) {
   return (
-    <div className="min-h-screen flex flex-col bg-brand-dark">
-      {/* Barre d'infos (style e-commerce) */}
-      <div className="bg-brand-topbar text-neutral-800 text-center py-2.5 px-4 text-sm font-medium">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
-          <span>LIVRAISON GRATUITE À PARTIR DE 3000 DZD</span>
-          <span className="hidden sm:inline text-neutral-400">|</span>
-          <span className="flex items-center justify-center gap-1">
-            <span className="text-amber-500">★★★★★</span>
-            <span>NOTÉ EXCELLENT</span>
-          </span>
-          <span className="hidden sm:inline text-neutral-400">|</span>
-          <span>RETOURS SOUS 7 JOURS</span>
-        </div>
-      </div>
-
-      {/* Header */}
-      <header className="bg-brand-header border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="text-white font-bold text-xl tracking-tight">
-            PROTECPHONE
-          </Link>
-          <nav className="hidden sm:flex items-center gap-6 text-sm text-white/90">
-            <span className="text-white font-medium">Promos</span>
-            <Link to="/admin" className="text-white/60 hover:text-white text-xs">
-              Admin
-            </Link>
-            <Link to="/confirmateur" className="text-white/60 hover:text-white text-xs">
-              Confirmation
-            </Link>
-          </nav>
-        </div>
-      </header>
-
+    <div className="flex flex-col flex-1">
       {/* Hero — Liquidation de stock */}
-      <section className="flex-1 flex items-center">
+      <section className="flex-1 flex items-center py-8 sm:py-12">
         <div className="w-full max-w-6xl mx-auto px-4 py-12 sm:py-16">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800/90 via-brand-card to-brand-dark border border-white/10 min-h-[320px] sm:min-h-[380px] flex flex-col sm:flex-row items-center justify-between gap-8 sm:gap-12 p-8 sm:p-12">
             {/* Fond décoratif */}
@@ -75,14 +41,6 @@ export function LandingStep({ onNext }: Props) {
           </div>
         </div>
       </section>
-
-      {/* Pied de page léger */}
-      <footer className="py-6 text-center text-sm text-brand-muted border-t border-white/5">
-        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-          <span>✓ Paiement à la livraison</span>
-          <span>✓ Stock limité</span>
-        </p>
-      </footer>
     </div>
   )
 }
