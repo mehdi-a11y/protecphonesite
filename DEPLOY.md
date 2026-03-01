@@ -63,8 +63,17 @@ Dans l’onglet **Environment** du service :
 | `YALIDINE_API_ID`    | votre API ID Yalidine    |
 | `YALIDINE_API_TOKEN` | votre API Token Yalidine |
 | `VITE_FB_PIXEL_ID`   | (optionnel) ID du Pixel Facebook / Meta pour Facebook Ads. À définir **avant** le build pour que le pixel soit actif. |
+| `TWILIO_ACCOUNT_SID` | (optionnel) Compte Twilio — envoi WhatsApp de confirmation de commande au client. |
+| `TWILIO_AUTH_TOKEN` | (optionnel) Token d’authentification Twilio. |
+| `TWILIO_WHATSAPP_FROM` | (optionnel) Numéro WhatsApp expéditeur, ex. `whatsapp:+14155238886` (sandbox) ou `whatsapp:+213XXXXXXXXX`. |
 
 (Pas besoin de `PORT`, Render le définit tout seul.)
+
+**WhatsApp (Twilio)** : si ces 3 variables sont renseignées, le client reçoit automatiquement un message WhatsApp après chaque commande (n° commande, code de confirmation, montant). Créer un compte sur [twilio.com](https://www.twilio.com), activer WhatsApp (Sandbox pour test ou numéro WhatsApp Business).
+
+**Webhook WhatsApp (confirmation client)** : dans Twilio, configurez l’URL « When a message comes in » en **POST** vers :  
+`https://VOTRE-DOMAINE.onrender.com/api/whatsapp/webhook`  
+Ainsi, quand le client répond au message (ex. en choisissant « تم الاستلام » dans la liste), la commande est automatiquement passée en statut **Confirmée**. Voir `docs/WHATSAPP_LIST_PICKER_AR.md`.
 
 ### 5. Déployer
 

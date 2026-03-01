@@ -33,6 +33,7 @@ import {
   dbDeleteLanding,
 } from './db.js'
 import { getBureauxByWilaya } from './yalidine-bureaux.js'
+import { sendOrderConfirmationWhatsApp, normalizePhoneToE164 } from './whatsapp.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -259,6 +260,49 @@ app.post('/api/yalidine/webhook', async (req, res) => {
   }
 })
 
+// --- Webhook WhatsApp (réponse du client : confirmation de commande) ---
+const PENDING_STATUSES = ['tentative1', 'tentative2', 'tentative3', 'callback']
+const CONFIRM_LIST_IDS = ['received', 'ok', 'confirm', 'confirmed', 'تم الاستلام']
+
+app.post('/api/whatsapp/webhook', async (req, res) => {
+  res.type('text/xml')
+  try {
+    const fromRaw = req.body.From || req.body.from
+    const body = (req.body.Body || req.body.body || '').trim()
+    const buttonPayload = (req.body.ButtonPayload || req.body.button_payload || '').trim().toLowerCase()
+    const buttonText = (req.body.ButtonText || req.body.button_text || '').trim()
+
+    const fromNormalized = fromRaw ? normalizePhoneToE164(String(fromRaw).replace(/^whatsapp:/i, '')) : null
+    if (!fromNormalized) {
+      return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>')
+    }
+
+    const isConfirm = CONFIRM_LIST_IDS.some((id) => buttonPayload === id || body === id) ||
+      /تم الاستلام|استلام|حسنا|ok|confirm/i.test(body) ||
+      /تم الاستلام|استلام|حسنا|ok|confirm/i.test(buttonText)
+
+    if (!isConfirm) {
+      return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>')
+    }
+
+    const orders = await dbGetOrders()
+    const order = orders
+      .filter((o) => PENDING_STATUSES.includes(o.status))
+      .filter((o) => normalizePhoneToE164(o.phone) === fromNormalized)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+
+    if (order) {
+      await dbSetOrderStatus(order.id, 'confirmed')
+      console.log('[WhatsApp webhook] Commande', order.id, 'confirmée par le client (réponse liste)')
+    }
+
+    res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>')
+  } catch (e) {
+    console.error('[WhatsApp webhook]', e.message)
+    res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>')
+  }
+})
+
 // --- API base de données partagée ---
 function orderToApi(o) {
   return {
@@ -319,6 +363,9 @@ app.post('/api/orders', async (req, res) => {
       return res.status(400).json({ error: 'id et confirmationCode requis' })
     }
     await dbSaveOrder(order)
+    sendOrderConfirmationWhatsApp(order).then((result) => {
+      if (!result.ok) console.error('[WhatsApp]', result.error)
+    }).catch((err) => console.error('[WhatsApp]', err))
     res.status(201).json(orderToApi(order))
   } catch (e) {
     res.status(500).json({ error: e.message })
