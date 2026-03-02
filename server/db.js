@@ -152,6 +152,41 @@ export async function dbSetOrderStatus(orderId, status) {
   if (o) o.status = status
 }
 
+/** Clé variante (couleur|modèle iPhone), comme dans le frontend. */
+function variantKey(colorId, phoneId) {
+  return `${colorId || ''}|${phoneId || ''}`
+}
+
+/** Décrémente le stock des produits d'une commande (1 par ligne). À appeler quand la commande passe en "confirmed". */
+export async function dbDecrementStockForOrder(order) {
+  const items = order.items && Array.isArray(order.items) ? order.items : []
+  if (items.length === 0) return
+  const products = await dbGetProducts()
+  let changed = false
+  for (const item of items) {
+    const antichoc = item.antichoc
+    if (!antichoc || !antichoc.id) continue
+    const product = products.find((p) => p.id === antichoc.id)
+    if (!product) continue
+    const colorId = item.selectedColorId || ''
+    const phoneId = item.selectedPhoneId || (antichoc.compatibleWith && antichoc.compatibleWith[0]) || ''
+    const key = variantKey(colorId, phoneId)
+    if (product.variantStocks && Object.keys(product.variantStocks).length > 0) {
+      if (product.variantStocks[key] !== undefined) {
+        product.variantStocks[key] = Math.max(0, Number(product.variantStocks[key]) - 1)
+      } else if (colorId && product.variantStocks[colorId] !== undefined) {
+        product.variantStocks[colorId] = Math.max(0, Number(product.variantStocks[colorId]) - 1)
+      } else {
+        product.quantity = Math.max(0, Number(product.quantity ?? 0) - 1)
+      }
+    } else {
+      product.quantity = Math.max(0, Number(product.quantity ?? 0) - 1)
+    }
+    changed = true
+  }
+  if (changed) await dbSaveProducts(products)
+}
+
 export async function dbUpdateOrderYalidine(orderId, tracking, sentAt) {
   if (pool) {
     await pool.query(

@@ -20,6 +20,7 @@ import {
   dbGetOrders,
   dbSaveOrder,
   dbSetOrderStatus,
+  dbDecrementStockForOrder,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
   dbFindOrderByYalidineTracking,
@@ -180,7 +181,8 @@ app.post('/api/yalidine/parcels', async (req, res) => {
 // Liste des bureaux Yalidine (stop desks) par wilaya — API Yalidine + liste statique en secours
 // ?only_from_api=1 : ne renvoyer que les bureaux de l'API (pas le fallback), pour éviter des stopdesk_id invalides à l'envoi
 app.get('/api/yalidine/stopdesks', async (req, res) => {
-  const wilaya = (req.query.wilaya || req.query.wilaya_id || '').toString().trim()
+  let wilaya = (req.query.wilaya || req.query.wilaya_id || '').toString().trim()
+  if (wilaya && wilaya.length === 1) wilaya = '0' + wilaya
   const onlyFromApi = String(req.query.only_from_api || req.query.onlyFromApi || '').toLowerCase() === '1' || req.query.only_from_api === 'true'
 
   const normalize = (data, wilayaParam) => {
@@ -382,6 +384,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
 
     if (order) {
+      await dbDecrementStockForOrder(order)
       await dbSetOrderStatus(order.id, 'confirmed')
       console.log('[WhatsApp webhook] Commande', order.id, 'confirmée par le client (réponse liste)')
     }
@@ -481,6 +484,13 @@ app.patch('/api/orders/:id/status', async (req, res) => {
     const { id } = req.params
     const { status } = req.body
     if (!status) return res.status(400).json({ error: 'status requis' })
+    if (status === 'confirmed') {
+      const orders = await dbGetOrders()
+      const order = orders.find((o) => o.id === id)
+      if (order && order.status !== 'confirmed') {
+        await dbDecrementStockForOrder(order)
+      }
+    }
     await dbSetOrderStatus(id, status)
     res.status(200).json({ ok: true })
   } catch (e) {

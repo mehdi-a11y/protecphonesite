@@ -1,12 +1,13 @@
 /**
  * Client API pour la base de données partagée (remplace localStorage).
+ * En production, définir VITE_API_URL (ex: https://api.monsite.com) si le backend est sur un autre domaine.
  */
 
 import type { Order } from './types'
 import type { Antichoc } from './data'
 import type { DeliveryPrices } from './delivery'
 
-const BASE = ''
+const BASE = (import.meta.env.VITE_API_URL as string) || ''
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(BASE + url, {

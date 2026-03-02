@@ -42,18 +42,10 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
     setSelectedStopdeskName('')
 
     let cancelled = false
-    apiGetYalidineStopdesks(wilaya, { onlyFromApi: true })
+    // Un seul appel : le serveur renvoie toujours la liste statique si l'API Yalidine ne répond pas
+    apiGetYalidineStopdesks(wilaya, { onlyFromApi: false })
       .then((list) => {
-        if (cancelled) return
-        if (list && list.length > 0) {
-          setStopdesks(list)
-          return
-        }
-        return apiGetYalidineStopdesks(wilaya, { onlyFromApi: false })
-      })
-      .then((fallbackList) => {
-        if (cancelled) return
-        if (fallbackList && fallbackList.length > 0) setStopdesks(fallbackList)
+        if (!cancelled && list && list.length > 0) setStopdesks(list)
       })
       .catch(() => { if (!cancelled) setStopdesks([]) })
       .finally(() => { if (!cancelled) setStopdesksLoading(false) })
@@ -250,7 +242,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                 </select>
                 {!stopdesksLoading && stopdesks.length === 0 && wilaya && (
                   <p className="text-amber-400/90 text-xs mt-1">
-                    Aucun bureau trouvé pour cette wilaya. Réessayez ou choisissez une autre wilaya.
+                    Aucun bureau trouvé. Vérifiez que le serveur est démarré (npm run server) ou réessayez.
                   </p>
                 )}
               </div>
