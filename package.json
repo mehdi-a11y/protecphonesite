@@ -11,6 +11,7 @@
     "dev:all": "concurrently -n v,proxy \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
+    "@dzcode-io/leblad": "^1.0.3",
     "@tailwindcss/postcss": "^4.2.1",
     "cors": "^2.8.5",
     "express": "^4.21.0",

@@ -7,6 +7,7 @@ import { AdminPage } from './pages/AdminPage.tsx'
 import { ConfirmPage } from './pages/ConfirmPage.tsx'
 import { ProductLandingPage } from './pages/ProductLandingPage.tsx'
 import { ProductPage } from './pages/ProductPage.tsx'
+import { CollectionPage } from './pages/CollectionPage.tsx'
 import { initFacebookPixel } from './facebookPixel'
 import './index.css'
 
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/confirmateur" element={<ConfirmPage />} />
           <Route path="/p/:slug" element={<ProductLandingPage />} />
+          <Route path="/c/:slug" element={<CollectionPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
         </Route>
       </Routes>

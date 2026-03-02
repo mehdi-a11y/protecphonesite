@@ -32,7 +32,12 @@ import {
   apiCreateLanding,
   apiDeleteLanding,
   apiAddProduct,
+  apiGetCollections,
+  apiCreateCollection,
+  apiUpdateCollection,
+  apiDeleteCollection,
   type LandingPage,
+  type Collection,
 } from '../api'
 
 /** Compresse fortement une image pour éviter "Payload Too Large" (petite taille, qualité réduite). */
@@ -91,7 +96,7 @@ function compressImageToDataUrl(
   })
 }
 
-type Tab = 'commandes' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings'
+type Tab = 'commandes' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
 
 export function AdminPage() {
   const [auth, setAuth] = useState(isAdminAuthenticated())
@@ -122,6 +127,14 @@ export function AdminPage() {
   const [newLandingProductIphones, setNewLandingProductIphones] = useState<IPhoneModelId[]>([])
   const [newLandingProductColorIds, setNewLandingProductColorIds] = useState<string[]>([])
   const [landingMessage, setLandingMessage] = useState<string | null>(null)
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [collectionMessage, setCollectionMessage] = useState<string | null>(null)
+  const [newCollectionSlug, setNewCollectionSlug] = useState('')
+  const [newCollectionName, setNewCollectionName] = useState('')
+  const [newCollectionLandingSlugs, setNewCollectionLandingSlugs] = useState<string[]>([])
+  const [editingCollectionSlug, setEditingCollectionSlug] = useState<string | null>(null)
+  const [editCollectionName, setEditCollectionName] = useState('')
+  const [editCollectionLandingSlugs, setEditCollectionLandingSlugs] = useState<string[]>([])
   const [productsSaveStatus, setProductsSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle')
   const [productsSaveMessage, setProductsSaveMessage] = useState<string | null>(null)
 
@@ -139,6 +152,7 @@ export function AdminPage() {
         if (r.success && r.updated > 0) getOrders().then(setOrders)
       })
       apiGetLandingPages().then(setLandingPages)
+      apiGetCollections().then(setCollections)
     }
   }, [auth, tab])
 
@@ -458,6 +472,17 @@ export function AdminPage() {
           }`}
         >
           Landing pages
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('collections')}
+          className={`px-6 py-3 font-medium text-sm ${
+            tab === 'collections'
+              ? 'text-brand-accent border-b-2 border-brand-accent'
+              : 'text-brand-muted hover:text-white'
+          }`}
+        >
+          Collections
         </button>
       </div>
 
@@ -1473,6 +1498,212 @@ export function AdminPage() {
                       </li>
                     )
                   })}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'collections' && (
+          <div className="space-y-6">
+            <p className="text-brand-muted text-sm">
+              Les collections regroupent une ou plusieurs landing pages. URL publique : <strong className="text-white">/c/slug</strong> (ex. /c/coques-iphone).
+            </p>
+            <div className="rounded-xl bg-brand-card border border-white/10 p-4 max-w-lg space-y-4">
+              <h3 className="font-semibold text-white">
+                {editingCollectionSlug ? 'Modifier la collection' : 'Nouvelle collection'}
+              </h3>
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Nom de la collection</label>
+                <input
+                  type="text"
+                  value={editingCollectionSlug ? editCollectionName : newCollectionName}
+                  onChange={(e) =>
+                    editingCollectionSlug ? setEditCollectionName(e.target.value) : setNewCollectionName(e.target.value)
+                  }
+                  placeholder="ex: Coques iPhone 15"
+                  className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none"
+                />
+              </div>
+              {!editingCollectionSlug && (
+                <div>
+                  <label className="block text-sm text-brand-muted mb-1">Slug (URL) — lettres, chiffres, tirets</label>
+                  <input
+                    type="text"
+                    value={newCollectionSlug}
+                    onChange={(e) => setNewCollectionSlug(e.target.value)}
+                    placeholder="ex: coques-iphone-15"
+                    className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Landing pages dans la collection</label>
+                <select
+                  multiple
+                  value={editingCollectionSlug ? editCollectionLandingSlugs : newCollectionLandingSlugs}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions).map((o) => o.value)
+                    editingCollectionSlug ? setEditCollectionLandingSlugs(selected) : setNewCollectionLandingSlugs(selected)
+                  }}
+                  className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none min-h-[120px]"
+                >
+                  {landingPages.map((lp) => {
+                    const product = products.find((p) => p.id === lp.antichocId)
+                    return (
+                      <option key={lp.slug} value={lp.slug}>
+                        /p/{lp.slug} — {lp.title || product?.name || lp.antichocId}
+                      </option>
+                    )
+                  })}
+                </select>
+                <p className="text-[10px] text-brand-muted mt-0.5">Ctrl+clic pour sélectionner plusieurs</p>
+              </div>
+              {collectionMessage && (
+                <p className={`text-sm ${collectionMessage.startsWith('Erreur') ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {collectionMessage}
+                </p>
+              )}
+              <div className="flex gap-2">
+                {editingCollectionSlug ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!editCollectionName.trim()) {
+                          setCollectionMessage('Nom requis.')
+                          return
+                        }
+                        setCollectionMessage(null)
+                        try {
+                          await apiUpdateCollection(editingCollectionSlug, {
+                            name: editCollectionName.trim(),
+                            landingSlugs: editCollectionLandingSlugs,
+                          })
+                          setEditingCollectionSlug(null)
+                          setEditCollectionName('')
+                          setEditCollectionLandingSlugs([])
+                          setCollectionMessage('Collection mise à jour.')
+                          apiGetCollections().then(setCollections)
+                          setTimeout(() => setCollectionMessage(null), 2000)
+                        } catch (e) {
+                          setCollectionMessage('Erreur : ' + (e instanceof Error ? e.message : String(e)))
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm hover:bg-brand-accentDim"
+                    >
+                      Enregistrer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCollectionSlug(null)
+                        setEditCollectionName('')
+                        setEditCollectionLandingSlugs([])
+                        setCollectionMessage(null)
+                      }}
+                      className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                    >
+                      Annuler
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const slugRaw = newCollectionSlug.trim()
+                      if (!slugRaw) {
+                        setCollectionMessage('Remplissez le slug (URL).')
+                        return
+                      }
+                      if (!newCollectionName.trim()) {
+                        setCollectionMessage('Remplissez le nom.')
+                        return
+                      }
+                      const cleanSlug = slugRaw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '') || slugRaw
+                      setCollectionMessage(null)
+                      try {
+                        await apiCreateCollection({
+                          slug: cleanSlug,
+                          name: newCollectionName.trim(),
+                          landingSlugs: newCollectionLandingSlugs,
+                        })
+                        setNewCollectionSlug('')
+                        setNewCollectionName('')
+                        setNewCollectionLandingSlugs([])
+                        setCollectionMessage('Collection créée.')
+                        apiGetCollections().then(setCollections)
+                        setTimeout(() => setCollectionMessage(null), 2000)
+                      } catch (e) {
+                        setCollectionMessage('Erreur : ' + (e instanceof Error ? e.message : String(e)))
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm hover:bg-brand-accentDim"
+                  >
+                    Créer la collection
+                  </button>
+                )}
+              </div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white mb-2">Collections existantes</h3>
+              {collections.length === 0 ? (
+                <p className="text-brand-muted text-sm">Aucune collection.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {collections.map((c) => (
+                    <li
+                      key={c.slug}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-brand-card border border-white/10 px-4 py-3"
+                    >
+                      <div>
+                        <span className="font-mono text-brand-accent">/c/{c.slug}</span>
+                        <span className="ml-2 text-white">{c.name}</span>
+                        <span className="ml-2 text-brand-muted text-sm">
+                          ({c.landingSlugs.length} landing{c.landingSlugs.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/c/${c.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                        >
+                          Ouvrir
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCollectionSlug(c.slug)
+                            setEditCollectionName(c.name)
+                            setEditCollectionLandingSlugs([...c.landingSlugs])
+                            setCollectionMessage(null)
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm('Supprimer cette collection ?')) return
+                            try {
+                              await apiDeleteCollection(c.slug)
+                              apiGetCollections().then(setCollections)
+                              setCollectionMessage('Collection supprimée.')
+                              setTimeout(() => setCollectionMessage(null), 2000)
+                            } catch (e) {
+                              setCollectionMessage('Erreur : ' + (e instanceof Error ? e.message : String(e)))
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>

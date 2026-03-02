@@ -73,6 +73,15 @@ export async function apiGetYalidineStopdesks(wilaya?: string): Promise<Yalidine
   return data.stopdesks ?? []
 }
 
+/** Liste des communes (baladiyas) pour une wilaya — source officielle Algérie, utilisée par Yalidine */
+export async function apiGetCommunes(wilaya: string): Promise<string[]> {
+  if (!wilaya?.trim()) return []
+  const res = await fetch(BASE + `/api/communes?wilaya=${encodeURIComponent(wilaya.trim())}`)
+  if (!res.ok) return []
+  const data = await res.json().catch(() => ({}))
+  return Array.isArray(data) ? data : []
+}
+
 export async function apiGetProducts(): Promise<Antichoc[]> {
   const list = await fetchJson<Antichoc[]>('/api/products')
   return list || []
@@ -132,6 +141,50 @@ export async function apiCreateLanding(landing: { slug: string; antichocId: stri
 
 export async function apiDeleteLanding(slug: string): Promise<void> {
   const res = await fetch('/api/landing-pages/' + encodeURIComponent(slug), { method: 'DELETE' })
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || 'Erreur')
+  }
+}
+
+export interface Collection {
+  slug: string
+  name: string
+  landingSlugs: string[]
+}
+
+export async function apiGetCollections(): Promise<Collection[]> {
+  const list = await fetchJson<Collection[]>('/api/collections')
+  return list || []
+}
+
+export async function apiGetCollectionBySlug(slug: string): Promise<Collection | null> {
+  const res = await fetch(BASE + '/api/collections/' + encodeURIComponent(slug))
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('Collection introuvable')
+  return res.json()
+}
+
+export async function apiCreateCollection(collection: { slug: string; name: string; landingSlugs?: string[] }): Promise<Collection> {
+  return fetchJson<Collection>('/api/collections', {
+    method: 'POST',
+    body: JSON.stringify({
+      slug: collection.slug,
+      name: collection.name,
+      landingSlugs: collection.landingSlugs ?? [],
+    }),
+  })
+}
+
+export async function apiUpdateCollection(slug: string, data: { name?: string; landingSlugs?: string[] }): Promise<Collection> {
+  return fetchJson<Collection>('/api/collections/' + encodeURIComponent(slug), {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function apiDeleteCollection(slug: string): Promise<void> {
+  const res = await fetch('/api/collections/' + encodeURIComponent(slug), { method: 'DELETE' })
   if (!res.ok && res.status !== 204) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as { error?: string }).error || 'Erreur')

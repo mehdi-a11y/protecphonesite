@@ -86,6 +86,13 @@ async function runMigrations() {
       )
     `)
     await client.query(`
+      CREATE TABLE IF NOT EXISTS collections (
+        slug TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        landing_slugs JSONB NOT NULL DEFAULT '[]'
+      )
+    `)
+    await client.query(`
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS yalidine_stopdesk_id TEXT
     `).catch(() => {})
     await client.query(`
@@ -101,6 +108,7 @@ const memoryOrders = []
 const memoryProducts = new Map()
 const memoryDelivery = new Map()
 const memoryLandingPages = new Map()
+const memoryCollections = new Map()
 
 // --- Orders ---
 export async function dbGetOrders() {
@@ -346,4 +354,49 @@ export async function dbDeleteLanding(slug) {
     return
   }
   memoryLandingPages.delete(slug)
+}
+
+// --- Collections (1 ou plusieurs landing pages) ---
+function rowToCollection(r) {
+  const slugs = r.landing_slugs != null && Array.isArray(r.landing_slugs) ? r.landing_slugs : (r.landing_slugs && r.landing_slugs.data ? r.landing_slugs.data : []) || []
+  return { slug: r.slug, name: r.name || '', landingSlugs: slugs }
+}
+
+export async function dbGetCollections() {
+  if (pool) {
+    const { rows } = await pool.query('SELECT slug, name, landing_slugs FROM collections ORDER BY name')
+    return rows.map(rowToCollection)
+  }
+  return Array.from(memoryCollections.values())
+}
+
+export async function dbGetCollectionBySlug(slug) {
+  if (pool) {
+    const { rows } = await pool.query('SELECT slug, name, landing_slugs FROM collections WHERE slug = $1', [slug])
+    if (rows.length === 0) return null
+    return rowToCollection(rows[0])
+  }
+  return memoryCollections.get(slug) || null
+}
+
+export async function dbSaveCollection(collection) {
+  const { slug, name, landingSlugs } = collection
+  const slugs = Array.isArray(landingSlugs) ? landingSlugs : []
+  if (pool) {
+    await pool.query(
+      `INSERT INTO collections (slug, name, landing_slugs) VALUES ($1, $2, $3::jsonb)
+       ON CONFLICT (slug) DO UPDATE SET name = $2, landing_slugs = $3::jsonb`,
+      [slug, name || '', JSON.stringify(slugs)],
+    )
+    return
+  }
+  memoryCollections.set(slug, { slug, name: name || '', landingSlugs: slugs })
+}
+
+export async function dbDeleteCollection(slug) {
+  if (pool) {
+    await pool.query('DELETE FROM collections WHERE slug = $1', [slug])
+    return
+  }
+  memoryCollections.delete(slug)
 }

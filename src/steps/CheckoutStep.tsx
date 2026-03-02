@@ -7,7 +7,7 @@ import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
-import { apiGetYalidineStopdesks, type YalidineStopdesk } from '../api'
+import { apiGetYalidineStopdesks, apiGetCommunes, type YalidineStopdesk } from '../api'
 import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
 
 const UPSELL_DISCOUNT = 0.5 // -50%
@@ -27,6 +27,8 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [phone, setPhone] = useState('')
   const [wilaya, setWilaya] = useState('')
   const [commune, setCommune] = useState('')
+  const [communes, setCommunes] = useState<string[]>([])
+  const [communesLoading, setCommunesLoading] = useState(false)
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('domicile')
   const [stopdesks, setStopdesks] = useState<YalidineStopdesk[]>([])
   const [stopdesksLoading, setStopdesksLoading] = useState(false)
@@ -66,6 +68,20 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       .catch(() => useFallback().then(setStopdesks))
       .finally(() => setStopdesksLoading(false))
   }, [deliveryType, wilaya])
+
+  useEffect(() => {
+    if (!wilaya) {
+      setCommunes([])
+      setCommune('')
+      return
+    }
+    setCommune('')
+    setCommunesLoading(true)
+    apiGetCommunes(wilaya)
+      .then((list) => setCommunes(list || []))
+      .catch(() => setCommunes([]))
+      .finally(() => setCommunesLoading(false))
+  }, [wilaya])
 
   const mainItem = cart[0]
   const phoneId = mainItem?.antichoc.compatibleWith[0] as IPhoneModelId | undefined
@@ -250,14 +266,28 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
           </div>
           <div>
             <label className="block text-sm text-brand-muted mb-1">Commune</label>
-            <input
-              type="text"
+            <select
               required
               value={commune}
               onChange={(e) => setCommune(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none"
-              placeholder="Ex: Bir Mourad Raïs, Kouba, Hydra..."
-            />
+              className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+              disabled={!wilaya || communesLoading}
+            >
+              <option value="">
+                {!wilaya
+                  ? 'Choisir une wilaya d\'abord'
+                  : communesLoading
+                    ? 'Chargement des communes...'
+                    : communes.length === 0
+                      ? 'Aucune commune'
+                      : 'Choisir une commune'}
+              </option>
+              {communes.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm text-brand-muted mb-2">Choix de livraison</label>

@@ -31,6 +31,10 @@ import {
   dbGetLandingBySlug,
   dbSaveLanding,
   dbDeleteLanding,
+  dbGetCollections,
+  dbGetCollectionBySlug,
+  dbSaveCollection,
+  dbDeleteCollection,
 } from './db.js'
 import { getBureauxByWilaya } from './yalidine-bureaux.js'
 import { sendOrderConfirmationWhatsApp, normalizePhoneToE164 } from './whatsapp.js'
@@ -513,6 +517,80 @@ app.post('/api/landing-pages', async (req, res) => {
 app.delete('/api/landing-pages/:slug', async (req, res) => {
   try {
     await dbDeleteLanding(req.params.slug)
+    res.status(204).send()
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// --- Communes par wilaya (source: leblad / données officielles Algérie, utilisées par Yalidine) ---
+app.get('/api/communes', async (req, res) => {
+  try {
+    const wilaya = (req.query.wilaya || req.query.wilaya_id || '').toString().trim()
+    if (!wilaya) return res.json([])
+    const code = wilaya.length === 1 ? '0' + wilaya : wilaya
+    const wilayaNum = parseInt(code, 10)
+    if (Number.isNaN(wilayaNum) || wilayaNum < 1 || wilayaNum > 58) return res.json([])
+    const leblad = (await import('@dzcode-io/leblad')).default
+    const baladyiats = leblad.getBaladyiatsForWilaya(wilayaNum) || []
+    const names = baladyiats.map((b) => (b.name != null ? String(b.name).trim() : '')).filter(Boolean)
+    res.json(names)
+  } catch (e) {
+    console.warn('[API communes]', e.message)
+    res.json([])
+  }
+})
+
+// --- Collections (1 ou plusieurs landing pages) ---
+app.get('/api/collections', async (_req, res) => {
+  try {
+    res.json(await dbGetCollections())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/collections/:slug', async (req, res) => {
+  try {
+    const collection = await dbGetCollectionBySlug(req.params.slug)
+    if (!collection) return res.status(404).json({ error: 'Collection introuvable' })
+    res.json(collection)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.post('/api/collections', async (req, res) => {
+  try {
+    const { slug, name, landingSlugs } = req.body || {}
+    if (!slug || typeof slug !== 'string') return res.status(400).json({ error: 'slug requis' })
+    const cleanSlug = slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
+    if (!cleanSlug) return res.status(400).json({ error: 'slug invalide' })
+    const slugs = Array.isArray(landingSlugs) ? landingSlugs : []
+    await dbSaveCollection({ slug: cleanSlug, name: name ? String(name).trim() : '', landingSlugs: slugs })
+    res.json(await dbGetCollectionBySlug(cleanSlug))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.patch('/api/collections/:slug', async (req, res) => {
+  try {
+    const existing = await dbGetCollectionBySlug(req.params.slug)
+    if (!existing) return res.status(404).json({ error: 'Collection introuvable' })
+    const { name, landingSlugs } = req.body || {}
+    const name2 = name !== undefined ? String(name).trim() : existing.name
+    const slugs = landingSlugs !== undefined ? (Array.isArray(landingSlugs) ? landingSlugs : []) : existing.landingSlugs
+    await dbSaveCollection({ slug: existing.slug, name: name2, landingSlugs: slugs })
+    res.json(await dbGetCollectionBySlug(existing.slug))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.delete('/api/collections/:slug', async (req, res) => {
+  try {
+    await dbDeleteCollection(req.params.slug)
     res.status(204).send()
   } catch (e) {
     res.status(500).json({ error: e.message })

@@ -51,7 +51,8 @@ function orderToParcelPayload(order: Order): YalidineParcelPayload {
   const firstname = nameParts[0] ?? 'Client'
   const familyname = nameParts.slice(1).join(' ') || firstname
   const wilayaName = order.wilaya ? getWilayaName(order.wilaya) : 'Alger'
-  // Yalidine exige un nom de commune valide (pas "À préciser"). On utilise le chef-lieu = nom de la wilaya.
+  // Yalidine exige un nom de commune valide. On utilise la commune choisie (order.address) ou le nom de la wilaya en secours.
+  const communeName = order.address?.trim() || wilayaName
   const productList = order.items
     .map((i) => `${i.antichoc.name}${i.isUpsell ? ' (offre)' : ''}`)
     .join(', ')
@@ -71,7 +72,7 @@ function orderToParcelPayload(order: Order): YalidineParcelPayload {
     familyname,
     contact_phone: order.phone || '',
     address: order.address || 'À préciser',
-    to_commune_name: wilayaName,
+    to_commune_name: communeName,
     to_wilaya_name: wilayaName,
     product_list: productList || 'Commande Protecphone',
     price: order.total ?? 0,
