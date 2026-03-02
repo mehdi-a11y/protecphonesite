@@ -34,6 +34,14 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
 
   const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>('')
   const [selectedColorId, setSelectedColorId] = useState<string>('')
+
+  useEffect(() => {
+    setSelectedPhoneId('')
+    setSelectedColorId('')
+    setSelectedImageIndex(0)
+    setAddScreenProtector(false)
+  }, [product.id])
+
   useEffect(() => {
     if (phoneOptions.length === 1 && !selectedPhoneId) setSelectedPhoneId(phoneOptions[0])
     if (colorOptions.length === 1 && !selectedColorId) setSelectedColorId(colorOptions[0].id)
@@ -143,34 +151,33 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               </p>
             )}
 
-            {phoneOptions.length === 0 && (
+            {phoneOptions.length === 0 ? (
               <div className="mb-6 p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm">
                 Ce produit est actuellement indisponible (stock épuisé et non disponible chez le fournisseur).
               </div>
+            ) : (
+              <div className="mb-6">
+                <label className="block text-xs font-medium text-brand-muted uppercase tracking-wider mb-2">
+                  Votre appareil <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={selectedPhoneId}
+                  onChange={(e) => setSelectedPhoneId(e.target.value as IPhoneModelId)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                >
+                  <option value="">Choisir un modèle</option>
+                  {phoneOptions.map((id) => {
+                    const model = IPHONE_MODELS.find((m) => m.id === id)
+                    return (
+                      <option key={id} value={id}>
+                        {model?.name ?? id}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
             )}
-
-            {/* Votre appareil */}
-            <div className="mb-6">
-              <label className="block text-xs font-medium text-brand-muted uppercase tracking-wider mb-2">
-                Votre appareil <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={selectedPhoneId}
-                onChange={(e) => setSelectedPhoneId(e.target.value as IPhoneModelId)}
-                required
-                className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-              >
-                <option value="">Choisir un modèle</option>
-                {phoneOptions.map((id) => {
-                  const model = IPHONE_MODELS.find((m) => m.id === id)
-                  return (
-                    <option key={id} value={id}>
-                      {model?.name ?? id}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
 
             {/* Couleur : pastilles */}
             {colorOptions.length > 0 && (

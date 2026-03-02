@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { apiGetCollectionBySlug, apiGetLandingBySlug } from '../api'
-import { loadProducts, getAntichocById, hasAnyOrderableVariant } from '../data'
+import { loadProducts, getAntichocById } from '../data'
 import type { Antichoc } from '../data'
 
 interface CollectionProduct {
@@ -51,7 +51,7 @@ export function CollectionPage() {
         for (const { landingSlug, antichocId } of pairs) {
           if (!antichocId) continue
           const product = getAntichocById(antichocId)
-          if (product && hasAnyOrderableVariant(product)) list.push({ landingSlug, product })
+          if (product) list.push({ landingSlug, product })
         }
         setItems(list)
       })
