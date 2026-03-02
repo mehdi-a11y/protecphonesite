@@ -260,7 +260,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                 </select>
                 {!stopdesksLoading && stopdesks.length === 0 && wilaya && (
                   <p className="text-amber-400/90 text-xs mt-1">
-                    Aucun bureau trouvé. Sur Render, configurez <strong>VITE_API_URL</strong> (URL de votre backend) au build du frontend.
+                    Aucun bureau trouvé pour cette wilaya. Réessayez dans un instant ou choisissez une autre wilaya.
                   </p>
                 )}
               </div>

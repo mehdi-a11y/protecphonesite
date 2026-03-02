@@ -22,11 +22,18 @@ export function ProductPage() {
   const [confirmationCode, setConfirmationCode] = useState('')
 
   useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [id])
+
+  useEffect(() => {
     if (!id) {
       setError('URL invalide')
       setLoading(false)
       return
     }
+    setLoading(true)
+    setError(null)
+    setProduct(null)
     let cancelled = false
     async function load() {
       try {
@@ -107,14 +114,16 @@ export function ProductPage() {
   }
 
   return (
-    <ProductDetailView
-      product={product}
-      onCommander={goToCheckout}
-      backLink={
-        <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
-          ← Retour au catalogue
-        </Link>
-      }
-    />
+    <div className="min-h-screen bg-brand-dark">
+      <ProductDetailView
+        product={product}
+        onCommander={goToCheckout}
+        backLink={
+          <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
+            ← Retour au catalogue
+          </Link>
+        }
+      />
+    </div>
   )
 }

@@ -6,7 +6,7 @@ export function SiteLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-brand-dark">
       <SiteHeader />
-      <main className="flex-1">
+      <main className="flex-1 bg-brand-dark min-h-0">
         <Outlet />
       </main>
       <SiteFooter />
