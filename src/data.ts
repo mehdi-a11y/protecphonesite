@@ -35,6 +35,8 @@ export interface Antichoc {
   quantity?: number; // stock global (fallback si pas de variantStocks)
   /** Stock par variante (couleur + iPhone) : clé "colorId|phoneId" -> quantité */
   variantStocks?: Record<string, number>;
+  /** Par variante : true = commandable même si stock 0 (disponible chez le fournisseur) */
+  variantAvailableFromSupplier?: Record<string, boolean>;
   image: string; // emoji(s) ou pictogramme
   colorIds?: string[]; // couleurs sélectionnées (ids ANTICHOC_COLORS)
   photoUrl: string; // première photo (URL ou base64)
@@ -59,6 +61,22 @@ export function getVariantStock(antichoc: Antichoc, colorId: string, phoneId: IP
   return Number(antichoc.quantity) ?? 0
 }
 
+/** La variante est commandable si stock > 0 OU disponible chez le fournisseur. */
+export function isVariantOrderable(antichoc: Antichoc, colorId: string, phoneId: IPhoneModelId): boolean {
+  const stock = getVariantStock(antichoc, colorId, phoneId)
+  if (stock > 0) return true
+  const key = variantKey(colorId, phoneId)
+  return antichoc.variantAvailableFromSupplier?.[key] === true
+}
+
+/** Au moins une variante du produit est commandable (pour un modèle iPhone donné). */
+export function hasOrderableVariantForPhone(antichoc: Antichoc, phoneId: IPhoneModelId): boolean {
+  const colorIds = antichoc.colorIds?.length ? antichoc.colorIds : ['']
+  const phoneIds = antichoc.compatibleWith?.length ? antichoc.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+  if (!phoneIds.includes(phoneId)) return false
+  return colorIds.some((cid) => isVariantOrderable(antichoc, cid, phoneId))
+}
+
 /** Couleurs disponibles pour les antichocs (sélection dans l'admin) */
 export const ANTICHOC_COLORS = [
   { id: 'noir-mat', name: 'Noir mat', emoji: '⬛', hex: '#1a1a1a' },
@@ -75,12 +93,12 @@ const colors = ANTICHOC_COLORS;
 
 const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id);
 
-/** Produit upsell : protecteur d'écran incassable (affiché sur la page produit, -50% en offre). */
+/** Produit upsell : protecteur d'écran incassable (affiché sur la page produit). */
 export const SCREEN_PROTECTOR_UPSELL: Antichoc = {
   id: 'upsell-protecteur-ecran-incassable',
   name: "Protecteur d'écran incassable",
   description: 'Protection en verre trempé, résistant aux chocs.',
-  price: 1200,
+  price: 900,
   wholesalePrice: 0,
   quantity: 0,
   image: '🛡️',

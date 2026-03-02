@@ -82,7 +82,18 @@ Cliquez sur **Create Web Service**. Render va :
 - lancer la commande de build (install + `npm run build` → génère `dist/`) ;
 - lancer `node server/index.js`, qui sert l’API **et** les fichiers du front depuis `dist/`.
 
+**Important** : le **Start Command** doit être exactement `node server/index.js` (pas `npm run dev` ni un serveur qui ne sert que le frontend). Ainsi, la même URL sert à la fois le site et les routes `/api/*` (bureaux Yalidine, commandes, etc.).
+
 Quand le déploiement est vert, votre site est en ligne.
+
+### 5b. Si vous avez deux services Render (frontend + backend séparés)
+
+Si le **frontend** est déployé en **Static Site** et le **backend** en **Web Service** (deux URLs différentes) :
+
+1. Dans le service **frontend** (Static Site) : onglet **Environment** → ajoutez une variable **au moment du build** :
+   - Key : `VITE_API_URL`
+   - Value : l’URL de votre backend, ex. `https://votre-api.onrender.com` (sans slash final).
+2. Redéployez le frontend pour que le build prenne en compte `VITE_API_URL`. Les appels du site (bureaux Yalidine, commandes, etc.) iront alors vers votre backend.
 
 ### 6. URL de la plateforme
 
@@ -118,6 +129,16 @@ Si votre site est en ligne à **https://www.protecphone.shop/** (ou tout autre d
 
 - **Railway** : même principe (Web Service Node, Build = `npm install && npm run build`, Start = `node server/index.js`, variables `NODE_ENV`, `YALIDINE_API_ID`, `YALIDINE_API_TOKEN`).
 - **Fly.io** : déploiement Node possible avec un `Dockerfile` ou `fly.toml` (on peut les ajouter si besoin).
+
+---
+
+## Dépannage : « Aucun bureau trouvé » sur Render
+
+- **Un seul service (Web Service)**  
+  Vérifiez que le **Start Command** est bien `node server/index.js`. Ouvrez l’URL de votre site puis l’onglet **Network** (F12) : la requête vers `/api/yalidine/stopdesks?wilaya=...` doit aller vers la **même origine** (ex. `https://votre-app.onrender.com`) et renvoyer du JSON. Si vous voyez une 404 ou du HTML (page d’accueil), les routes API ne sont pas servies par ce service.
+
+- **Deux services (Static Site + Web Service)**  
+  Le frontend appelle `/api` sur son propre domaine, qui ne sert pas le backend. Configurez **VITE_API_URL** au build du frontend (voir § 5b ci‑dessus) avec l’URL du service backend, puis redéployez le frontend.
 
 ---
 

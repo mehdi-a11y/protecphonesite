@@ -4,8 +4,6 @@ import type { IPhoneModelId } from '../data'
 import { IPHONE_MODELS, ANTICHOC_COLORS, SCREEN_PROTECTOR_UPSELL } from '../data'
 import { trackViewContent } from '../facebookPixel'
 
-const UPSELL_DISCOUNT = 0.5
-
 interface Props {
   product: Antichoc
   title?: string | null
@@ -42,7 +40,6 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const photos =
     product.photoGallery?.length ? product.photoGallery : product.photoUrl ? [product.photoUrl] : []
   const mainPhoto = photos[selectedImageIndex] ?? photos[0]
-  const screenProtectorPromoPrice = Math.round(SCREEN_PROTECTOR_UPSELL.price * (1 - UPSELL_DISCOUNT))
 
   const canCommander =
     selectedPhoneId !== '' && (colorOptions.length === 0 || selectedColorId !== '')
@@ -202,13 +199,9 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                       {SCREEN_PROTECTOR_UPSELL.name}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-brand-muted line-through text-sm">
+                      <span className="text-brand-accent font-semibold">
                         {SCREEN_PROTECTOR_UPSELL.price} DA
                       </span>
-                      <span className="text-brand-accent font-semibold">
-                        {screenProtectorPromoPrice} DA
-                      </span>
-                      <span className="text-amber-400 text-xs">(offre -50%)</span>
                     </div>
                     <p className="text-xs text-brand-muted mt-1">
                       Verre trempé, résistant aux chocs. Compatible avec votre modèle.
@@ -222,7 +215,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                   />
                 </label>
                 <p className="text-xs text-brand-muted mt-2">
-                  Cochez pour ajouter à votre commande au prix promo.
+                  Cochez pour ajouter à votre commande.
                 </p>
               </div>
             </section>

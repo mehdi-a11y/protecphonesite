@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAntichocsForPhone } from '../data'
 import { ANTICHOC_COLORS } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
-import { trackAddToCart } from '../facebookPixel'
 
 const MAX_SWATCHES = 4 // nombre de pastilles visibles avant "+ N"
 
@@ -20,7 +19,6 @@ interface Props {
 export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }: Props) {
   const products = getAntichocsForPhone(phoneId)
   const [selectedColorByProductId, setSelectedColorByProductId] = useState<Record<string, string>>({})
-  const [addedProductId, setAddedProductId] = useState<string | null>(null)
 
   const getColorOptions = (p: Antichoc) =>
     (p.colorIds?.length
@@ -28,26 +26,6 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
           .map((id) => ANTICHOC_COLORS.find((c) => c.id === id))
           .filter((c): c is NonNullable<typeof c> => c != null)
       : []) as Array<{ id: string; name: string; emoji: string; hex: string }>
-
-  const canAddProduct = (p: Antichoc) => {
-    const colors = getColorOptions(p)
-    if (colors.length <= 1) return true
-    return !!selectedColorByProductId[p.id]
-  }
-
-  const handleAdd = (p: Antichoc) => {
-    const colors = getColorOptions(p)
-    const colorId = colors.length === 1 ? colors[0].id : colors.length > 1 ? selectedColorByProductId[p.id] : undefined
-    if (colors.length > 1 && !colorId) return
-    onAddToCart({
-      antichoc: p,
-      selectedPhoneId: phoneId,
-      ...(colorId ? { selectedColorId: colorId } : {}),
-    })
-    trackAddToCart(p.name, [p.id], p.price, 'DZD')
-    setAddedProductId(p.id)
-    setTimeout(() => setAddedProductId(null), 1500)
-  }
 
   return (
     <div className="min-h-screen px-4 py-8 pb-28 animate-fade-in">
@@ -70,8 +48,6 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
           {products.map((p) => {
             const colors = getColorOptions(p)
             const selectedColorId = selectedColorByProductId[p.id]
-            const added = addedProductId === p.id
-            const canAdd = canAddProduct(p)
             const photo = p.photoGallery?.[0] ?? p.photoUrl
             const visibleSwatches = colors.slice(0, MAX_SWATCHES)
             const moreCount = colors.length > MAX_SWATCHES ? colors.length - MAX_SWATCHES : 0
@@ -161,29 +137,6 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
                   <p className="text-brand-accent font-semibold text-lg mb-4 mt-auto">
                     {p.price.toLocaleString('fr-FR')} DA
                   </p>
-
-                  {/* Bouton Ajouter */}
-                  <button
-                    type="button"
-                    onClick={() => handleAdd(p)}
-                    disabled={!canAdd}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                      added
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                        : 'bg-white text-black hover:bg-neutral-200 border border-transparent'
-                    }`}
-                  >
-                    {added ? (
-                      '✓ Ajouté'
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
-                        Ajouter
-                      </>
-                    )}
-                  </button>
                 </div>
               </article>
             )
