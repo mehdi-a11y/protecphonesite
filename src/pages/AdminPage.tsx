@@ -40,11 +40,11 @@ import {
   type Collection,
 } from '../api'
 
-/** Compresse fortement une image pour éviter "Payload Too Large" (petite taille, qualité réduite). */
+/** Redimensionne et compresse une image (qualité correcte pour l'affichage produit, tout en limitant la taille). */
 function compressImageToDataUrl(
   file: File,
-  maxSize = 480,
-  quality = 0.6,
+  maxSize = 1024,
+  quality = 0.88,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -139,6 +139,9 @@ export function AdminPage() {
   const [editCollectionLandingSlugs, setEditCollectionLandingSlugs] = useState<string[]>([])
   const [productsSaveStatus, setProductsSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle')
   const [productsSaveMessage, setProductsSaveMessage] = useState<string | null>(null)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [stockModalProductId, setStockModalProductId] = useState<string | null>(null)
+  const [stockModalDraft, setStockModalDraft] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (auth) {
@@ -294,7 +297,7 @@ export function AdminPage() {
   ) => {
     const file = event.target.files?.[0]
     if (!file) return
-    compressImageToDataUrl(file, 480, 0.6).then((url) => {
+    compressImageToDataUrl(file, 1024, 0.88).then((url) => {
       setProducts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, photoUrl: url } : p)),
       )
@@ -664,7 +667,7 @@ export function AdminPage() {
                     <th className="pb-2 pr-4">Titre</th>
                     <th className="pb-2 pr-4">Prix détail (DA)</th>
                     <th className="pb-2 pr-4">Prix gros (DA)</th>
-                    <th className="pb-2 pr-4">Stock par variante (couleur)</th>
+                    <th className="pb-2 pr-4">Stock</th>
                     <th className="pb-2 pr-4">Description</th>
                     <th className="pb-2 pr-4">Photo</th>
                     <th className="pb-2 pr-0 text-right">Actions</th>
@@ -721,24 +724,14 @@ export function AdminPage() {
                           className="w-24 px-2 py-1 rounded bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
                         />
                       </td>
-                      <td className="py-2 pr-4 align-top">
-                        {((p.colorIds?.length ? p.colorIds : ['']) as string[]).map((colorId) => {
-                          const label = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : 'Stock'
-                          const val = p.variantStocks?.[colorId] ?? p.quantity ?? 0
-                          return (
-                            <div key={colorId || '_'} className="flex items-center gap-1 mb-1">
-                              <span className="text-brand-muted text-xs w-20 shrink-0 truncate">{label}</span>
-                              <input
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={val}
-                                onChange={(e) => handleVariantStockChange(p.id, colorId, e.target.value)}
-                                className="w-16 px-2 py-1 rounded bg-brand-card border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
-                              />
-                            </div>
-                          )
-                        })}
+                      <td className="py-2 pr-4 text-brand-muted text-xs">
+                        {(() => {
+                          const total = p.variantStocks && Object.keys(p.variantStocks).length > 0
+                            ? Object.values(p.variantStocks).reduce((a, b) => a + b, 0)
+                            : (p.quantity ?? 0)
+                          const variantCount = p.colorIds?.length || 1
+                          return `${total} (${variantCount} variante${variantCount > 1 ? 's' : ''})`
+                        })()}
                       </td>
                       <td className="py-2 pr-4">
                         <textarea
@@ -782,19 +775,167 @@ export function AdminPage() {
                         />
                       </td>
                       <td className="py-2 pr-0 align-middle text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProduct(p.id)}
-                          className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 border border-red-500/30"
-                        >
-                          Supprimer
-                        </button>
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setEditingProductId(p.id)}
+                            className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20"
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const variantIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
+                              const draft: Record<string, number> = {}
+                              variantIds.forEach((cid) => {
+                                draft[cid] = p.variantStocks?.[cid] ?? p.quantity ?? 0
+                              })
+                              setStockModalDraft(draft)
+                              setStockModalProductId(p.id)
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-brand-accent/20 text-brand-accent text-xs hover:bg-brand-accent/30"
+                          >
+                            Gérer le stock
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(p.id)}
+                            className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 border border-red-500/30"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Modal Modifier produit */}
+            {editingProductId && (() => {
+              const p = products.find((x) => x.id === editingProductId)
+              if (!p) return null
+              return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setEditingProductId(null)}>
+                  <div className="bg-brand-card border border-white/10 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold text-white">Modifier le produit</h3>
+                    <p className="text-brand-muted text-sm">{p.name}</p>
+                    <div>
+                      <label className="block text-xs text-brand-muted mb-1">Nom</label>
+                      <input
+                        type="text"
+                        value={p.name}
+                        onChange={(e) => handleProductChange(p.id, 'name', e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-brand-muted mb-1">Prix détail (DA)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={p.price}
+                          onChange={(e) => handleProductChange(p.id, 'price', e.target.value)}
+                          className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-brand-muted mb-1">Prix gros (DA)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={p.wholesalePrice ?? 0}
+                          onChange={(e) => handleProductChange(p.id, 'wholesalePrice', e.target.value)}
+                          className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-brand-muted mb-1">Description</label>
+                      <textarea
+                        value={p.description}
+                        onChange={(e) => handleProductChange(p.id, 'description', e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-brand-muted mb-1">Photo (URL)</label>
+                      <input
+                        type="text"
+                        value={p.photoUrl}
+                        onChange={(e) => handleProductChange(p.id, 'photoUrl', e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button type="button" onClick={() => setEditingProductId(null)} className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium">
+                        Fermer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Modal Gérer le stock (par variante) */}
+            {stockModalProductId && (() => {
+              const p = products.find((x) => x.id === stockModalProductId)
+              if (!p) return null
+              const variantIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
+              return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setStockModalProductId(null)}>
+                  <div className="bg-brand-card border border-white/10 rounded-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold text-white">Gérer le stock</h3>
+                    <p className="text-brand-muted text-sm">{p.name}</p>
+                    <p className="text-xs text-brand-muted">Stock par variante (couleur) :</p>
+                    <div className="space-y-3">
+                      {variantIds.map((colorId) => {
+                        const label = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : 'Stock'
+                        return (
+                          <div key={colorId || '_'} className="flex items-center justify-between gap-4">
+                            <span className="text-white font-medium">{label}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={stockModalDraft[colorId] ?? 0}
+                              onChange={(e) => setStockModalDraft((prev) => ({ ...prev, [colorId]: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+                              className="w-24 px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProducts((prev) =>
+                            prev.map((prod) =>
+                              prod.id !== stockModalProductId
+                                ? prod
+                                : { ...prod, variantStocks: { ...stockModalDraft } },
+                            ),
+                          )
+                          setStockModalProductId(null)
+                        }}
+                        className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium"
+                      >
+                        Enregistrer
+                      </button>
+                      <button type="button" onClick={() => setStockModalProductId(null)} className="px-4 py-2 rounded-lg bg-white/10 text-white">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         )}
 
@@ -1328,7 +1469,7 @@ export function AdminPage() {
                           for (const file of files) {
                             if (urls.length >= maxPhotos) break
                             try {
-                              const url = await compressImageToDataUrl(file, 480, 0.6)
+                              const url = await compressImageToDataUrl(file, 1024, 0.88)
                               urls.push(url)
                             } catch {
                               const reader = new FileReader()
