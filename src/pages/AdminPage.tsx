@@ -11,7 +11,7 @@ import {
   ADMIN_PASSWORD,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, needToBuyVariantFromSupplier } from '../data'
 import { IPHONE_MODELS, type IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import {
@@ -96,7 +96,7 @@ function compressImageToDataUrl(
   })
 }
 
-type Tab = 'commandes' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
+type Tab = 'commandes' | 'achats' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
 
 export function AdminPage() {
   const [auth, setAuth] = useState(isAdminAuthenticated())
@@ -142,6 +142,7 @@ export function AdminPage() {
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [stockModalProductId, setStockModalProductId] = useState<string | null>(null)
   const [stockModalDraft, setStockModalDraft] = useState<Record<string, number>>({})
+  const [stockModalSupplierDraft, setStockModalSupplierDraft] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (auth) {
@@ -404,6 +405,22 @@ export function AdminPage() {
   const retourneOrders = orders.filter((o) => o.status === 'retourne')
   const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
 
+  const ordersToBuyCount = (() => {
+    const productMap = new Map(products.map((p) => [p.id, p]))
+    let n = 0
+    for (const order of confirmedOrders) {
+      for (const item of order.items) {
+        if (item.isUpsell || !item.selectedPhoneId) continue
+        const product = productMap.get(item.antichoc.id) ?? item.antichoc
+        if (needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
+          n++
+          break
+        }
+      }
+    }
+    return n
+  })()
+
   return (
     <div className="min-h-screen bg-brand-dark">
       <header className="border-b border-white/10 px-4 py-3 flex items-center justify-between">
@@ -433,6 +450,22 @@ export function AdminPage() {
           }`}
         >
           Commandes
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('achats')}
+          className={`px-6 py-3 font-medium text-sm ${
+            tab === 'achats'
+              ? 'text-brand-accent border-b-2 border-brand-accent'
+              : 'text-brand-muted hover:text-white'
+          }`}
+        >
+          À acheter
+          {ordersToBuyCount > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-300 text-xs">
+              {ordersToBuyCount}
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -632,6 +665,76 @@ export function AdminPage() {
           </div>
         )}
 
+        {tab === 'achats' && (() => {
+          const productMap = new Map(products.map((p) => [p.id, p]))
+          type BuyLine = { productName: string; variantLabel: string }
+          const ordersWithBuyList: { order: Order; linesToBuy: BuyLine[] }[] = []
+          for (const order of confirmedOrders) {
+            const linesToBuy: BuyLine[] = []
+            for (const item of order.items) {
+              if (item.isUpsell) continue
+              const phoneId = item.selectedPhoneId
+              if (!phoneId) continue
+              const colorId = item.selectedColorId ?? ''
+              const product = productMap.get(item.antichoc.id) ?? item.antichoc
+              if (!needToBuyVariantFromSupplier(product, colorId, phoneId)) continue
+              const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+              const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
+              linesToBuy.push({
+                productName: item.antichoc.name,
+                variantLabel: colorId ? `${colorName} — ${phoneName}` : phoneName,
+              })
+            }
+            if (linesToBuy.length > 0) ordersWithBuyList.push({ order, linesToBuy })
+          }
+          return (
+            <div className="space-y-6">
+              <p className="text-brand-muted text-sm">
+                Priorité au stock : si la commande confirmée est couverte par le stock, elle n’apparaît pas. Sinon, si une variante est en stock 0 mais « disponible chez le fournisseur », elle est listée ici pour achat.
+              </p>
+              <section>
+                <h2 className="text-lg font-semibold text-white mb-3">
+                  Commandes à acheter chez le fournisseur ({ordersWithBuyList.length})
+                </h2>
+                {ordersWithBuyList.length === 0 ? (
+                  <p className="text-brand-muted text-sm">Aucune. Toutes les commandes confirmées sont couvertes par le stock actuel.</p>
+                ) : (
+                  <ul className="space-y-4">
+                    {ordersWithBuyList.map(({ order, linesToBuy }) => (
+                      <li
+                        key={order.id}
+                        className="rounded-xl bg-brand-card border border-amber-500/30 p-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <span className="font-medium text-white">{order.id}</span>
+                          <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
+                        </div>
+                        <p className="text-amber-400 text-sm font-medium mb-2">À commander chez le fournisseur :</p>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-white">
+                          {linesToBuy.map((line, idx) => (
+                            <li key={idx}>
+                              {line.productName} — {line.variantLabel}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-3 pt-3 border-t border-white/10">
+                          <button
+                            type="button"
+                            onClick={() => setTab('commandes')}
+                            className="text-brand-accent text-sm hover:underline"
+                          >
+                            Voir la commande
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          )
+        })()}
+
         {tab === 'produits' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -798,13 +901,16 @@ export function AdminPage() {
                               const colorIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
                               const phoneIds = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
                               const draft: Record<string, number> = {}
+                              const supplierDraft: Record<string, boolean> = {}
                               colorIds.forEach((cid) => {
                                 phoneIds.forEach((pid) => {
                                   const key = variantKey(cid, pid)
                                   draft[key] = p.variantStocks?.[key] ?? p.variantStocks?.[cid] ?? p.quantity ?? 0
+                                  supplierDraft[key] = p.variantAvailableFromSupplier?.[key] === true
                                 })
                               })
                               setStockModalDraft(draft)
+                              setStockModalSupplierDraft(supplierDraft)
                               setStockModalProductId(p.id)
                             }}
                             className="px-3 py-1.5 rounded-lg bg-brand-accent/20 text-brand-accent text-xs hover:bg-brand-accent/30"
@@ -909,23 +1015,35 @@ export function AdminPage() {
                   <div className="bg-brand-card border border-white/10 rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col p-6" onClick={(e) => e.stopPropagation()}>
                     <h3 className="text-lg font-semibold text-white">Gérer le stock</h3>
                     <p className="text-brand-muted text-sm mb-2">{p.name}</p>
-                    <p className="text-xs text-brand-muted mb-3">Stock par variante (couleur + modèle iPhone) :</p>
+                    <p className="text-xs text-brand-muted mb-3">Stock ou « Disponible chez le fournisseur ». Si stock = 0 et pas disponible fournisseur, le client ne peut pas commander cette variante.</p>
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
                       {variantEntries.map(({ key, colorId, phoneId }) => {
                         const colorName = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : '—'
                         const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
                         const label = colorId ? `${colorName} — ${phoneName}` : phoneName
                         return (
-                          <div key={key} className="flex items-center justify-between gap-4 py-1 border-b border-white/5">
-                            <span className="text-white text-sm truncate">{label}</span>
-                            <input
-                              type="number"
-                              min={0}
-                              step={1}
-                              value={stockModalDraft[key] ?? 0}
-                              onChange={(e) => setStockModalDraft((prev) => ({ ...prev, [key]: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
-                              className="w-20 px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none shrink-0"
-                            />
+                          <div key={key} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 flex-wrap">
+                            <span className="text-white text-sm truncate min-w-0 flex-1">{label}</span>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <label className="flex items-center gap-1.5 text-sm text-brand-muted cursor-pointer whitespace-nowrap">
+                                <input
+                                  type="checkbox"
+                                  checked={stockModalSupplierDraft[key] === true}
+                                  onChange={(e) => setStockModalSupplierDraft((prev) => ({ ...prev, [key]: e.target.checked }))}
+                                  className="rounded border-white/30 text-brand-accent focus:ring-brand-accent"
+                                />
+                                Fournisseur
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={stockModalDraft[key] ?? 0}
+                                onChange={(e) => setStockModalDraft((prev) => ({ ...prev, [key]: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+                                className="w-16 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                                placeholder="Stock"
+                              />
+                            </div>
                           </div>
                         )
                       })}
@@ -938,7 +1056,13 @@ export function AdminPage() {
                             prev.map((prod) =>
                               prod.id !== stockModalProductId
                                 ? prod
-                                : { ...prod, variantStocks: { ...stockModalDraft } },
+                                : {
+                                    ...prod,
+                                    variantStocks: { ...stockModalDraft },
+                                    variantAvailableFromSupplier: Object.fromEntries(
+                                      Object.entries(stockModalSupplierDraft).filter(([, v]) => v === true),
+                                    ),
+                                  },
                             ),
                           )
                           setStockModalProductId(null)

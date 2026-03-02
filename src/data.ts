@@ -77,6 +77,24 @@ export function hasOrderableVariantForPhone(antichoc: Antichoc, phoneId: IPhoneM
   return colorIds.some((cid) => isVariantOrderable(antichoc, cid, phoneId))
 }
 
+/** Au moins une variante du produit est commandable (tous modèles confondus). */
+export function hasAnyOrderableVariant(antichoc: Antichoc): boolean {
+  const phoneIds = antichoc.compatibleWith?.length ? antichoc.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+  return phoneIds.some((pid) => hasOrderableVariantForPhone(antichoc, pid))
+}
+
+/** Variante à acheter chez le fournisseur : stock = 0 et disponible chez le fournisseur. Priorité au stock : si stock > 0 on n'achète pas. */
+export function needToBuyVariantFromSupplier(
+  antichoc: Antichoc,
+  colorId: string,
+  phoneId: IPhoneModelId,
+): boolean {
+  const stock = getVariantStock(antichoc, colorId, phoneId)
+  if (stock > 0) return false
+  const key = variantKey(colorId, phoneId)
+  return antichoc.variantAvailableFromSupplier?.[key] === true
+}
+
 /** Couleurs disponibles pour les antichocs (sélection dans l'admin) */
 export const ANTICHOC_COLORS = [
   { id: 'noir-mat', name: 'Noir mat', emoji: '⬛', hex: '#1a1a1a' },

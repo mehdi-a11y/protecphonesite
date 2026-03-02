@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { IPHONE_MODELS, ANTICHOC_COLORS } from '../data'
+import { IPHONE_MODELS, ANTICHOC_COLORS, isVariantOrderable } from '../data'
 import { saveOrder } from '../types'
 import type { CartItem } from '../types'
 import type { IPhoneModelId } from '../data'
@@ -61,13 +61,24 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
   const canSubmitBureau = deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)
 
+  const invalidCartItems = useMemo(() => {
+    return cart.filter((item) => {
+      if (item.isUpsell) return false
+      const phoneId = item.selectedPhoneId
+      const colorId = item.selectedColorId ?? ''
+      if (!phoneId) return false
+      return !isVariantOrderable(item.antichoc, colorId, phoneId)
+    })
+  }, [cart])
+  const canSubmitOrder = canSubmitBureau && invalidCartItems.length === 0
+
   useEffect(() => {
     if (cart.length > 0) trackInitiateCheckout(total, 'DZD', cart.length)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmitBureau) return
+    if (!canSubmitOrder) return
     const orderId = 'CMD-' + Date.now()
     const confirmationCode = generateConfirmationCode()
     const finalCart: CartItem[] = [...cart]
@@ -134,6 +145,13 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
             )
           })}
         </div>
+
+        {invalidCartItems.length > 0 && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm">
+            <p className="font-medium mb-1">Commande impossible</p>
+            <p>Un ou plusieurs articles ne sont plus disponibles (stock épuisé et non disponible chez le fournisseur). Retournez au panier et retirez-les ou choisissez une autre variante.</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -269,7 +287,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
           <button
             type="submit"
-            disabled={!canSubmitBureau}
+            disabled={!canSubmitOrder}
             className="w-full py-4 bg-brand-accent text-brand-dark font-semibold rounded-xl hover:bg-brand-accentDim transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirmer la commande (COD)

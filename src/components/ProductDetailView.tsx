@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
-import { IPHONE_MODELS, ANTICHOC_COLORS, SCREEN_PROTECTOR_UPSELL } from '../data'
+import { IPHONE_MODELS, ANTICHOC_COLORS, SCREEN_PROTECTOR_UPSELL, isVariantOrderable, hasOrderableVariantForPhone } from '../data'
 import { trackViewContent } from '../facebookPixel'
 
 interface Props {
@@ -16,33 +16,46 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [addScreenProtector, setAddScreenProtector] = useState(false)
 
-  const phoneOptions = useMemo(
-    () =>
-      (product.compatibleWith?.length ? product.compatibleWith : IPHONE_MODELS.map((m) => m.id)).map(
-        (id) => IPHONE_MODELS.find((m) => m.id === id)!.id,
-      ) as IPhoneModelId[],
-    [product.compatibleWith],
-  )
+  const phoneOptions = useMemo(() => {
+    const all = (product.compatibleWith?.length ? product.compatibleWith : IPHONE_MODELS.map((m) => m.id)) as IPhoneModelId[]
+    return all.filter((id) => hasOrderableVariantForPhone(product, id))
+  }, [product])
   const colorOptions = useMemo(() => {
     if (!product.colorIds?.length) return []
     return product.colorIds
       .map((id) => ANTICHOC_COLORS.find((c) => c.id === id))
       .filter((c): c is NonNullable<typeof c> => c != null)
   }, [product.colorIds])
+  const orderableColorIdsForSelectedPhone = useMemo(() => {
+    if (!selectedPhoneId) return new Set<string>()
+    const colorIds = (product.colorIds?.length ? product.colorIds : ['']) as string[]
+    return new Set(colorIds.filter((cid) => isVariantOrderable(product, cid, selectedPhoneId)))
+  }, [product, selectedPhoneId])
 
-  const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>(
-    phoneOptions.length === 1 ? phoneOptions[0] : '',
-  )
-  const [selectedColorId, setSelectedColorId] = useState<string>(
-    colorOptions.length === 1 ? colorOptions[0].id : '',
-  )
+  const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>('')
+  const [selectedColorId, setSelectedColorId] = useState<string>('')
+  useEffect(() => {
+    if (phoneOptions.length === 1 && !selectedPhoneId) setSelectedPhoneId(phoneOptions[0])
+    if (colorOptions.length === 1 && !selectedColorId) setSelectedColorId(colorOptions[0].id)
+  }, [phoneOptions, colorOptions, selectedPhoneId, selectedColorId])
+  useEffect(() => {
+    if (selectedPhoneId && colorOptions.length > 0 && selectedColorId && !orderableColorIdsForSelectedPhone.has(selectedColorId)) {
+      const first = colorOptions.find((c) => orderableColorIdsForSelectedPhone.has(c.id))
+      setSelectedColorId(first?.id ?? '')
+    }
+  }, [selectedPhoneId, orderableColorIdsForSelectedPhone, colorOptions, selectedColorId])
 
   const photos =
     product.photoGallery?.length ? product.photoGallery : product.photoUrl ? [product.photoUrl] : []
   const mainPhoto = photos[selectedImageIndex] ?? photos[0]
 
+  const selectedVariantOrderable =
+    selectedPhoneId !== '' &&
+    (colorOptions.length === 0 ? true : isVariantOrderable(product, selectedColorId, selectedPhoneId))
   const canCommander =
-    selectedPhoneId !== '' && (colorOptions.length === 0 || selectedColorId !== '')
+    selectedPhoneId !== '' &&
+    (colorOptions.length === 0 || selectedColorId !== '') &&
+    selectedVariantOrderable
 
   useEffect(() => {
     trackViewContent(product.name, [product.id], product.price, 'DZD')
@@ -130,6 +143,12 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               </p>
             )}
 
+            {phoneOptions.length === 0 && (
+              <div className="mb-6 p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm">
+                Ce produit est actuellement indisponible (stock épuisé et non disponible chez le fournisseur).
+              </div>
+            )}
+
             {/* Votre appareil */}
             <div className="mb-6">
               <label className="block text-xs font-medium text-brand-muted uppercase tracking-wider mb-2">
@@ -160,21 +179,27 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                   Couleur <span className="text-red-400">*</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {colorOptions.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setSelectedColorId(c.id)}
-                      className={`w-9 h-9 rounded-full border-2 transition-all shrink-0 ${
-                        selectedColorId === c.id
-                          ? 'border-white ring-2 ring-brand-accent/50'
-                          : 'border-white/30 hover:border-white/50'
-                      }`}
-                      style={{ backgroundColor: (c as { hex: string }).hex ?? '#444' }}
-                      title={c.name}
-                      aria-label={c.name}
-                    />
-                  ))}
+                  {colorOptions.map((c) => {
+                    const orderable = !selectedPhoneId || orderableColorIdsForSelectedPhone.has(c.id)
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => orderable && setSelectedColorId(c.id)}
+                        disabled={!orderable}
+                        className={`w-9 h-9 rounded-full border-2 transition-all shrink-0 ${
+                          selectedColorId === c.id
+                            ? 'border-white ring-2 ring-brand-accent/50'
+                            : orderable
+                              ? 'border-white/30 hover:border-white/50'
+                              : 'border-white/10 opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{ backgroundColor: (c as { hex: string }).hex ?? '#444' }}
+                        title={orderable ? c.name : `${c.name} — Indisponible`}
+                        aria-label={orderable ? c.name : `${c.name} (indisponible)`}
+                      />
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -220,6 +245,11 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               </div>
             </section>
 
+            {selectedPhoneId && !selectedVariantOrderable && (colorOptions.length === 0 || selectedColorId) && (
+              <p className="mb-3 text-amber-400 text-sm">
+                Cette variante n&apos;est pas disponible à la commande (stock épuisé et non disponible chez le fournisseur).
+              </p>
+            )}
             <button
               type="button"
               onClick={handleCommander}

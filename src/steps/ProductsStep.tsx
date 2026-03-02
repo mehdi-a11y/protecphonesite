@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAntichocsForPhone } from '../data'
+import { getAntichocsForPhone, hasOrderableVariantForPhone } from '../data'
 import { ANTICHOC_COLORS } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }: Props) {
-  const products = getAntichocsForPhone(phoneId)
+  const products = getAntichocsForPhone(phoneId).filter((p) => hasOrderableVariantForPhone(p, phoneId))
   const [selectedColorByProductId, setSelectedColorByProductId] = useState<Record<string, string>>({})
 
   const getColorOptions = (p: Antichoc) =>

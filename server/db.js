@@ -75,6 +75,9 @@ async function runMigrations() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_stocks JSONB DEFAULT '{}'
     `).catch(() => {})
     await client.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_available_at_supplier JSONB DEFAULT '{}'
+    `).catch(() => {})
+    await client.query(`
       CREATE TABLE IF NOT EXISTS delivery_prices (
         wilaya_code TEXT PRIMARY KEY,
         domicile INTEGER NOT NULL DEFAULT 0,
@@ -278,10 +281,10 @@ export async function dbSaveProducts(products) {
     for (const p of products) {
       const r = productToRow(p)
       await pool.query(
-        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, image, photo_url, photo_gallery, color_ids, compatible_with)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10::jsonb,$11::jsonb,$12::jsonb)
-         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, image=$8, photo_url=$9, photo_gallery=$10::jsonb, color_ids=$11::jsonb, compatible_with=$12::jsonb`,
-        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), JSON.stringify(r.compatible_with)]
+        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, compatible_with)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb)
+         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, compatible_with=$13::jsonb`,
+        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), JSON.stringify(r.compatible_with)]
       )
     }
     return
@@ -337,6 +340,10 @@ function rowToProduct(r) {
     ? r.variant_stocks
     : (r.variant_stocks && r.variant_stocks.data ? r.variant_stocks.data : null)
   const vs = variantStocks && Object.keys(variantStocks).length > 0 ? variantStocks : undefined
+  const supplierMap = r.variant_available_at_supplier != null && typeof r.variant_available_at_supplier === 'object' && !Array.isArray(r.variant_available_at_supplier)
+    ? r.variant_available_at_supplier
+    : {}
+  const vas = supplierMap && Object.keys(supplierMap).length > 0 ? supplierMap : undefined
   return {
     id: r.id,
     name: r.name,
@@ -345,6 +352,7 @@ function rowToProduct(r) {
     wholesalePrice: r.wholesale_price ?? 0,
     quantity: r.quantity ?? 0,
     variantStocks: vs,
+    variantAvailableFromSupplier: vas,
     image: r.image || '',
     colorIds: colorIds.length ? colorIds : undefined,
     photoUrl: r.photo_url || (gallery[0] || ''),
@@ -363,6 +371,7 @@ function productToRow(p) {
     wholesale_price: p.wholesalePrice ?? p.wholesale_price ?? 0,
     quantity: p.quantity ?? 0,
     variant_stocks: p.variantStocks ?? {},
+    variant_available_at_supplier: p.variantAvailableFromSupplier ?? {},
     image: p.image || '',
     photo_url: (gallery[0] ?? p.photoUrl ?? p.photo_url) || '',
     photo_gallery: gallery,
