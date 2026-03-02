@@ -69,6 +69,38 @@ const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
 const API_TOKEN = process.env.YALIDINE_API_TOKEN || ''
 
+// Nom de wilaya (français) → code pour appeler l'API Yalidine (centers par wilaya_id)
+const WILAYA_NAME_TO_CODE = {
+  Adrar: '01', Chlef: '02', Laghouat: '03', 'Oum El Bouaghi': '04', Batna: '05', 'Béjaïa': '06',
+  Biskra: '07', Béchar: '08', Blida: '09', Bouira: '10', Tamanrasset: '11', Tébessa: '12',
+  Tlemcen: '13', Tiaret: '14', 'Tizi Ouzou': '15', Alger: '16', Djelfa: '17', Jijel: '18',
+  Sétif: '19', Saïda: '20', Skikda: '21', 'Sidi Bel Abbès': '22', Annaba: '23', Guelma: '24',
+  Constantine: '25', Médéa: '26', Mostaganem: '27', "M'Sila": '28', Mascara: '29', Ouargla: '30',
+  Oran: '31', 'El Bayadh': '32', Illizi: '33', 'Bordj Bou Arréridj': '34', Boumerdès: '35',
+  'El Tarf': '36', Tindouf: '37', Tissemsilt: '38', 'El Oued': '39', Khenchela: '40',
+  'Souk Ahras': '41', Tipaza: '42', Mila: '43', 'Aïn Defla': '44', 'Naâma': '45',
+  "Aïn Témouchent": '46', Ghardaïa: '47', Relizane: '48', "El M'Ghair": '49', 'El Meniaa': '50',
+  'Ouled Djellal': '51', 'Bordj Badji Mokhtar': '52', 'Béni Abbès': '53', Timimoun: '54',
+  Touggourt: '55', Djanet: '56', 'In Salah': '57', 'In Guezzam': '58',
+}
+
+async function fetchYalidineCentersForWilaya(wilayaCode) {
+  for (const endpoint of ['centers', 'stopdesks']) {
+    try {
+      const url = new URL(endpoint, YALIDINE_API_BASE)
+      url.searchParams.set('wilaya_id', wilayaCode)
+      const response = await fetch(url.toString(), {
+        headers: { 'X-API-ID': API_ID, 'X-API-TOKEN': API_TOKEN },
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) continue
+      const list = Array.isArray(data) ? data : (data.data ?? data.centers ?? data.stopdesks ?? [])
+      return list.map((s) => Number(s.id ?? s.center_id ?? s.stopdesk_id)).filter((n) => !Number.isNaN(n))
+    } catch (_) {}
+  }
+  return []
+}
+
 app.post('/api/yalidine/parcels', async (req, res) => {
   if (!API_ID || !API_TOKEN) {
     return res.status(500).json({
@@ -79,6 +111,28 @@ app.post('/api/yalidine/parcels', async (req, res) => {
   const parcels = req.body
   if (!Array.isArray(parcels) || parcels.length === 0) {
     return res.status(400).json({ error: 'Body doit être un tableau de colis.' })
+  }
+
+  // Valider chaque colis bureau : stopdesk_id doit être dans la liste des centers Yalidine pour la wilaya
+  for (const parcel of parcels) {
+    const isStopdesk = parcel.is_stopdesk === true
+    const stopdeskId = parcel.stopdesk_id != null ? Number(parcel.stopdesk_id) : null
+    if (!isStopdesk || stopdeskId == null || Number.isNaN(stopdeskId)) continue
+
+    const wilayaName = (parcel.to_wilaya_name || '').toString().trim()
+    const wilayaCode = WILAYA_NAME_TO_CODE[wilayaName] || null
+    if (!wilayaCode) continue
+
+    const validIds = await fetchYalidineCentersForWilaya(wilayaCode)
+    if (validIds.length > 0 && !validIds.includes(stopdeskId)) {
+      return res.status(400).json({
+        error: 'Unknown stopdesk_id value in the order_id ' + (parcel.order_id || '') + '. Please check the acceptable stop-desk ids using the Centers Endpoint (see the docs)',
+        code: 'INVALID_STOPDESK_ID',
+        order_id: parcel.order_id,
+        stopdesk_id: stopdeskId,
+        message: 'Le bureau choisi n\'est pas reconnu par Yalidine pour cette wilaya. Passez la commande en livraison à domicile ou demandez au client de repasser commande en choisissant un bureau dans la liste à jour.',
+      })
+    }
   }
 
   try {
@@ -102,8 +156,10 @@ app.post('/api/yalidine/parcels', async (req, res) => {
 })
 
 // Liste des bureaux Yalidine (stop desks) par wilaya — API Yalidine + liste statique en secours
+// ?only_from_api=1 : ne renvoyer que les bureaux de l'API (pas le fallback), pour éviter des stopdesk_id invalides à l'envoi
 app.get('/api/yalidine/stopdesks', async (req, res) => {
   const wilaya = (req.query.wilaya || req.query.wilaya_id || '').toString().trim()
+  const onlyFromApi = String(req.query.only_from_api || req.query.onlyFromApi || '').toLowerCase() === '1' || req.query.only_from_api === 'true'
 
   const normalize = (data, wilayaParam) => {
     const list = Array.isArray(data) ? data : (data.data ?? data.stopdesks ?? data.centers ?? [])
@@ -133,7 +189,9 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
     }
   }
 
-  // Liste statique (toujours utilisée si l’API ne renvoie rien ou n’est pas configurée)
+  if (onlyFromApi) return res.json({ stopdesks: [] })
+
+  // Liste statique (utilisée si l'API ne renvoie rien — les IDs peuvent être refusés par Yalidine à l'envoi)
   let stopdesks = []
   try {
     stopdesks = getBureauxByWilaya(wilaya).map((s) => ({

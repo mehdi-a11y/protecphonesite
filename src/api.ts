@@ -65,8 +65,12 @@ export interface YalidineStopdesk {
   wilaya?: string
 }
 
-export async function apiGetYalidineStopdesks(wilaya?: string): Promise<YalidineStopdesk[]> {
-  const url = wilaya ? `/api/yalidine/stopdesks?wilaya=${encodeURIComponent(wilaya)}` : '/api/yalidine/stopdesks'
+/** onlyFromApi: true = uniquement les bureaux renvoyés par l'API Yalidine (pas la liste statique), pour éviter des stopdesk_id invalides à l'envoi */
+export async function apiGetYalidineStopdesks(wilaya?: string, options?: { onlyFromApi?: boolean }): Promise<YalidineStopdesk[]> {
+  const params = new URLSearchParams()
+  if (wilaya) params.set('wilaya', wilaya)
+  if (options?.onlyFromApi) params.set('only_from_api', '1')
+  const url = '/api/yalidine/stopdesks' + (params.toString() ? '?' + params.toString() : '')
   const res = await fetch(BASE + url)
   if (!res.ok) return []
   const data = await res.json().catch(() => ({}))

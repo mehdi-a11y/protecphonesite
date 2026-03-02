@@ -72,6 +72,9 @@ async function runMigrations() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS color_ids JSONB DEFAULT '[]'
     `).catch(() => {})
     await client.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_stocks JSONB DEFAULT '{}'
+    `).catch(() => {})
+    await client.query(`
       CREATE TABLE IF NOT EXISTS delivery_prices (
         wilaya_code TEXT PRIMARY KEY,
         domicile INTEGER NOT NULL DEFAULT 0,
@@ -240,10 +243,10 @@ export async function dbSaveProducts(products) {
     for (const p of products) {
       const r = productToRow(p)
       await pool.query(
-        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, image, photo_url, photo_gallery, color_ids, compatible_with)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb)
-         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, image=$7, photo_url=$8, photo_gallery=$9::jsonb, color_ids=$10::jsonb, compatible_with=$11::jsonb`,
-        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), JSON.stringify(r.compatible_with)]
+        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, image, photo_url, photo_gallery, color_ids, compatible_with)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10::jsonb,$11::jsonb,$12::jsonb)
+         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, image=$8, photo_url=$9, photo_gallery=$10::jsonb, color_ids=$11::jsonb, compatible_with=$12::jsonb`,
+        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), JSON.stringify(r.compatible_with)]
       )
     }
     return
@@ -255,6 +258,10 @@ export async function dbSaveProducts(products) {
 function rowToProduct(r) {
   const gallery = r.photo_gallery != null && Array.isArray(r.photo_gallery) ? r.photo_gallery : (r.photo_gallery && r.photo_gallery.data ? r.photo_gallery.data : []) || []
   const colorIds = r.color_ids != null && Array.isArray(r.color_ids) ? r.color_ids : (r.color_ids && r.color_ids.data ? r.color_ids.data : []) || []
+  const variantStocks = r.variant_stocks != null && typeof r.variant_stocks === 'object' && !Array.isArray(r.variant_stocks)
+    ? r.variant_stocks
+    : (r.variant_stocks && r.variant_stocks.data ? r.variant_stocks.data : null)
+  const vs = variantStocks && Object.keys(variantStocks).length > 0 ? variantStocks : undefined
   return {
     id: r.id,
     name: r.name,
@@ -262,6 +269,7 @@ function rowToProduct(r) {
     price: r.price ?? 0,
     wholesalePrice: r.wholesale_price ?? 0,
     quantity: r.quantity ?? 0,
+    variantStocks: vs,
     image: r.image || '',
     colorIds: colorIds.length ? colorIds : undefined,
     photoUrl: r.photo_url || (gallery[0] || ''),
@@ -279,6 +287,7 @@ function productToRow(p) {
     price: p.price ?? 0,
     wholesale_price: p.wholesalePrice ?? p.wholesale_price ?? 0,
     quantity: p.quantity ?? 0,
+    variant_stocks: p.variantStocks ?? {},
     image: p.image || '',
     photo_url: (gallery[0] ?? p.photoUrl ?? p.photo_url) || '',
     photo_gallery: gallery,

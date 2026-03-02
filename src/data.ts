@@ -32,12 +32,22 @@ export interface Antichoc {
   description: string;
   price: number; // prix détail
   wholesalePrice?: number; // prix gros
-  quantity?: number; // stock disponible
+  quantity?: number; // stock global (fallback si pas de variantStocks)
+  /** Stock par variante (couleur) : colorId -> quantité */
+  variantStocks?: Record<string, number>;
   image: string; // emoji(s) ou pictogramme
   colorIds?: string[]; // couleurs sélectionnées (ids ANTICHOC_COLORS)
   photoUrl: string; // première photo (URL ou base64)
   photoGallery?: string[]; // plusieurs photos (la première = photoUrl si une seule)
   compatibleWith: IPhoneModelId[]; // modèles d'iPhone compatibles
+}
+
+/** Retourne le stock pour une variante (couleur). Si variantStocks[colorId] défini, l'utiliser ; sinon quantity. */
+export function getVariantStock(antichoc: Antichoc, colorId: string): number {
+  if (antichoc.variantStocks && antichoc.variantStocks[colorId] !== undefined) {
+    return Number(antichoc.variantStocks[colorId]) || 0
+  }
+  return Number(antichoc.quantity) ?? 0
 }
 
 /** Couleurs disponibles pour les antichocs (sélection dans l'admin) */

@@ -43,29 +43,14 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       setSelectedStopdeskName('')
       return
     }
-    const code = wilaya.length === 1 ? '0' + wilaya : wilaya
     setStopdesksLoading(true)
     setSelectedStopdeskId('')
     setSelectedStopdeskName('')
 
-    const useFallback = (): Promise<YalidineStopdesk[]> =>
-      fetch('/yalidine-bureaux.json')
-        .then((r) => (r.ok ? r.json() : {}))
-        .then((data: Record<string, { id: number; name: string; address: string }[]>) => {
-          const list = data[code] ?? data[wilaya] ?? []
-          return list.map((s) => ({ id: s.id, name: s.name, address: s.address ?? '', wilaya: code }))
-        })
-        .catch(() => [])
-
-    apiGetYalidineStopdesks(wilaya)
-      .then((list) => {
-        if (list.length > 0) {
-          setStopdesks(list)
-        } else {
-          useFallback().then(setStopdesks)
-        }
-      })
-      .catch(() => useFallback().then(setStopdesks))
+    // onlyFromApi: true pour n'afficher que les bureaux reconnus par Yalidine (évite "Unknown stopdesk_id" à l'envoi)
+    apiGetYalidineStopdesks(wilaya, { onlyFromApi: true })
+      .then((list) => setStopdesks(list || []))
+      .catch(() => setStopdesks([]))
       .finally(() => setStopdesksLoading(false))
   }, [deliveryType, wilaya])
 

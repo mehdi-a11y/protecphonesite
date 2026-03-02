@@ -121,6 +121,8 @@ export function AdminPage() {
   const [landingProductMode, setLandingProductMode] = useState<'existing' | 'new'>('existing')
   const [newLandingProductName, setNewLandingProductName] = useState('')
   const [newLandingProductPrice, setNewLandingProductPrice] = useState('')
+  const [newLandingProductWholesalePrice, setNewLandingProductWholesalePrice] = useState('')
+  const [newLandingProductQuantity, setNewLandingProductQuantity] = useState('')
   const [newLandingProductDescription, setNewLandingProductDescription] = useState('')
   const [newLandingProductPhotoUrl, setNewLandingProductPhotoUrl] = useState('')
   const [newLandingProductPhotos, setNewLandingProductPhotos] = useState<string[]>([])
@@ -241,6 +243,19 @@ export function AdminPage() {
         : p,
     )
     setProducts(next)
+  }
+
+  const handleVariantStockChange = (productId: string, colorId: string, value: string) => {
+    const num = Math.max(0, parseInt(value, 10) || 0)
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== productId) return p
+        const vs = { ...(p.variantStocks || {}) }
+        if (num === 0 && colorId === '') delete vs['']
+        else vs[colorId] = num
+        return { ...p, variantStocks: vs }
+      }),
+    )
   }
 
   const handleSaveProducts = async () => {
@@ -649,7 +664,7 @@ export function AdminPage() {
                     <th className="pb-2 pr-4">Titre</th>
                     <th className="pb-2 pr-4">Prix détail (DA)</th>
                     <th className="pb-2 pr-4">Prix gros (DA)</th>
-                    <th className="pb-2 pr-4">Quantité</th>
+                    <th className="pb-2 pr-4">Stock par variante (couleur)</th>
                     <th className="pb-2 pr-4">Description</th>
                     <th className="pb-2 pr-4">Photo</th>
                     <th className="pb-2 pr-0 text-right">Actions</th>
@@ -706,17 +721,24 @@ export function AdminPage() {
                           className="w-24 px-2 py-1 rounded bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
                         />
                       </td>
-                      <td className="py-2 pr-4">
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={p.quantity ?? 0}
-                          onChange={(e) =>
-                            handleProductChange(p.id, 'quantity', e.target.value)
-                          }
-                          className="w-24 px-2 py-1 rounded bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-                        />
+                      <td className="py-2 pr-4 align-top">
+                        {((p.colorIds?.length ? p.colorIds : ['']) as string[]).map((colorId) => {
+                          const label = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : 'Stock'
+                          const val = p.variantStocks?.[colorId] ?? p.quantity ?? 0
+                          return (
+                            <div key={colorId || '_'} className="flex items-center gap-1 mb-1">
+                              <span className="text-brand-muted text-xs w-20 shrink-0 truncate">{label}</span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={val}
+                                onChange={(e) => handleVariantStockChange(p.id, colorId, e.target.value)}
+                                className="w-16 px-2 py-1 rounded bg-brand-card border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
+                              />
+                            </div>
+                          )
+                        })}
                       </td>
                       <td className="py-2 pr-4">
                         <textarea
@@ -779,10 +801,12 @@ export function AdminPage() {
         {tab === 'statistiques' && (
           <div className="space-y-6">
             {(() => {
-              const chStock = products.reduce(
-                (sum, p) => sum + (p.wholesalePrice ?? 0) * (p.quantity ?? 0),
-                0,
-              )
+              const chStock = products.reduce((sum, p) => {
+                const qty = p.variantStocks && Object.keys(p.variantStocks).length > 0
+                  ? Object.values(p.variantStocks).reduce((a, b) => a + b, 0)
+                  : (p.quantity ?? 0)
+                return sum + (p.wholesalePrice ?? 0) * qty
+              }, 0)
               return (
                 <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="rounded-xl bg-brand-card border border-white/10 p-4">
@@ -1264,7 +1288,23 @@ export function AdminPage() {
                       min={0}
                       value={newLandingProductPrice}
                       onChange={(e) => setNewLandingProductPrice(e.target.value)}
-                      placeholder="Prix (DA)"
+                      placeholder="Prix détail (DA)"
+                      className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      value={newLandingProductWholesalePrice}
+                      onChange={(e) => setNewLandingProductWholesalePrice(e.target.value)}
+                      placeholder="Prix de gros (DA)"
+                      className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      value={newLandingProductQuantity}
+                      onChange={(e) => setNewLandingProductQuantity(e.target.value)}
+                      placeholder="Stock (quantité)"
                       className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
                     />
                     <textarea
@@ -1382,6 +1422,8 @@ export function AdminPage() {
                       return
                     }
                     const price = Number(newLandingProductPrice) || 0
+                    const wholesalePrice = Number(newLandingProductWholesalePrice) || 0
+                    const quantity = Number(newLandingProductQuantity) || 0
                     antichocId = `landing-${cleanSlug}-${Date.now()}`
                     const selectedColorEmojis = newLandingProductColorIds
                       .map((id) => ANTICHOC_COLORS.find((c) => c.id === id)?.emoji)
@@ -1391,13 +1433,20 @@ export function AdminPage() {
                       ...newLandingProductPhotos,
                       ...(newLandingProductPhotoUrl.trim() ? [newLandingProductPhotoUrl.trim()] : []),
                     ]
+                    const variantStocks: Record<string, number> = {}
+                    if (newLandingProductColorIds.length > 0) {
+                      newLandingProductColorIds.forEach((cid) => { variantStocks[cid] = quantity })
+                    } else {
+                      variantStocks[''] = quantity
+                    }
                     const newProduct: Antichoc = {
                       id: antichocId,
                       name: newLandingProductName.trim(),
                       description: newLandingProductDescription.trim(),
                       price,
-                      wholesalePrice: 0,
-                      quantity: 0,
+                      wholesalePrice,
+                      quantity,
+                      variantStocks: Object.keys(variantStocks).length ? variantStocks : undefined,
                       image: imageEmojis,
                       colorIds: newLandingProductColorIds.length > 0 ? newLandingProductColorIds : undefined,
                       photoUrl: allPhotos[0] ?? '',
@@ -1434,6 +1483,8 @@ export function AdminPage() {
                     setNewLandingTitle('')
                     setNewLandingProductName('')
                     setNewLandingProductPrice('')
+                    setNewLandingProductWholesalePrice('')
+                    setNewLandingProductQuantity('')
                     setNewLandingProductDescription('')
                     setNewLandingProductPhotoUrl('')
                     setNewLandingProductPhotos([])

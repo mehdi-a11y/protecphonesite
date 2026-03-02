@@ -113,7 +113,8 @@ export async function createParcelOnYalidine(
 
     if (!res.ok) {
       const msg =
-        data?.error ?? data?.message ?? data?.detail ?? (typeof data === 'string' ? data : `Erreur ${res.status}`)
+        (res.status === 400 && data?.message) ? data.message
+          : data?.error ?? data?.message ?? data?.detail ?? (typeof data === 'string' ? data : `Erreur ${res.status}`)
       return { success: false, error: String(msg) }
     }
 
