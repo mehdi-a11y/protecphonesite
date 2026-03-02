@@ -25,6 +25,7 @@ import {
   dbFindOrderByYalidineTracking,
   dbGetProducts,
   dbSaveProducts,
+  dbDeleteProduct,
   dbGetDeliveryPrices,
   dbSaveDeliveryPrices,
   dbGetLandingPages,
@@ -113,27 +114,48 @@ app.post('/api/yalidine/parcels', async (req, res) => {
     return res.status(400).json({ error: 'Body doit être un tableau de colis.' })
   }
 
-  // Valider chaque colis bureau : stopdesk_id doit être dans la liste des centers Yalidine pour la wilaya
+  // Colis bureau : exiger stopdesk_id, puis valider contre l'API Yalidine si disponible
   for (const parcel of parcels) {
     const isStopdesk = parcel.is_stopdesk === true
-    const stopdeskId = parcel.stopdesk_id != null ? Number(parcel.stopdesk_id) : null
-    if (!isStopdesk || stopdeskId == null || Number.isNaN(stopdeskId)) continue
-
-    const wilayaName = (parcel.to_wilaya_name || '').toString().trim()
-    const wilayaCode = WILAYA_NAME_TO_CODE[wilayaName] || null
-    if (!wilayaCode) continue
-
-    const validIds = await fetchYalidineCentersForWilaya(wilayaCode)
-    if (validIds.length > 0 && !validIds.includes(stopdeskId)) {
-      return res.status(400).json({
-        error: 'Unknown stopdesk_id value in the order_id ' + (parcel.order_id || '') + '. Please check the acceptable stop-desk ids using the Centers Endpoint (see the docs)',
-        code: 'INVALID_STOPDESK_ID',
-        order_id: parcel.order_id,
-        stopdesk_id: stopdeskId,
-        message: 'Le bureau choisi n\'est pas reconnu par Yalidine pour cette wilaya. Passez la commande en livraison à domicile ou demandez au client de repasser commande en choisissant un bureau dans la liste à jour.',
-      })
+    if (isStopdesk) {
+      const stopdeskId = parcel.stopdesk_id != null ? Number(parcel.stopdesk_id) : null
+      if (stopdeskId == null || Number.isNaN(stopdeskId)) {
+        return res.status(400).json({
+          error: 'Commande bureau Yalidine sans bureau choisi (stopdesk_id manquant).',
+          code: 'MISSING_STOPDESK_ID',
+          order_id: parcel.order_id,
+        })
+      }
+      const wilayaName = (parcel.to_wilaya_name || '').toString().trim()
+      const wilayaCode = WILAYA_NAME_TO_CODE[wilayaName] || null
+      if (!wilayaCode) {
+        return res.status(400).json({
+          error: 'Wilaya manquante ou invalide pour la commande bureau.',
+          order_id: parcel.order_id,
+        })
+      }
+      const validIds = await fetchYalidineCentersForWilaya(wilayaCode)
+      if (validIds.length > 0 && !validIds.includes(stopdeskId)) {
+        return res.status(400).json({
+          error: 'Unknown stopdesk_id value in the order_id ' + (parcel.order_id || '') + '. Please check the acceptable stop-desk ids using the Centers Endpoint (see the docs)',
+          code: 'INVALID_STOPDESK_ID',
+          order_id: parcel.order_id,
+          stopdesk_id: stopdeskId,
+          message: 'Le bureau choisi n\'est pas reconnu par Yalidine pour cette wilaya. Passez la commande en livraison à domicile ou demandez au client de repasser commande en choisissant un bureau dans la liste à jour.',
+        })
+      }
     }
   }
+
+  // Normaliser les payloads : stopdesk_id en entier pour l'API Yalidine
+  const normalizedParcels = parcels.map((p) => {
+    const out = { ...p }
+    if (out.is_stopdesk === true && out.stopdesk_id != null) {
+      out.stopdesk_id = parseInt(out.stopdesk_id, 10)
+      if (Number.isNaN(out.stopdesk_id)) delete out.stopdesk_id
+    }
+    return out
+  })
 
   try {
     const response = await fetch(`${YALIDINE_API_BASE}parcels/`, {
@@ -143,7 +165,7 @@ app.post('/api/yalidine/parcels', async (req, res) => {
         'X-API-ID': API_ID,
         'X-API-TOKEN': API_TOKEN,
       },
-      body: JSON.stringify(parcels),
+      body: JSON.stringify(normalizedParcels),
     })
 
     const data = await response.json().catch(() => ({}))
@@ -172,20 +194,28 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
   }
 
   if (API_ID && API_TOKEN) {
+    const wilayaName = Object.keys(WILAYA_NAME_TO_CODE).find((k) => WILAYA_NAME_TO_CODE[k] === wilaya) || ''
     for (const endpoint of ['stopdesks', 'centers']) {
-      try {
-        const url = new URL(endpoint, YALIDINE_API_BASE)
-        if (wilaya) url.searchParams.set('wilaya_id', wilaya)
-        const response = await fetch(url.toString(), {
-          headers: { 'X-API-ID': API_ID, 'X-API-TOKEN': API_TOKEN },
-        })
-        const data = await response.json().catch(() => ({}))
-        if (response.ok) {
-          const fromApi = normalize(data, wilaya)
-          if (fromApi.length > 0) return res.json({ stopdesks: fromApi })
-        }
-        if (response.status !== 404) return res.status(response.status).json(data)
-      } catch (_) {}
+      for (const param of [
+        () => ({ wilaya_id: wilaya }),
+        () => (wilayaName ? { wilaya: wilayaName } : null),
+      ]) {
+        const params = param()
+        if (!params || !wilaya) continue
+        try {
+          const url = new URL(endpoint, YALIDINE_API_BASE)
+          Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+          const response = await fetch(url.toString(), {
+            headers: { 'X-API-ID': API_ID, 'X-API-TOKEN': API_TOKEN },
+          })
+          const data = await response.json().catch(() => ({}))
+          if (response.ok) {
+            const fromApi = normalize(data, wilaya)
+            if (fromApi.length > 0) return res.json({ stopdesks: fromApi })
+          }
+          if (response.status !== 404) return res.status(response.status).json(data)
+        } catch (_) {}
+      }
     }
   }
 
@@ -514,6 +544,17 @@ app.post('/api/products/add', async (req, res) => {
       : [...current, product]
     await dbSaveProducts(next)
     res.json(await dbGetProducts())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const id = req.params.id
+    if (!id) return res.status(400).json({ error: 'id requis' })
+    await dbDeleteProduct(id)
+    res.status(204).send()
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

@@ -255,6 +255,46 @@ export async function dbSaveProducts(products) {
   for (const p of products) memoryProducts.set(p.id, p)
 }
 
+/** Supprime un produit de la base et nettoie les données liées (landing pages, références dans les collections). */
+export async function dbDeleteProduct(id) {
+  if (pool) {
+    const client = await pool.connect()
+    try {
+      const { rows: landings } = await client.query(
+        'SELECT slug FROM landing_pages WHERE antichoc_id = $1',
+        [id],
+      )
+      const slugsToRemove = landings.map((r) => r.slug)
+      await client.query('DELETE FROM landing_pages WHERE antichoc_id = $1', [id])
+      const { rows: collections } = await client.query('SELECT slug, landing_slugs FROM collections')
+      for (const c of collections) {
+        const current = Array.isArray(c.landing_slugs) ? c.landing_slugs : (c.landing_slugs?.data || []) || []
+        const next = current.filter((s) => !slugsToRemove.includes(s))
+        if (next.length !== current.length) {
+          await client.query(
+            'UPDATE collections SET landing_slugs = $1::jsonb WHERE slug = $2',
+            [JSON.stringify(next), c.slug],
+          )
+        }
+      }
+      await client.query('DELETE FROM products WHERE id = $1', [id])
+    } finally {
+      client.release()
+    }
+    return
+  }
+  const landings = Array.from(memoryLandingPages.entries()).filter(([, v]) => v.antichocId === id)
+  const slugsToRemove = landings.map(([, v]) => v.slug)
+  for (const slug of slugsToRemove) memoryLandingPages.delete(slug)
+  for (const [cSlug, col] of memoryCollections) {
+    const next = (col.landingSlugs || []).filter((s) => !slugsToRemove.includes(s))
+    if (next.length !== (col.landingSlugs || []).length) {
+      memoryCollections.set(cSlug, { ...col, landingSlugs: next })
+    }
+  }
+  memoryProducts.delete(id)
+}
+
 function rowToProduct(r) {
   const gallery = r.photo_gallery != null && Array.isArray(r.photo_gallery) ? r.photo_gallery : (r.photo_gallery && r.photo_gallery.data ? r.photo_gallery.data : []) || []
   const colorIds = r.color_ids != null && Array.isArray(r.color_ids) ? r.color_ids : (r.color_ids && r.color_ids.data ? r.color_ids.data : []) || []

@@ -209,9 +209,18 @@ export function AdminPage() {
     getOrders().then(setOrders)
   }
 
-  const handleDeleteProduct = (id: string) => {
-    if (!confirm('Supprimer ce produit ?')) return
-    setProducts((prev) => prev.filter((p) => p.id !== id))
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('Supprimer ce produit ? Il sera retiré de la base et des landing pages liées.')) return
+    try {
+      const { apiDeleteProduct } = await import('../api')
+      await apiDeleteProduct(id)
+      await loadProducts()
+      setProducts(getAllAntichocs())
+      apiGetLandingPages().then(setLandingPages)
+      apiGetCollections().then(setCollections)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erreur lors de la suppression')
+    }
   }
 
   const handleAddProduct = () => {

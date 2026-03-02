@@ -106,6 +106,15 @@ export async function apiAddProduct(product: Antichoc): Promise<Antichoc[]> {
   })
 }
 
+/** Supprime un produit de la base (et les landing pages / références collections liées). */
+export async function apiDeleteProduct(id: string): Promise<void> {
+  const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || 'Erreur lors de la suppression')
+  }
+}
+
 export async function apiGetDeliveryPrices(): Promise<DeliveryPrices> {
   const prices = await fetchJson<DeliveryPrices>('/api/delivery-prices')
   return prices || {}

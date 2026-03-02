@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react'
-import { getAntichocsForPhone } from '../data'
 import { IPHONE_MODELS, ANTICHOC_COLORS } from '../data'
 import { saveOrder } from '../types'
 import type { CartItem } from '../types'
@@ -9,8 +8,6 @@ import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
 import { apiGetYalidineStopdesks, type YalidineStopdesk } from '../api'
 import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
-
-const UPSELL_DISCOUNT = 0.5 // -50%
 
 interface Props {
   cart: CartItem[]
@@ -32,7 +29,6 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [stopdesksLoading, setStopdesksLoading] = useState(false)
   const [selectedStopdeskId, setSelectedStopdeskId] = useState('')
   const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
-  const [acceptUpsell, setAcceptUpsell] = useState<Antichoc | null>(null)
 
   useEffect(() => {
     if (deliveryType !== 'yalidine' || !wilaya) {
@@ -45,38 +41,36 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
     setSelectedStopdeskId('')
     setSelectedStopdeskName('')
 
-    // onlyFromApi: true pour n'afficher que les bureaux reconnus par Yalidine (évite "Unknown stopdesk_id" à l'envoi)
+    let cancelled = false
     apiGetYalidineStopdesks(wilaya, { onlyFromApi: true })
-      .then((list) => setStopdesks(list || []))
-      .catch(() => setStopdesks([]))
-      .finally(() => setStopdesksLoading(false))
+      .then((list) => {
+        if (cancelled) return
+        if (list && list.length > 0) {
+          setStopdesks(list)
+          return
+        }
+        return apiGetYalidineStopdesks(wilaya, { onlyFromApi: false })
+      })
+      .then((fallbackList) => {
+        if (cancelled) return
+        if (fallbackList && fallbackList.length > 0) setStopdesks(fallbackList)
+      })
+      .catch(() => { if (!cancelled) setStopdesks([]) })
+      .finally(() => { if (!cancelled) setStopdesksLoading(false) })
+    return () => { cancelled = true }
   }, [deliveryType, wilaya])
 
-  const mainItem = cart[0]
-  const phoneId = mainItem?.antichoc.compatibleWith[0] as IPhoneModelId | undefined
-  const upsellCandidates = phoneId
-    ? getAntichocsForPhone(phoneId).filter((a) => a.id !== mainItem?.antichoc.id)
-    : []
-  const upsellOffer = upsellCandidates[0] ?? null
-  const upsellPrice = upsellOffer ? Math.round(upsellOffer.price * (1 - UPSELL_DISCOUNT)) : 0
-
-  const totalMain = cart.reduce(
-    (sum, i) =>
-      sum + (i.isUpsell ? Math.round(i.antichoc.price * (1 - UPSELL_DISCOUNT)) : i.antichoc.price),
-    0,
-  )
-  const totalUpsell = acceptUpsell ? upsellPrice : 0
+  const totalMain = cart.reduce((sum, i) => sum + i.antichoc.price, 0)
   const deliveryPrice = useMemo(
     () => (wilaya ? getDeliveryPriceForWilaya(wilaya, deliveryType) : 0),
     [wilaya, deliveryType],
   )
-  const total = totalMain + totalUpsell + deliveryPrice
+  const total = totalMain + deliveryPrice
 
   const canSubmitBureau = deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)
 
   useEffect(() => {
-    const numItems = cart.length + (acceptUpsell ? 1 : 0)
-    if (numItems > 0) trackInitiateCheckout(total, 'DZD', numItems)
+    if (cart.length > 0) trackInitiateCheckout(total, 'DZD', cart.length)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,10 +78,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
     if (!canSubmitBureau) return
     const orderId = 'CMD-' + Date.now()
     const confirmationCode = generateConfirmationCode()
-    const finalCart: CartItem[] = [
-      ...cart,
-      ...(acceptUpsell ? [{ antichoc: acceptUpsell, isUpsell: true }] : []),
-    ]
+    const finalCart: CartItem[] = [...cart]
     await saveOrder({
       id: orderId,
       customerName: name,
@@ -136,63 +127,21 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
             const colorName = item.selectedColorId
               ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
               : null
-            const itemPrice = item.isUpsell
-              ? Math.round(item.antichoc.price * (1 - UPSELL_DISCOUNT))
-              : item.antichoc.price
             return (
-              <div key={item.antichoc.id + (item.isUpsell ? '-upsell' : '')} className="flex justify-between text-white">
+              <div key={item.antichoc.id} className="flex justify-between text-white">
                 <span>
                   {item.antichoc.name}
-                  {item.isUpsell && (
-                    <span className="text-amber-400 text-xs ml-1">(offre -50%)</span>
-                  )}
                   {(phoneName || colorName) && (
                     <span className="block text-xs text-brand-muted font-normal mt-0.5">
                       {[phoneName, colorName].filter(Boolean).join(' — ')}
                     </span>
                   )}
                 </span>
-                <span>{itemPrice} DA</span>
+                <span>{item.antichoc.price} DA</span>
               </div>
             )
           })}
-          {acceptUpsell && upsellOffer && (
-            <div className="flex justify-between text-brand-gold mt-2 pt-2 border-t border-white/10">
-              <span>{upsellOffer.name} (offre -50%)</span>
-              <span>{upsellPrice} DA</span>
-            </div>
-          )}
         </div>
-
-        {/* Upsell -50% */}
-          {upsellOffer && (
-          <div className="rounded-xl border-2 border-brand-gold/50 bg-brand-gold/5 p-4 mb-6">
-            <p className="text-brand-gold font-semibold mb-2">
-              🎁 Offre spéciale : 2ème antichoc à -50%
-            </p>
-            <p className="text-white text-sm mb-3">
-              Ajoutez « {upsellOffer.name} » pour seulement {upsellPrice} DA (au lieu de {upsellOffer.price} DA).
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setAcceptUpsell(acceptUpsell ? null : upsellOffer)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  acceptUpsell ? 'bg-brand-accent text-brand-dark' : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-              >
-                Oui, j’en profite
-              </button>
-              <button
-                type="button"
-                onClick={() => setAcceptUpsell(null)}
-                className="px-4 py-2 rounded-lg bg-white/10 text-brand-muted hover:bg-white/20"
-              >
-                Non merci
-              </button>
-            </div>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
