@@ -11,7 +11,7 @@ import {
   ADMIN_PASSWORD,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey } from '../data'
 import { IPHONE_MODELS, type IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import {
@@ -729,7 +729,7 @@ export function AdminPage() {
                           const total = p.variantStocks && Object.keys(p.variantStocks).length > 0
                             ? Object.values(p.variantStocks).reduce((a, b) => a + b, 0)
                             : (p.quantity ?? 0)
-                          const variantCount = p.colorIds?.length || 1
+                          const variantCount = Object.keys(p.variantStocks || {}).length || (p.colorIds?.length ? p.colorIds.length * (p.compatibleWith?.length || 1) : 1)
                           return `${total} (${variantCount} variante${variantCount > 1 ? 's' : ''})`
                         })()}
                       </td>
@@ -786,10 +786,14 @@ export function AdminPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const variantIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
+                              const colorIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
+                              const phoneIds = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
                               const draft: Record<string, number> = {}
-                              variantIds.forEach((cid) => {
-                                draft[cid] = p.variantStocks?.[cid] ?? p.quantity ?? 0
+                              colorIds.forEach((cid) => {
+                                phoneIds.forEach((pid) => {
+                                  const key = variantKey(cid, pid)
+                                  draft[key] = p.variantStocks?.[key] ?? p.variantStocks?.[cid] ?? p.quantity ?? 0
+                                })
                               })
                               setStockModalDraft(draft)
                               setStockModalProductId(p.id)
@@ -882,30 +886,36 @@ export function AdminPage() {
               )
             })()}
 
-            {/* Modal Gérer le stock (par variante) */}
+            {/* Modal Gérer le stock (par variante = couleur + iPhone) */}
             {stockModalProductId && (() => {
               const p = products.find((x) => x.id === stockModalProductId)
               if (!p) return null
-              const variantIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
+              const colorIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
+              const phoneIds = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+              const variantEntries = colorIds.flatMap((cid) =>
+                phoneIds.map((pid) => ({ key: variantKey(cid, pid), colorId: cid, phoneId: pid })),
+              )
               return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setStockModalProductId(null)}>
-                  <div className="bg-brand-card border border-white/10 rounded-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="bg-brand-card border border-white/10 rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col p-6" onClick={(e) => e.stopPropagation()}>
                     <h3 className="text-lg font-semibold text-white">Gérer le stock</h3>
-                    <p className="text-brand-muted text-sm">{p.name}</p>
-                    <p className="text-xs text-brand-muted">Stock par variante (couleur) :</p>
-                    <div className="space-y-3">
-                      {variantIds.map((colorId) => {
-                        const label = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : 'Stock'
+                    <p className="text-brand-muted text-sm mb-2">{p.name}</p>
+                    <p className="text-xs text-brand-muted mb-3">Stock par variante (couleur + modèle iPhone) :</p>
+                    <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
+                      {variantEntries.map(({ key, colorId, phoneId }) => {
+                        const colorName = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : '—'
+                        const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+                        const label = colorId ? `${colorName} — ${phoneName}` : phoneName
                         return (
-                          <div key={colorId || '_'} className="flex items-center justify-between gap-4">
-                            <span className="text-white font-medium">{label}</span>
+                          <div key={key} className="flex items-center justify-between gap-4 py-1 border-b border-white/5">
+                            <span className="text-white text-sm truncate">{label}</span>
                             <input
                               type="number"
                               min={0}
                               step={1}
-                              value={stockModalDraft[colorId] ?? 0}
-                              onChange={(e) => setStockModalDraft((prev) => ({ ...prev, [colorId]: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
-                              className="w-24 px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                              value={stockModalDraft[key] ?? 0}
+                              onChange={(e) => setStockModalDraft((prev) => ({ ...prev, [key]: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+                              className="w-20 px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none shrink-0"
                             />
                           </div>
                         )
@@ -1575,11 +1585,13 @@ export function AdminPage() {
                       ...(newLandingProductPhotoUrl.trim() ? [newLandingProductPhotoUrl.trim()] : []),
                     ]
                     const variantStocks: Record<string, number> = {}
-                    if (newLandingProductColorIds.length > 0) {
-                      newLandingProductColorIds.forEach((cid) => { variantStocks[cid] = quantity })
-                    } else {
-                      variantStocks[''] = quantity
-                    }
+                    const landingColorIds = newLandingProductColorIds.length > 0 ? newLandingProductColorIds : ['']
+                    const landingPhoneIds = newLandingProductIphones.length > 0 ? newLandingProductIphones : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+                    landingColorIds.forEach((cid) => {
+                      landingPhoneIds.forEach((pid) => {
+                        variantStocks[variantKey(cid, pid)] = quantity
+                      })
+                    })
                     const newProduct: Antichoc = {
                       id: antichocId,
                       name: newLandingProductName.trim(),

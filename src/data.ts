@@ -33,7 +33,7 @@ export interface Antichoc {
   price: number; // prix détail
   wholesalePrice?: number; // prix gros
   quantity?: number; // stock global (fallback si pas de variantStocks)
-  /** Stock par variante (couleur) : colorId -> quantité */
+  /** Stock par variante (couleur + iPhone) : clé "colorId|phoneId" -> quantité */
   variantStocks?: Record<string, number>;
   image: string; // emoji(s) ou pictogramme
   colorIds?: string[]; // couleurs sélectionnées (ids ANTICHOC_COLORS)
@@ -42,8 +42,17 @@ export interface Antichoc {
   compatibleWith: IPhoneModelId[]; // modèles d'iPhone compatibles
 }
 
-/** Retourne le stock pour une variante (couleur). Si variantStocks[colorId] défini, l'utiliser ; sinon quantity. */
-export function getVariantStock(antichoc: Antichoc, colorId: string): number {
+/** Clé unique pour une variante (couleur + modèle iPhone). */
+export function variantKey(colorId: string, phoneId: IPhoneModelId): string {
+  return `${colorId || ''}|${phoneId}`
+}
+
+/** Retourne le stock pour une variante (couleur + iPhone). */
+export function getVariantStock(antichoc: Antichoc, colorId: string, phoneId: IPhoneModelId): number {
+  const key = variantKey(colorId, phoneId)
+  if (antichoc.variantStocks && antichoc.variantStocks[key] !== undefined) {
+    return Number(antichoc.variantStocks[key]) || 0
+  }
   if (antichoc.variantStocks && antichoc.variantStocks[colorId] !== undefined) {
     return Number(antichoc.variantStocks[colorId]) || 0
   }
