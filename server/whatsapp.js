@@ -47,7 +47,11 @@ export function normalizePhoneToE164(phone) {
  */
 export async function sendOrderConfirmationWhatsApp(order) {
   if (!isConfigured()) {
-    console.log('[WhatsApp] Envoi ignoré : TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN ou TWILIO_WHATSAPP_FROM manquant dans .env')
+    const missing = []
+    if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID')
+    if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN')
+    if (!TWILIO_WHATSAPP_FROM) missing.push('TWILIO_WHATSAPP_FROM')
+    console.log('[WhatsApp] Envoi ignoré : variable(s) manquante(s) dans .env :', missing.join(', '))
     return { ok: false, error: 'WhatsApp (Twilio) non configuré' }
   }
 

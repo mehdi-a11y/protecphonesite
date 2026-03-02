@@ -26,7 +26,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [wilaya, setWilaya] = useState('')
-  const [address, setAddress] = useState('')
+  const [commune, setCommune] = useState('')
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('domicile')
   const [stopdesks, setStopdesks] = useState<YalidineStopdesk[]>([])
   const [stopdesksLoading, setStopdesksLoading] = useState(false)
@@ -107,7 +107,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       id: orderId,
       customerName: name,
       phone,
-      address,
+      address: commune,
       wilaya,
       deliveryType,
       deliveryPrice,
@@ -249,14 +249,14 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-brand-muted mb-1">Adresse</label>
+            <label className="block text-sm text-brand-muted mb-1">Commune</label>
             <input
               type="text"
               required
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              value={commune}
+              onChange={(e) => setCommune(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none"
-              placeholder="Rue, quartier, commune..."
+              placeholder="Ex: Bir Mourad Raïs, Kouba, Hydra..."
             />
           </div>
           <div>

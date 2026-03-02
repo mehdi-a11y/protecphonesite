@@ -355,6 +355,20 @@ app.get('/api/orders', async (_req, res) => {
   }
 })
 
+app.get('/api/whatsapp/check', (_req, res) => {
+  const sid = !!process.env.TWILIO_ACCOUNT_SID
+  const token = !!process.env.TWILIO_AUTH_TOKEN
+  const from = !!process.env.TWILIO_WHATSAPP_FROM
+  const contentSid = !!process.env.TWILIO_WHATSAPP_CONTENT_SID
+  res.json({
+    configured: !!(sid && token && from),
+    hasAccountSid: sid,
+    hasAuthToken: token,
+    hasFrom: from,
+    hasContentSid: contentSid,
+  })
+})
+
 app.post('/api/orders', async (req, res) => {
   try {
     const a = req.body

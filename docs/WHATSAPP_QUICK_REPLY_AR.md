@@ -133,3 +133,11 @@ Le serveur reconnaît l’ID de bouton **`received`** (et aussi « تم الاس
 
 4. **Numéro algérien**  
    Saisir le numéro en 0XXXXXXXX ou 5XXXXXXXX ; le serveur le convertit en +213. Si le message part mais n’arrive pas, le Sandbox peut être peu fiable vers l’international (voir message Twilio). En production, utiliser un numéro WhatsApp Business enregistré.
+
+5. **Erreur « Invalid From and To pair. From and To should be of the same channel »**  
+   Twilio refuse d’envoyer car le **From** (expéditeur) n’est pas valide pour WhatsApp. À faire :
+   - **Sandbox** : dans le `.env` (ou variables Render), mets **exactement** :  
+     `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886`  
+     (pas d’espace, préfixe `whatsapp:` en minuscules, numéro du Sandbox Twilio).
+   - Vérifie qu’il n’y a pas de guillemets en trop ou d’espace après le `:`.
+   - Si tu utilises **ton propre numéro** WhatsApp Business, il doit être enregistré dans Twilio comme expéditeur WhatsApp et au format `whatsapp:+213XXXXXXXXX`.
