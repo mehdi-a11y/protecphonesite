@@ -219,9 +219,7 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
     }
   }
 
-  if (onlyFromApi) return res.json({ stopdesks: [] })
-
-  // Liste statique (utilisée si l'API ne renvoie rien — les IDs peuvent être refusés par Yalidine à l'envoi)
+  // Liste statique : toujours utilisée si l'API n'a rien renvoyé (même avec only_from_api=1), pour que le client puisse toujours choisir un bureau
   let stopdesks = []
   try {
     stopdesks = getBureauxByWilaya(wilaya).map((s) => ({

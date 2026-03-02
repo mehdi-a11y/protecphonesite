@@ -32,6 +32,7 @@ const WILAYA_NAME_TO_CODE = {
   Guelma: '24',
   Constantine: '25',
   Médéa: '26',
+  Mostaganem: '27',
   "M'Sila": '28',
   Mascara: '29',
   Ouargla: '30',
