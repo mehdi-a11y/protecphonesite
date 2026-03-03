@@ -36,6 +36,13 @@ export async function apiSaveOrder(order: Order): Promise<void> {
   })
 }
 
+export async function apiUpdateOrder(orderId: string, partial: Partial<Order>): Promise<Order> {
+  return fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(partial),
+  })
+}
+
 export async function apiSetOrderStatus(orderId: string, status: Order['status']): Promise<void> {
   await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/status`, {
     method: 'PATCH',

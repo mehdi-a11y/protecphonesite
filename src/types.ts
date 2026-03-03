@@ -76,6 +76,10 @@ export function confirmOrder(orderId: string): Promise<void> {
   return setOrderStatus(orderId, 'confirmed')
 }
 
+export async function updateOrder(orderId: string, partial: Partial<Order>): Promise<Order> {
+  return api.apiUpdateOrder(orderId, partial)
+}
+
 export async function updateOrderYalidine(
   orderId: string,
   data: { tracking: string; sentAt: string },

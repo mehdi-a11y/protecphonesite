@@ -517,6 +517,32 @@ app.post('/api/orders', async (req, res) => {
   }
 })
 
+app.patch('/api/orders/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const orders = await dbGetOrders()
+    const existing = orders.find((o) => o.id === id)
+    if (!existing) return res.status(404).json({ error: 'Commande introuvable' })
+    const partial = apiToOrder({ ...orderToApi(existing), ...req.body })
+    const merged = {
+      ...existing,
+      customerName: partial.customerName ?? existing.customerName,
+      phone: partial.phone ?? existing.phone,
+      address: partial.address ?? existing.address,
+      wilaya: partial.wilaya ?? existing.wilaya,
+      deliveryType: partial.deliveryType ?? existing.deliveryType,
+      deliveryPrice: partial.deliveryPrice !== undefined ? partial.deliveryPrice : existing.deliveryPrice,
+      total: partial.total !== undefined ? partial.total : existing.total,
+      yalidineStopdeskId: partial.yalidineStopdeskId !== undefined ? partial.yalidineStopdeskId : existing.yalidineStopdeskId,
+      yalidineStopdeskName: partial.yalidineStopdeskName !== undefined ? partial.yalidineStopdeskName : existing.yalidineStopdeskName,
+    }
+    await dbSaveOrder(merged)
+    res.status(200).json(orderToApi(merged))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 app.patch('/api/orders/:id/status', async (req, res) => {
   try {
     const { id } = req.params

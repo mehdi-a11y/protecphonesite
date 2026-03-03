@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getOrders, setOrderStatus, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order } from '../types'
+import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
 
 type FilterStatus =
@@ -52,6 +52,9 @@ export function ConfirmPage() {
   const [yalidineMsg, setYalidineMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [yalidineSyncing, setYalidineSyncing] = useState(false)
   const [yalidineSyncMsg, setYalidineSyncMsg] = useState<string | null>(null)
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editForm, setEditForm] = useState<Partial<Order>>({})
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -152,6 +155,49 @@ export function ConfirmPage() {
     setOrders(orders)
     setSelectedOrder(orders.find((o) => o.id === order.id) ?? null)
     setInfo(`Commande ${order.id} mise à jour en "${getStatusLabel(status)}".`)
+  }
+
+  const openEditOrder = (order: Order) => {
+    setEditingOrder(order)
+    setEditForm({
+      customerName: order.customerName ?? '',
+      phone: order.phone ?? '',
+      address: order.address ?? '',
+      wilaya: order.wilaya ?? '',
+      deliveryType: order.deliveryType ?? 'domicile',
+      deliveryPrice: order.deliveryPrice,
+      total: order.total,
+      yalidineStopdeskId: order.yalidineStopdeskId ?? '',
+      yalidineStopdeskName: order.yalidineStopdeskName ?? '',
+    })
+  }
+
+  const handleSaveEditOrder = async () => {
+    if (!editingOrder) return
+    setEditSaving(true)
+    setError('')
+    try {
+      const updated = await updateOrder(editingOrder.id, {
+        customerName: editForm.customerName,
+        phone: editForm.phone,
+        address: editForm.address,
+        wilaya: editForm.wilaya,
+        deliveryType: editForm.deliveryType,
+        deliveryPrice: editForm.deliveryPrice,
+        total: editForm.total,
+        yalidineStopdeskId: editForm.yalidineStopdeskId || undefined,
+        yalidineStopdeskName: editForm.yalidineStopdeskName || undefined,
+      })
+      const orders = await getOrders()
+      setOrders(orders)
+      setSelectedOrder(orders.find((o) => o.id === editingOrder.id) ?? updated)
+      setEditingOrder(null)
+      setInfo(`Commande ${editingOrder.id} mise à jour.`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erreur lors de la mise à jour.')
+    } finally {
+      setEditSaving(false)
+    }
   }
 
   const handleSendToYalidine = async (order: Order) => {
@@ -336,7 +382,14 @@ export function ConfirmPage() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-white/10 flex justify-end">
+            <div className="pt-3 border-t border-white/10 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => openEditOrder(selectedOrder)}
+                className="px-3 py-2 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20"
+              >
+                Modifier la commande
+              </button>
               <select
                 value={selectedOrder.status}
                 onChange={(e) =>
@@ -355,6 +408,102 @@ export function ConfirmPage() {
               </select>
             </div>
           </section>
+        )}
+
+        {/* Modal Modifier la commande */}
+        {editingOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => !editSaving && setEditingOrder(null)}>
+            <div className="rounded-xl bg-brand-card border border-white/10 w-full max-w-md shadow-xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-white font-semibold">Modifier la commande {editingOrder.id}</h3>
+              <div className="space-y-2">
+                <label className="block text-xs text-brand-muted">Nom client</label>
+                <input
+                  value={editForm.customerName ?? ''}
+                  onChange={(e) => setEditForm((f) => ({ ...f, customerName: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                />
+                <label className="block text-xs text-brand-muted">Téléphone</label>
+                <input
+                  value={editForm.phone ?? ''}
+                  onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                />
+                <label className="block text-xs text-brand-muted">Adresse / Commune</label>
+                <input
+                  value={editForm.address ?? ''}
+                  onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                />
+                <label className="block text-xs text-brand-muted">Wilaya</label>
+                <input
+                  value={editForm.wilaya ?? ''}
+                  onChange={(e) => setEditForm((f) => ({ ...f, wilaya: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                />
+                <label className="block text-xs text-brand-muted">Livraison</label>
+                <select
+                  value={editForm.deliveryType ?? 'domicile'}
+                  onChange={(e) => setEditForm((f) => ({ ...f, deliveryType: e.target.value as Order['deliveryType'] }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                >
+                  <option value="domicile">À domicile</option>
+                  <option value="yalidine">Bureau Yalidine</option>
+                </select>
+                {(editForm.deliveryType === 'yalidine') && (
+                  <>
+                    <label className="block text-xs text-brand-muted">Bureau Yalidine (nom)</label>
+                    <input
+                      value={editForm.yalidineStopdeskName ?? ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, yalidineStopdeskName: e.target.value }))}
+                      placeholder="Nom du bureau"
+                      className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                    />
+                    <label className="block text-xs text-brand-muted">ID bureau (stopdesk_id)</label>
+                    <input
+                      value={editForm.yalidineStopdeskId ?? ''}
+                      onChange={(e) => setEditForm((f) => ({ ...f, yalidineStopdeskId: e.target.value }))}
+                      placeholder="ex. 160101"
+                      className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                    />
+                  </>
+                )}
+                <label className="block text-xs text-brand-muted">Livraison (DA)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editForm.deliveryPrice ?? ''}
+                  onChange={(e) => setEditForm((f) => ({ ...f, deliveryPrice: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                />
+                <label className="block text-xs text-brand-muted">Total (DA)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editForm.total ?? ''}
+                  onChange={(e) => setEditForm((f) => ({ ...f, total: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveEditOrder}
+                  disabled={editSaving}
+                  className="flex-1 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {editSaving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingOrder(null)}
+                  disabled={editSaving}
+                  className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Tableau principal comme une plateforme de confirmation */}
