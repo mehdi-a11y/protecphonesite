@@ -44,10 +44,17 @@ function getTransporter() {
  * @param {object} order - Commande { id, customerName, phone, address, wilaya, deliveryType, total, confirmationCode, items }
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
+export function isEmailConfigured() {
+  const host = process.env.SMTP_HOST || ''
+  const user = process.env.SMTP_USER || ''
+  const pass = process.env.SMTP_PASS || ''
+  return !!(host && user && pass)
+}
+
 export async function sendNewOrderNotificationToConfirmateurs(order) {
   const transporter = getTransporter()
   if (!transporter) {
-    console.warn('[Email] SMTP non configuré (SMTP_HOST, SMTP_USER, SMTP_PASS). Notification confirmateur non envoyée.')
+    console.warn('[Email] SMTP non configuré. Définissez SMTP_HOST, SMTP_USER et SMTP_PASS dans .env puis redémarrez le serveur.')
     return { ok: false, error: 'SMTP non configuré' }
   }
 
@@ -56,6 +63,8 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
     console.warn('[Email] Aucune adresse confirmateur configurée.')
     return { ok: false, error: 'Aucune adresse' }
   }
+
+  console.log('[Email] Envoi notification nouvelle commande', order.id, 'vers', to.length, 'destinataire(s)')
 
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@protecphone.dz'
   const subject = `[ProtecPhone] Nouvelle commande ${order.id}`
@@ -110,10 +119,38 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
       text,
       html,
     })
+    console.log('[Email] Notification envoyée avec succès vers', to.join(', '))
     return { ok: true }
   } catch (err) {
     const message = err.message || String(err)
-    console.error('[Email] Erreur envoi notification confirmateur:', message)
+    console.error('[Email] Erreur envoi:', message)
+    if (err.response) console.error('[Email] Réponse SMTP:', err.response)
     return { ok: false, error: message }
+  }
+}
+
+/**
+ * Envoie un email de test aux confirmateurs (pour vérifier la config SMTP).
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function sendTestEmail() {
+  const transporter = getTransporter()
+  if (!transporter) return { ok: false, error: 'SMTP non configuré (SMTP_HOST, SMTP_USER, SMTP_PASS)' }
+  const to = getConfirmateurEmails()
+  if (to.length === 0) return { ok: false, error: 'Aucune adresse confirmateur' }
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject: '[ProtecPhone] Test notification email',
+      text: 'Ceci est un email de test. Si vous le recevez, les notifications commande sont opérationnelles.',
+      html: '<p>Ceci est un email de test. Si vous le recevez, les notifications commande sont opérationnelles.</p>',
+    })
+    return { ok: true }
+  } catch (err) {
+    const msg = err.message || String(err)
+    const code = err.code || err.responseCode
+    return { ok: false, error: msg, code: code ? String(code) : undefined }
   }
 }

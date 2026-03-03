@@ -1,0 +1,11 @@
+# Déploiement Render : Web Service (Node) qui sert l'API + le front
+# Sans ceci, si tu as créé un "Static Site", l'API (/api/...) ne fonctionne pas.
+services:
+  - type: web
+    name: protecphonesite
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production

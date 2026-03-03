@@ -41,7 +41,7 @@ import {
 } from './db.js'
 import { getBureauxByWilaya, getCommuneByStopdeskId } from './yalidine-bureaux.js'
 import { sendOrderConfirmationWhatsApp, normalizePhoneToE164 } from './whatsapp.js'
-import { sendNewOrderNotificationToConfirmateurs } from './email.js'
+import { sendNewOrderNotificationToConfirmateurs, isEmailConfigured, sendTestEmail } from './email.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -501,6 +501,28 @@ app.get('/api/whatsapp/check', (_req, res) => {
   })
 })
 
+// Diagnostic et test des notifications email confirmateur
+app.get('/api/email/check', (_req, res) => {
+  const configured = isEmailConfigured()
+  const to = (process.env.CONFIRMATEUR_EMAILS || 'brahimbouhounali2004@gmail.com,nacermido68@gmail.com')
+    .split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean)
+  res.json({
+    configured,
+    message: configured
+      ? 'SMTP configuré. Les confirmateurs recevront un email à chaque nouvelle commande.'
+      : 'SMTP non configuré. Ajoutez SMTP_HOST, SMTP_USER et SMTP_PASS dans .env puis redémarrez le serveur.',
+    to,
+  })
+})
+
+app.post('/api/email/test', async (_req, res) => {
+  const result = await sendTestEmail()
+  if (result.ok) {
+    return res.json({ ok: true, message: 'Email de test envoyé. Vérifiez la boîte des confirmateurs (et les spams).' })
+  }
+  res.status(500).json({ ok: false, error: result.error, code: result.code })
+})
+
 app.post('/api/orders', async (req, res) => {
   try {
     const a = req.body
@@ -513,7 +535,8 @@ app.post('/api/orders', async (req, res) => {
       if (!result.ok) console.error('[WhatsApp]', result.error)
     }).catch((err) => console.error('[WhatsApp]', err))
     sendNewOrderNotificationToConfirmateurs(order).then((result) => {
-      if (!result.ok) console.error('[Email]', result.error)
+      if (result.ok) console.log('[Email] Notification commande', order.id, 'envoyée.')
+      else console.error('[Email]', result.error)
     }).catch((err) => console.error('[Email]', err))
     res.status(201).json(orderToApi(order))
   } catch (e) {
