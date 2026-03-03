@@ -155,6 +155,10 @@ export function ConfirmPage() {
   }
 
   const handleSendToYalidine = async (order: Order) => {
+    if (order.status !== 'confirmed') {
+      setYalidineMsg({ type: 'error', text: 'Seules les commandes confirmées peuvent être envoyées à Yalidine.' })
+      return
+    }
     if (order.yalidineTracking) {
       setYalidineMsg({ type: 'error', text: `Déjà envoyé : ${order.yalidineTracking}` })
       return
@@ -299,7 +303,7 @@ export function ConfirmPage() {
                 {yalidineMsg.text}
               </p>
             )}
-            {!selectedOrder.yalidineTracking && (
+            {selectedOrder.yalidineTracking ? null : selectedOrder.status === 'confirmed' ? (
               <button
                 type="button"
                 onClick={() => handleSendToYalidine(selectedOrder)}
@@ -308,6 +312,8 @@ export function ConfirmPage() {
               >
                 {yalidineSending ? 'Envoi vers Yalidine…' : 'Envoyer à Yalidine'}
               </button>
+            ) : (
+              <p className="text-brand-muted text-sm">Confirmez la commande pour pouvoir l&apos;envoyer à Yalidine.</p>
             )}
 
             <div className="pt-3 border-t border-white/10 space-y-1">

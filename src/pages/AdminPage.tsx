@@ -354,6 +354,10 @@ export function AdminPage() {
   }
 
   const handleSendToYalidine = async (order: Order) => {
+    if (order.status !== 'confirmed') {
+      setYalidineMessage({ orderId: order.id, type: 'error', text: 'Seules les commandes confirmées peuvent être envoyées à Yalidine.' })
+      return
+    }
     if (order.yalidineTracking) {
       setYalidineMessage({ orderId: order.id, type: 'error', text: `Déjà envoyé : ${order.yalidineTracking}` })
       return
@@ -2183,7 +2187,7 @@ function OrderCard({
             >
               Suivre le colis →
             </a>
-          ) : (
+          ) : order.status === 'confirmed' ? (
             <button
               type="button"
               onClick={() => onSendToYalidine(order)}
@@ -2192,6 +2196,8 @@ function OrderCard({
             >
               {yalidineSending ? 'Envoi…' : 'Envoyer à Yalidine'}
             </button>
+          ) : (
+            <span className="text-brand-muted text-xs">Confirmer la commande pour envoyer à Yalidine</span>
           )}
         </div>
       )}
