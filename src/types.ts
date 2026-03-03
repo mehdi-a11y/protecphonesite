@@ -47,9 +47,12 @@ export interface Order {
   achatFournisseurDone?: boolean
 }
 
-export const ADMIN_PASSWORD = 'admin' // à changer en production
+export const ADMIN_PASSWORD = 'mehdi2026dz'
+
+export const CONFIRMATEUR_PASSWORD = 'brahim2003'
 
 const ADMIN_AUTH_KEY = 'protecphone_admin_auth'
+const CONFIRMATEUR_AUTH_KEY = 'protecphone_confirmateur_auth'
 
 import * as api from './api'
 
@@ -95,4 +98,13 @@ export function isAdminAuthenticated(): boolean {
 export function setAdminAuthenticated(value: boolean): void {
   if (value) sessionStorage.setItem(ADMIN_AUTH_KEY, '1')
   else sessionStorage.removeItem(ADMIN_AUTH_KEY)
+}
+
+export function isConfirmateurAuthenticated(): boolean {
+  return sessionStorage.getItem(CONFIRMATEUR_AUTH_KEY) === '1'
+}
+
+export function setConfirmateurAuthenticated(value: boolean): void {
+  if (value) sessionStorage.setItem(CONFIRMATEUR_AUTH_KEY, '1')
+  else sessionStorage.removeItem(CONFIRMATEUR_AUTH_KEY)
 }

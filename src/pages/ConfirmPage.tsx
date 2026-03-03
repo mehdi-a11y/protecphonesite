@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getOrders, setOrderStatus, updateOrderYalidine, type Order } from '../types'
+import { getOrders, setOrderStatus, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
 
 type FilterStatus =
@@ -38,6 +38,9 @@ function getStatusLabel(status: Order['status']): string {
 }
 
 export function ConfirmPage() {
+  const [auth, setAuth] = useState(isConfirmateurAuthenticated())
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
   const [codeInput, setCodeInput] = useState('')
   const [searchText, setSearchText] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
@@ -49,6 +52,51 @@ export function ConfirmPage() {
   const [yalidineMsg, setYalidineMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [yalidineSyncing, setYalidineSyncing] = useState(false)
   const [yalidineSyncMsg, setYalidineSyncMsg] = useState<string | null>(null)
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginError('')
+    if (password === CONFIRMATEUR_PASSWORD) {
+      setConfirmateurAuthenticated(true)
+      setAuth(true)
+      setPassword('')
+    } else {
+      setLoginError('Mot de passe incorrect.')
+    }
+  }
+
+  const handleLogout = () => {
+    setConfirmateurAuthenticated(false)
+    setAuth(false)
+  }
+
+  if (!auth) {
+    return (
+      <div className="min-h-screen bg-brand-dark flex items-center justify-center px-4">
+        <div className="w-full max-w-sm rounded-xl bg-brand-card border border-white/10 p-6">
+          <h1 className="text-lg font-semibold text-white mb-2">Plateforme de confirmation</h1>
+          <p className="text-brand-muted text-sm mb-4">Entrez le mot de passe pour accéder.</p>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mot de passe"
+              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              autoFocus
+            />
+            {loginError && <p className="text-red-400 text-sm">{loginError}</p>}
+            <button type="submit" className="w-full py-2 rounded-lg bg-brand-accent text-white font-medium hover:opacity-90">
+              Connexion
+            </button>
+          </form>
+          <p className="mt-4 text-center">
+            <Link to="/" className="text-brand-muted hover:text-white text-sm">Retour au site</Link>
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     getOrders().then(setOrders)
@@ -153,6 +201,9 @@ export function ConfirmPage() {
           ← Retour au site
         </Link>
         <span className="text-brand-accent text-sm font-medium">Confirmation des commandes</span>
+        <button type="button" onClick={handleLogout} className="text-brand-muted hover:text-white text-sm">
+          Déconnexion
+        </button>
       </header>
 
       <main className="p-4 max-w-6xl mx-auto">
