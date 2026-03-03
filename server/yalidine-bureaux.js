@@ -239,18 +239,46 @@ const BUREAUX_RAW = [
   [580601, 'El Meniaa', 'Agence de El Menia [Yalidine]', 'Route Unite Africaine'],
 ]
 
+/** Dérive le nom de commune depuis le libellé du bureau (ex. "Agence de Aïn Benian [Guepex]" → "Aïn Benian"). */
+function deriveCommuneFromBureauName(name, wilayaName) {
+  if (!name || typeof name !== 'string') return wilayaName || ''
+  const m = name.match(/\bAgence\s+(?:de\s+)?([^[\](]+?)(?:\s*\[|\s*\(|$)/i) || name.match(/\b(?:Agence|Desk|HUB)\s+([^[\](]+?)(?:\s*\[|\s*\(|$)/i)
+  const extracted = m ? m[1].trim() : ''
+  if (extracted && extracted.length < 50) return extracted
+  return wilayaName || ''
+}
+
 function getBureauxByWilaya(wilayaCode) {
   let code = String(wilayaCode || '').trim()
   if (code && code.length === 1) code = '0' + code
-  if (!code) return BUREAUX_RAW.map(([id, , name, address]) => ({ id, name, address, wilaya: '' }))
+  if (!code) {
+    return BUREAUX_RAW.map(([id, wName, name, address]) => ({
+      id,
+      name,
+      address,
+      wilaya: '',
+      commune: deriveCommuneFromBureauName(name, wName),
+    }))
+  }
   return BUREAUX_RAW.filter(([, wName]) => WILAYA_NAME_TO_CODE[wName] === code).map(
     ([id, wName, name, address]) => ({
       id,
       name,
       address,
       wilaya: WILAYA_NAME_TO_CODE[wName] ?? code,
+      commune: deriveCommuneFromBureauName(name, wName),
     }),
   )
 }
 
-export { getBureauxByWilaya, BUREAUX_RAW, WILAYA_NAME_TO_CODE }
+/** Retourne la commune du bureau par son id (liste statique). Utilisé pour to_commune_name à l'envoi Yalidine. */
+function getCommuneByStopdeskId(stopdeskId) {
+  const id = parseInt(stopdeskId, 10)
+  if (Number.isNaN(id)) return null
+  const row = BUREAUX_RAW.find(([bid]) => Number(bid) === id)
+  if (!row) return null
+  const [, wName, name] = row
+  return deriveCommuneFromBureauName(name, wName)
+}
+
+export { getBureauxByWilaya, getCommuneByStopdeskId, BUREAUX_RAW, WILAYA_NAME_TO_CODE }

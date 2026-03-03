@@ -71,6 +71,8 @@ export interface YalidineStopdesk {
   name: string
   address?: string
   wilaya?: string
+  /** Commune du bureau (pour to_commune_name à l'envoi Yalidine) */
+  commune?: string
 }
 
 /** onlyFromApi: true = uniquement les bureaux renvoyés par l'API Yalidine (pas la liste statique), pour éviter des stopdesk_id invalides à l'envoi */

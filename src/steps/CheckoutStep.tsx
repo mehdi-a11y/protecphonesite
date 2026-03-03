@@ -31,6 +31,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [stopdesksLoading, setStopdesksLoading] = useState(false)
   const [selectedStopdeskId, setSelectedStopdeskId] = useState('')
   const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
+  const [selectedStopdeskCommune, setSelectedStopdeskCommune] = useState('')
 
   useEffect(() => {
     if (!wilaya) {
@@ -53,11 +54,13 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       setStopdesks([])
       setSelectedStopdeskId('')
       setSelectedStopdeskName('')
+      setSelectedStopdeskCommune('')
       return
     }
     setStopdesksLoading(true)
     setSelectedStopdeskId('')
     setSelectedStopdeskName('')
+    setSelectedStopdeskCommune('')
 
     let cancelled = false
     // Bureaux uniquement depuis l'API Yalidine pour que le stopdesk_id soit accepté à l'envoi
@@ -106,7 +109,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       id: orderId,
       customerName: name,
       phone,
-      address: deliveryType === 'domicile' ? commune.trim() : '',
+      address: deliveryType === 'domicile' ? commune.trim() : (deliveryType === 'yalidine' ? selectedStopdeskCommune : ''),
       wilaya,
       deliveryType,
       deliveryPrice,
@@ -117,6 +120,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       confirmationCode,
       ...(deliveryType === 'yalidine' && selectedStopdeskId
         ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
+        : {},
         : {}),
     })
     trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
@@ -268,9 +272,12 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                   required={deliveryType === 'yalidine'}
                   value={selectedStopdeskId}
                   onChange={(e) => {
+                    const value = e.target.value
                     const opt = e.target.options[e.target.selectedIndex]
-                    setSelectedStopdeskId(e.target.value)
+                    const bureau = stopdesks.find((s) => String(s.id) === value)
+                    setSelectedStopdeskId(value)
                     setSelectedStopdeskName(opt?.textContent ?? '')
+                    setSelectedStopdeskCommune(bureau?.commune ?? '')
                   }}
                   className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
                   aria-label="Choisir un bureau Yalidine"

@@ -39,7 +39,7 @@ import {
   dbSaveCollection,
   dbDeleteCollection,
 } from './db.js'
-import { getBureauxByWilaya } from './yalidine-bureaux.js'
+import { getBureauxByWilaya, getCommuneByStopdeskId } from './yalidine-bureaux.js'
 import { sendOrderConfirmationWhatsApp, normalizePhoneToE164 } from './whatsapp.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -167,7 +167,7 @@ app.post('/api/yalidine/parcels', async (req, res) => {
     }
   }
 
-  // Normaliser les payloads : stopdesk_id en entier, to_commune_name résolu si vide ou égal à la wilaya
+  // Normaliser les payloads : stopdesk_id en entier, to_commune_name = commune du bureau si is_stopdesk
   const normalizedParcels = []
   for (const p of parcels) {
     const out = { ...p }
@@ -176,8 +176,16 @@ app.post('/api/yalidine/parcels', async (req, res) => {
       if (Number.isNaN(out.stopdesk_id)) delete out.stopdesk_id
     }
     const wilayaName = (out.to_wilaya_name || '').toString().trim()
-    const communeName = (out.to_commune_name || '').toString().trim()
+    let communeName = (out.to_commune_name || '').toString().trim()
     const looksLikeAddress = communeName.length > 50 || communeName.includes(',')
+    // Pour livraison bureau : utiliser la commune du bureau (API ou liste statique) pour éviter l'erreur stopdesk_id / to_commune_name
+    if (out.is_stopdesk === true && out.stopdesk_id != null) {
+      const bureauCommune = getCommuneByStopdeskId(out.stopdesk_id)
+      if (bureauCommune) {
+        out.to_commune_name = bureauCommune
+        communeName = bureauCommune
+      }
+    }
     if (!communeName || communeName === wilayaName || looksLikeAddress) {
       out.to_commune_name = await getDefaultCommuneForWilaya(wilayaName)
     }
@@ -218,6 +226,7 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
       name: s.name ?? s.stopdesk_name ?? s.center_name ?? s.address ?? String(s.id ?? ''),
       address: s.address ?? s.adresse ?? '',
       wilaya: s.wilaya ?? s.wilaya_name ?? wilayaParam ?? '',
+      commune: (s.commune ?? s.commune_name ?? s.commune_name_ar ?? '').toString().trim() || undefined,
     })).filter((s) => s.id != null)
   }
 
@@ -255,6 +264,7 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
       name: s.name,
       address: s.address ?? '',
       wilaya: s.wilaya ?? wilaya ?? '',
+      commune: s.commune ?? undefined,
     }))
   } catch (e) {
     console.warn('[Yalidine stopdesks]', e.message)
