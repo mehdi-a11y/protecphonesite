@@ -87,6 +87,24 @@ const WILAYA_NAME_TO_CODE = {
   Touggourt: '55', Djanet: '56', 'In Salah': '57', 'In Guezzam': '58',
 }
 
+/** Retourne un nom de commune valide pour la wilaya (pour to_commune_name Yalidine). */
+async function getDefaultCommuneForWilaya(wilayaName) {
+  const code = WILAYA_NAME_TO_CODE[wilayaName] || null
+  if (!code) return wilayaName || 'Alger'
+  const wilayaNum = parseInt(code, 10)
+  if (Number.isNaN(wilayaNum) || wilayaNum < 1 || wilayaNum > 58) return wilayaName || 'Alger'
+  try {
+    const leblad = (await import('@dzcode-io/leblad')).default
+    const baladyiats = leblad.getBaladyiatsForWilaya(wilayaNum) || []
+    if (baladyiats.length > 0) {
+      const first = baladyiats[0]
+      const name = first?.name != null ? String(first.name).trim() : ''
+      if (name) return name
+    }
+  } catch (_) {}
+  return wilayaName || 'Alger'
+}
+
 async function fetchYalidineCentersForWilaya(wilayaCode) {
   for (const endpoint of ['centers', 'stopdesks']) {
     try {
@@ -149,15 +167,22 @@ app.post('/api/yalidine/parcels', async (req, res) => {
     }
   }
 
-  // Normaliser les payloads : stopdesk_id en entier pour l'API Yalidine
-  const normalizedParcels = parcels.map((p) => {
+  // Normaliser les payloads : stopdesk_id en entier, to_commune_name résolu si vide ou égal à la wilaya
+  const normalizedParcels = []
+  for (const p of parcels) {
     const out = { ...p }
     if (out.is_stopdesk === true && out.stopdesk_id != null) {
       out.stopdesk_id = parseInt(out.stopdesk_id, 10)
       if (Number.isNaN(out.stopdesk_id)) delete out.stopdesk_id
     }
-    return out
-  })
+    const wilayaName = (out.to_wilaya_name || '').toString().trim()
+    const communeName = (out.to_commune_name || '').toString().trim()
+    const looksLikeAddress = communeName.length > 50 || communeName.includes(',')
+    if (!communeName || communeName === wilayaName || looksLikeAddress) {
+      out.to_commune_name = await getDefaultCommuneForWilaya(wilayaName)
+    }
+    normalizedParcels.push(out)
+  }
 
   try {
     const response = await fetch(`${YALIDINE_API_BASE}parcels/`, {

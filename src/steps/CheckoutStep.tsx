@@ -42,8 +42,8 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
     setSelectedStopdeskName('')
 
     let cancelled = false
-    // Un seul appel : le serveur renvoie toujours la liste statique si l'API Yalidine ne répond pas
-    apiGetYalidineStopdesks(wilaya, { onlyFromApi: false })
+    // Bureaux uniquement depuis l'API Yalidine pour que le stopdesk_id soit accepté à l'envoi
+    apiGetYalidineStopdesks(wilaya, { onlyFromApi: true })
       .then((list) => {
         if (!cancelled && list && list.length > 0) setStopdesks(list)
       })
