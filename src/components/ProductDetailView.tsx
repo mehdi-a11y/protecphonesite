@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
 import { IPHONE_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone } from '../data'
-import { SCREEN_PROTECTOR_UPSELL } from '../data-screen-protector'
+import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
 export function ProductDetailView({ product, title, onCommander, backLink }: Props) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [addScreenProtector, setAddScreenProtector] = useState(false)
+  const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
 
   const phoneOptions = useMemo(() => {
     const all = (product.compatibleWith?.length ? product.compatibleWith : IPHONE_MODELS.map((m) => m.id)) as IPhoneModelId[]
@@ -235,15 +236,15 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-4">
                 <label className="flex gap-4 cursor-pointer group">
                   <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-brand-card border border-white/10 flex items-center justify-center text-2xl">
-                    {SCREEN_PROTECTOR_UPSELL.image}
+                    {screenProtectorUpsell.image}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-white group-hover:text-brand-accent transition-colors">
-                      {SCREEN_PROTECTOR_UPSELL.name}
+                      {screenProtectorUpsell.name}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-brand-accent font-semibold">
-                        {SCREEN_PROTECTOR_UPSELL.price} DA
+                        {screenProtectorUpsell.price} DA
                       </span>
                     </div>
                     <p className="text-xs text-brand-muted mt-1">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { loadProducts, getAntichocById, normalizeProduct } from '../data'
-import { SCREEN_PROTECTOR_UPSELL } from '../data-screen-protector'
+import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
@@ -61,7 +61,7 @@ export function ProductPage() {
   const goToCheckout = (selectedPhoneId: IPhoneModelId, selectedColorId: string, addUpsellScreenProtector: boolean) => {
     const p = product!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
-    if (addUpsellScreenProtector) items.push({ antichoc: SCREEN_PROTECTOR_UPSELL, isUpsell: true })
+    if (addUpsellScreenProtector) items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
