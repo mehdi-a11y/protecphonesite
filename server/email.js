@@ -34,6 +34,10 @@ function getTransporter() {
     port: Number.isNaN(port) ? 587 : port,
     secure,
     auth: { user, pass },
+    // Timeouts plus longs : sur hébergement gratuit (ex. Render), la connexion à Gmail peut être lente
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
   })
 }
 

@@ -536,8 +536,8 @@ app.post('/api/orders', async (req, res) => {
     }).catch((err) => console.error('[WhatsApp]', err))
     sendNewOrderNotificationToConfirmateurs(order).then((result) => {
       if (result.ok) console.log('[Email] Notification commande', order.id, 'envoyée.')
-      else console.error('[Email]', result.error)
-    }).catch((err) => console.error('[Email]', err))
+      else console.error('[Email] Notification commande', order.id, 'échouée:', result.error)
+    }).catch((err) => console.error('[Email] Exception envoi notification:', err.message || err))
     res.status(201).json(orderToApi(order))
   } catch (e) {
     res.status(500).json({ error: e.message })
