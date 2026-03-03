@@ -677,6 +677,7 @@ export function AdminPage() {
               if (!phoneId) continue
               const colorId = item.selectedColorId ?? ''
               const product = productMap.get(item.antichoc.id) ?? item.antichoc
+              // Priorité stock : si la variante a du stock, on n'achète pas → la ligne n'est pas ajoutée
               if (!needToBuyVariantFromSupplier(product, colorId, phoneId)) continue
               const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
@@ -685,6 +686,7 @@ export function AdminPage() {
                 variantLabel: colorId ? `${colorName} — ${phoneName}` : phoneName,
               })
             }
+            // Seules les commandes avec au moins une ligne à acheter (stock 0 + fournisseur) apparaissent ici
             if (linesToBuy.length > 0) ordersWithBuyList.push({ order, linesToBuy })
           }
           return (
