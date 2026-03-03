@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { loadProducts, getAntichocById, SCREEN_PROTECTOR_UPSELL } from '../data'
+import { loadProducts, getAntichocById } from '../data'
+import { SCREEN_PROTECTOR_UPSELL } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'

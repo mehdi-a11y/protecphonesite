@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
-import { IPHONE_MODELS, ANTICHOC_COLORS, SCREEN_PROTECTOR_UPSELL, isVariantOrderable, hasOrderableVariantForPhone } from '../data'
+import { IPHONE_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone } from '../data'
+import { SCREEN_PROTECTOR_UPSELL } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
 
 interface Props {
