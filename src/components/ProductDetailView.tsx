@@ -28,14 +28,15 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
       .map((id) => ANTICHOC_COLORS.find((c) => c.id === id))
       .filter((c): c is NonNullable<typeof c> => c != null)
   }, [product.colorIds])
+
+  const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>('')
+  const [selectedColorId, setSelectedColorId] = useState<string>('')
+
   const orderableColorIdsForSelectedPhone = useMemo(() => {
     if (!selectedPhoneId) return new Set<string>()
     const colorIds = (product.colorIds?.length ? product.colorIds : ['']) as string[]
     return new Set(colorIds.filter((cid) => isVariantOrderable(product, cid, selectedPhoneId)))
   }, [product, selectedPhoneId])
-
-  const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>('')
-  const [selectedColorId, setSelectedColorId] = useState<string>('')
 
   useEffect(() => {
     setSelectedPhoneId('')

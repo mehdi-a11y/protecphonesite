@@ -1,4 +1,4 @@
-import { StrictMode, lazy, Suspense } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SiteLayout } from './components/SiteLayout'
@@ -13,15 +13,7 @@ import './index.css'
 
 initFacebookPixel()
 
-const ProductPage = lazy(() => import('./pages/ProductPage.tsx').then((m) => ({ default: m.ProductPage })))
-
-function ProductPageFallback() {
-  return (
-    <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-      <p className="text-brand-muted">Chargement...</p>
-    </div>
-  )
-}
+import { ProductPageWrapper } from './pages/ProductPageWrapper'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -37,9 +29,7 @@ createRoot(document.getElementById('root')!).render(
             path="/product/:id"
             element={
               <ErrorBoundary>
-                <Suspense fallback={<ProductPageFallback />}>
-                  <ProductPage />
-                </Suspense>
+                <ProductPageWrapper />
               </ErrorBoundary>
             }
           />

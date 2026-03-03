@@ -1,5 +1,4 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { useParams, Link } from 'react-router-dom'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
@@ -12,8 +11,11 @@ const ConfirmationStep = lazy(() => import('../steps/ConfirmationStep').then((m)
 
 type Step = 'product' | 'checkout' | 'confirmation'
 
-export function ProductPage() {
-  const { id } = useParams<{ id: string }>()
+interface ProductPageProps {
+  id: string | undefined
+}
+
+export function ProductPage({ id }: ProductPageProps) {
   const [step, setStep] = useState<Step>('product')
   const [product, setProduct] = useState<Antichoc | null>(null)
   const [loading, setLoading] = useState(true)
@@ -93,9 +95,9 @@ export function ProductPage() {
     return (
       <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center px-6">
         <p className="text-red-400 mb-4">{error ?? 'Produit introuvable'}</p>
-        <Link to="/" className="text-brand-accent hover:underline">
-          Retour à l'accueil
-        </Link>
+        <a href="/" className="text-brand-accent hover:underline">
+          Retour à l&apos;accueil
+        </a>
       </div>
     )
   }
@@ -129,9 +131,9 @@ export function ProductPage() {
           product={product}
           onCommander={goToCheckout}
           backLink={
-            <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
+            <a href="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
               ← Retour au catalogue
-            </Link>
+            </a>
           }
         />
       </Suspense>
