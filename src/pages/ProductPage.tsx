@@ -126,7 +126,7 @@ export function ProductPage() {
     <div className="min-h-screen bg-brand-dark">
       <Suspense fallback={<div className="min-h-screen bg-brand-dark flex items-center justify-center"><p className="text-brand-muted">Chargement...</p></div>}>
         <ProductDetailView
-          product={normalizeProduct(product) ?? product}
+          product={product}
           onCommander={goToCheckout}
           backLink={
             <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
