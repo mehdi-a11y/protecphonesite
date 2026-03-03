@@ -16,7 +16,7 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first')
 }
 
-const CONFIRMATEUR_EMAILS_DEFAULT = ['naceurmehdi9@gmail.com']
+const CONFIRMATEUR_EMAILS_DEFAULT = ['protecphonedz@gmail.com']
 
 function getConfirmateurEmails() {
   const env = (process.env.CONFIRMATEUR_EMAILS || '').trim()

@@ -505,7 +505,7 @@ app.get('/api/whatsapp/check', (_req, res) => {
 app.get('/api/email/check', (_req, res) => {
   const configured = isEmailConfigured()
   const useResend = !!(process.env.RESEND_API_KEY || '').trim()
-  const to = (process.env.CONFIRMATEUR_EMAILS || 'naceurmehdi9@gmail.com')
+  const to = (process.env.CONFIRMATEUR_EMAILS || 'protecphonedz@gmail.com')
     .split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean)
   const message = configured
     ? (useResend ? 'Resend configuré. ' : 'SMTP configuré. ') + 'Les confirmateurs recevront un email à chaque nouvelle commande.'
