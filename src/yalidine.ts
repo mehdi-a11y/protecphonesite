@@ -76,7 +76,7 @@ function orderToParcelPayload(order: Order): YalidineParcelPayload {
     to_wilaya_name: wilayaName,
     product_list: productList || 'Commande Protecphone',
     price: order.total ?? 0,
-    freeshipping: false,
+    freeshipping: true, // Total déjà calculé sur notre site (produits + livraison), pas de double facturation côté Yalidine
     is_stopdesk: isStopdesk,
     ...(isStopdesk && stopdeskId != null ? { stopdesk_id: stopdeskId } : {}),
     has_exchange: 0,
