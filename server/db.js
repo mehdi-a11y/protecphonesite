@@ -205,18 +205,15 @@ export async function dbDecrementStockForOrder(order) {
 export async function dbUpdateOrderYalidine(orderId, tracking, sentAt) {
   if (pool) {
     await pool.query(
-      'UPDATE orders SET yalidine_tracking = $1, yalidine_sent_at = $2, delivery_price = 0, total = GREATEST(0, total - COALESCE(delivery_price, 0)) WHERE id = $3',
+      'UPDATE orders SET yalidine_tracking = $1, yalidine_sent_at = $2 WHERE id = $3',
       [tracking, sentAt, orderId]
     )
     return
   }
   const o = memoryOrders.find((x) => x.id === orderId)
   if (o) {
-    const prevDelivery = o.deliveryPrice ?? 0
     o.yalidineTracking = tracking
     o.yalidineSentAt = sentAt
-    o.deliveryPrice = 0
-    o.total = Math.max(0, (o.total ?? 0) - prevDelivery)
   }
 }
 
