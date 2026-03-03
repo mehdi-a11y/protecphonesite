@@ -41,6 +41,7 @@ import {
 } from './db.js'
 import { getBureauxByWilaya, getCommuneByStopdeskId } from './yalidine-bureaux.js'
 import { sendOrderConfirmationWhatsApp, normalizePhoneToE164 } from './whatsapp.js'
+import { sendNewOrderNotificationToConfirmateurs } from './email.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -511,6 +512,9 @@ app.post('/api/orders', async (req, res) => {
     sendOrderConfirmationWhatsApp(order).then((result) => {
       if (!result.ok) console.error('[WhatsApp]', result.error)
     }).catch((err) => console.error('[WhatsApp]', err))
+    sendNewOrderNotificationToConfirmateurs(order).then((result) => {
+      if (!result.ok) console.error('[Email]', result.error)
+    }).catch((err) => console.error('[Email]', err))
     res.status(201).json(orderToApi(order))
   } catch (e) {
     res.status(500).json({ error: e.message })
