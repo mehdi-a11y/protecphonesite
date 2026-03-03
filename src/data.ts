@@ -44,6 +44,21 @@ export interface Antichoc {
   compatibleWith: IPhoneModelId[]; // modèles d'iPhone compatibles
 }
 
+const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id)
+
+/** Produit upsell : protecteur d'écran incassable (affiché sur la page produit). */
+export const SCREEN_PROTECTOR_UPSELL: Antichoc = {
+  id: 'upsell-protecteur-ecran-incassable',
+  name: "Protecteur d'écran incassable",
+  description: 'Protection en verre trempé, résistant aux chocs.',
+  price: 900,
+  wholesalePrice: 0,
+  quantity: 0,
+  image: '🛡️',
+  photoUrl: '',
+  compatibleWith: [...allIphoneIds],
+}
+
 /** Normalise un objet produit (API ou cache) pour avoir la forme Antichoc attendue par l'UI. */
 export function normalizeProduct(p: Partial<Antichoc> | null): Antichoc | null {
   if (!p || typeof p !== 'object') return null
@@ -150,21 +165,6 @@ export const ANTICHOC_COLORS = [
 ] as const;
 
 const colors = ANTICHOC_COLORS;
-
-const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id);
-
-/** Produit upsell : protecteur d'écran incassable (affiché sur la page produit). */
-export const SCREEN_PROTECTOR_UPSELL: Antichoc = {
-  id: 'upsell-protecteur-ecran-incassable',
-  name: "Protecteur d'écran incassable",
-  description: 'Protection en verre trempé, résistant aux chocs.',
-  price: 900,
-  wholesalePrice: 0,
-  quantity: 0,
-  image: '🛡️',
-  photoUrl: '',
-  compatibleWith: [...allIphoneIds],
-};
 
 // Générer un catalogue d'antichocs.
 // Chaque design (couleur) est un produit qui peut exister sur plusieurs modèles d'iPhone (collections).
