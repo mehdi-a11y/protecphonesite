@@ -1,12 +1,10 @@
 /**
  * Notification email au confirmateur lors d'une nouvelle commande.
  *
- * Configuration dans .env :
- *   SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS
- *   Optionnel : EMAIL_FROM (sinon SMTP_USER), CONFIRMATEUR_EMAILS (sinon liste par défaut)
- *
- * Exemple Gmail : SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_SECURE=false,
- *   SMTP_USER=votre@gmail.com, SMTP_PASS=mot_de_passe_application_16_caracteres
+ * Deux modes (priorité à Resend si défini) :
+ * 1) Resend (API HTTP, recommandé sur Render) : RESEND_API_KEY + optionnel RESEND_FROM
+ *    Créer un compte sur resend.com, vérifier un domaine ou utiliser onboarding@resend.dev pour test.
+ * 2) SMTP (Gmail, etc.) : SMTP_HOST, SMTP_USER, SMTP_PASS — souvent bloqué sur hébergement gratuit.
  */
 
 import dns from 'node:dns'
@@ -69,19 +67,40 @@ async function getTransporter() {
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
 export function isEmailConfigured() {
+  if ((process.env.RESEND_API_KEY || '').trim()) return true
   const host = process.env.SMTP_HOST || ''
   const user = process.env.SMTP_USER || ''
   const pass = process.env.SMTP_PASS || ''
   return !!(host && user && pass)
 }
 
-export async function sendNewOrderNotificationToConfirmateurs(order) {
-  const transporter = await getTransporter()
-  if (!transporter) {
-    console.warn('[Email] SMTP non configuré. Définissez SMTP_HOST, SMTP_USER et SMTP_PASS dans .env puis redémarrez le serveur.')
-    return { ok: false, error: 'SMTP non configuré' }
+/** Envoi via l'API Resend (HTTP, non bloqué sur Render). */
+async function sendViaResend({ from, to, subject, text, html }) {
+  const key = (process.env.RESEND_API_KEY || '').trim()
+  if (!key) return { ok: false, error: 'RESEND_API_KEY manquant' }
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      from: from || process.env.RESEND_FROM || 'ProtecPhone <onboarding@resend.dev>',
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      text: text || undefined,
+      html: html || undefined,
+    }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = data.message || data.error?.message || data.statusText || res.status
+    return { ok: false, error: String(msg) }
   }
+  return { ok: true }
+}
 
+export async function sendNewOrderNotificationToConfirmateurs(order) {
   const to = getConfirmateurEmails()
   if (to.length === 0) {
     console.warn('[Email] Aucune adresse confirmateur configurée.')
@@ -90,7 +109,6 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
 
   console.log('[Email] Envoi notification nouvelle commande', order.id, 'vers', to.length, 'destinataire(s)')
 
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@protecphone.dz'
   const subject = `[ProtecPhone] Nouvelle commande ${order.id}`
   const deliveryLabel = order.deliveryType === 'yalidine'
     ? `Bureau Yalidine${order.yalidineStopdeskName ? ` : ${order.yalidineStopdeskName}` : ''}`
@@ -135,6 +153,20 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
 </html>
 `.trim()
 
+  // Resend (API HTTP) : prioritaire si défini, évite les blocages SMTP sur Render
+  if ((process.env.RESEND_API_KEY || '').trim()) {
+    const result = await sendViaResend({ to, subject, text, html })
+    if (result.ok) console.log('[Email] Notification envoyée (Resend) vers', to.join(', '))
+    else console.error('[Email] Resend:', result.error)
+    return result
+  }
+
+  const transporter = await getTransporter()
+  if (!transporter) {
+    console.warn('[Email] Ni RESEND_API_KEY ni SMTP configuré.')
+    return { ok: false, error: 'Email non configuré (Resend ou SMTP)' }
+  }
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@protecphone.dz'
   try {
     await transporter.sendMail({
       from,
@@ -158,23 +190,22 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
 export async function sendTestEmail() {
-  const transporter = await getTransporter()
-  if (!transporter) return { ok: false, error: 'SMTP non configuré (SMTP_HOST, SMTP_USER, SMTP_PASS)' }
   const to = getConfirmateurEmails()
   if (to.length === 0) return { ok: false, error: 'Aucune adresse confirmateur' }
+  const subject = '[ProtecPhone] Test notification email'
+  const text = 'Ceci est un email de test. Si vous le recevez, les notifications commande sont opérationnelles.'
+  const html = '<p>Ceci est un email de test. Si vous le recevez, les notifications commande sont opérationnelles.</p>'
+  if ((process.env.RESEND_API_KEY || '').trim()) {
+    return sendViaResend({ to, subject, text, html })
+  }
+  const transporter = await getTransporter()
+  if (!transporter) return { ok: false, error: 'Ni RESEND_API_KEY ni SMTP configuré' }
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER
   try {
-    await transporter.sendMail({
-      from,
-      to,
-      subject: '[ProtecPhone] Test notification email',
-      text: 'Ceci est un email de test. Si vous le recevez, les notifications commande sont opérationnelles.',
-      html: '<p>Ceci est un email de test. Si vous le recevez, les notifications commande sont opérationnelles.</p>',
-    })
+    await transporter.sendMail({ from, to, subject, text, html })
     return { ok: true }
   } catch (err) {
     const msg = err.message || String(err)
-    const code = err.code || err.responseCode
-    return { ok: false, error: msg, code: code ? String(code) : undefined }
+    return { ok: false, error: msg, code: err.code ? String(err.code) : undefined }
   }
 }

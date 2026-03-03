@@ -504,15 +504,13 @@ app.get('/api/whatsapp/check', (_req, res) => {
 // Diagnostic et test des notifications email confirmateur
 app.get('/api/email/check', (_req, res) => {
   const configured = isEmailConfigured()
+  const useResend = !!(process.env.RESEND_API_KEY || '').trim()
   const to = (process.env.CONFIRMATEUR_EMAILS || 'brahimbouhounali2004@gmail.com,nacermido68@gmail.com')
     .split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean)
-  res.json({
-    configured,
-    message: configured
-      ? 'SMTP configuré. Les confirmateurs recevront un email à chaque nouvelle commande.'
-      : 'SMTP non configuré. Ajoutez SMTP_HOST, SMTP_USER et SMTP_PASS dans .env puis redémarrez le serveur.',
-    to,
-  })
+  const message = configured
+    ? (useResend ? 'Resend configuré. ' : 'SMTP configuré. ') + 'Les confirmateurs recevront un email à chaque nouvelle commande.'
+    : 'Email non configuré. Ajoutez RESEND_API_KEY (recommandé sur Render) ou SMTP_HOST/SMTP_USER/SMTP_PASS.'
+  res.json({ configured, method: useResend ? 'resend' : 'smtp', message, to })
 })
 
 app.post('/api/email/test', async (_req, res) => {
