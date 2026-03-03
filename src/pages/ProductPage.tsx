@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { loadProducts, getAntichocById, normalizeProduct } from '../data'
-import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { CartItem } from '../types'
-import { ProductDetailView } from '../components/ProductDetailView'
-import { CheckoutStep } from '../steps/CheckoutStep'
-import { ConfirmationStep } from '../steps/ConfirmationStep'
 import { trackAddToCart } from '../facebookPixel'
+
+const ProductDetailView = lazy(() => import('../components/ProductDetailView').then((m) => ({ default: m.ProductDetailView })))
+const CheckoutStep = lazy(() => import('../steps/CheckoutStep').then((m) => ({ default: m.CheckoutStep })))
+const ConfirmationStep = lazy(() => import('../steps/ConfirmationStep').then((m) => ({ default: m.ConfirmationStep })))
 
 type Step = 'product' | 'checkout' | 'confirmation'
 
@@ -38,6 +37,7 @@ export function ProductPage() {
     let cancelled = false
     async function load() {
       try {
+        const { loadProducts, getAntichocById, normalizeProduct } = await import('../data')
         await Promise.all([loadProducts(), loadDeliveryPrices()])
         if (cancelled) return
         const p = getAntichocById(id)
@@ -58,10 +58,13 @@ export function ProductPage() {
   }, [id])
 
   const [cart, setCart] = useState<CartItem[]>([])
-  const goToCheckout = (selectedPhoneId: IPhoneModelId, selectedColorId: string, addUpsellScreenProtector: boolean) => {
+  const goToCheckout = async (selectedPhoneId: IPhoneModelId, selectedColorId: string, addUpsellScreenProtector: boolean) => {
     const p = product!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
-    if (addUpsellScreenProtector) items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
+    if (addUpsellScreenProtector) {
+      const { getScreenProtectorUpsell } = await import('../data-screen-protector')
+      items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
+    }
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
@@ -100,32 +103,38 @@ export function ProductPage() {
   if (step === 'checkout') {
     return (
       <div className="min-h-screen bg-brand-dark">
-        <CheckoutStep cart={cart} onBack={goBack} onConfirm={onConfirm} />
+        <Suspense fallback={<div className="min-h-screen bg-brand-dark flex items-center justify-center"><p className="text-brand-muted">Chargement...</p></div>}>
+          <CheckoutStep cart={cart} onBack={goBack} onConfirm={onConfirm} />
+        </Suspense>
       </div>
     )
   }
 
   if (step === 'confirmation') {
     return (
-      <ConfirmationStep
-        orderId={orderId}
-        confirmationCode={confirmationCode}
-        onNewOrder={onNewOrder}
-      />
+      <Suspense fallback={<div className="min-h-screen bg-brand-dark flex items-center justify-center"><p className="text-brand-muted">Chargement...</p></div>}>
+        <ConfirmationStep
+          orderId={orderId}
+          confirmationCode={confirmationCode}
+          onNewOrder={onNewOrder}
+        />
+      </Suspense>
     )
   }
 
   return (
     <div className="min-h-screen bg-brand-dark">
-      <ProductDetailView
-        product={normalizeProduct(product) ?? product}
-        onCommander={goToCheckout}
-        backLink={
-          <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
-            ← Retour au catalogue
-          </Link>
-        }
-      />
+      <Suspense fallback={<div className="min-h-screen bg-brand-dark flex items-center justify-center"><p className="text-brand-muted">Chargement...</p></div>}>
+        <ProductDetailView
+          product={normalizeProduct(product) ?? product}
+          onCommander={goToCheckout}
+          backLink={
+            <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
+              ← Retour au catalogue
+            </Link>
+          }
+        />
+      </Suspense>
     </div>
   )
 }
