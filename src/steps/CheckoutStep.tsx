@@ -6,7 +6,7 @@ import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
-import { apiGetYalidineStopdesks, type YalidineStopdesk } from '../api'
+import { apiGetYalidineStopdesks, apiGetCommunes, type YalidineStopdesk } from '../api'
 import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
 
 interface Props {
@@ -23,12 +23,30 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [wilaya, setWilaya] = useState('')
-  const [address, setAddress] = useState('')
+  const [commune, setCommune] = useState('')
+  const [communes, setCommunes] = useState<string[]>([])
+  const [communesLoading, setCommunesLoading] = useState(false)
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('domicile')
   const [stopdesks, setStopdesks] = useState<YalidineStopdesk[]>([])
   const [stopdesksLoading, setStopdesksLoading] = useState(false)
   const [selectedStopdeskId, setSelectedStopdeskId] = useState('')
   const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
+
+  useEffect(() => {
+    if (!wilaya) {
+      setCommunes([])
+      setCommune('')
+      return
+    }
+    setCommunesLoading(true)
+    setCommune('')
+    let cancelled = false
+    apiGetCommunes(wilaya)
+      .then((list) => { if (!cancelled && list?.length) setCommunes(list) })
+      .catch(() => { if (!cancelled) setCommunes([]) })
+      .finally(() => { if (!cancelled) setCommunesLoading(false) })
+    return () => { cancelled = true }
+  }, [wilaya])
 
   useEffect(() => {
     if (deliveryType !== 'yalidine' || !wilaya) {
@@ -59,7 +77,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   )
   const total = totalMain + deliveryPrice
 
-  const canSubmitBureau = deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)
+  const canSubmitBureau = (deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)) && (!wilaya || commune.trim() !== '')
 
   const invalidCartItems = useMemo(() => {
     return cart.filter((item) => {
@@ -86,7 +104,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       id: orderId,
       customerName: name,
       phone,
-      address: deliveryType === 'domicile' ? address.trim() : '',
+      address: commune.trim(),
       wilaya,
       deliveryType,
       deliveryPrice,
@@ -192,6 +210,26 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
               ))}
             </select>
           </div>
+          {wilaya && (
+            <div>
+              <label className="block text-sm text-brand-muted mb-1">Commune</label>
+              <select
+                required
+                value={commune}
+                onChange={(e) => setCommune(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+              >
+                <option value="">
+                  {communesLoading ? 'Chargement des communes…' : communes.length === 0 ? 'Aucune commune' : 'Choisir une commune'}
+                </option>
+                {communes.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm text-brand-muted mb-2">Choix de livraison</label>
             <div className="flex gap-4">
@@ -216,19 +254,6 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                 <span className="text-white">Bureau Yalidine</span>
               </label>
             </div>
-            {deliveryType === 'domicile' && (
-              <div className="mt-3">
-                <label className="block text-sm text-brand-muted mb-1">Adresse de livraison</label>
-                <input
-                  type="text"
-                  required
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none"
-                  placeholder="Rue, quartier, numéro..."
-                />
-              </div>
-            )}
             {deliveryType === 'yalidine' && wilaya && (
               <div className="mt-3">
                 <label className="block text-sm font-medium text-white mb-1">
