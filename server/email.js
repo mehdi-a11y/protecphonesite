@@ -9,7 +9,14 @@
  *   SMTP_USER=votre@gmail.com, SMTP_PASS=mot_de_passe_application_16_caracteres
  */
 
+import dns from 'node:dns'
 import nodemailer from 'nodemailer'
+
+// Sur Render (et autres hébergeurs), l’IPv6 sortant peut être indisponible (ENETUNREACH).
+// Forcer l’usage de l’IPv4 pour la connexion SMTP à Gmail.
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first')
+}
 
 const CONFIRMATEUR_EMAILS_DEFAULT = [
   'brahimbouhounali2004@gmail.com',
