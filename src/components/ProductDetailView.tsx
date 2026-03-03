@@ -40,7 +40,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     setSelectedColorId('')
     setSelectedImageIndex(0)
     setAddScreenProtector(false)
-  }, [product.id])
+  }, [product?.id ?? ''])
 
   useEffect(() => {
     if (phoneOptions.length === 1 && !selectedPhoneId) {

@@ -44,6 +44,48 @@ export interface Antichoc {
   compatibleWith: IPhoneModelId[]; // modèles d'iPhone compatibles
 }
 
+/** Normalise un objet produit (API ou cache) pour avoir la forme Antichoc attendue par l'UI. */
+export function normalizeProduct(p: Partial<Antichoc> | null): Antichoc | null {
+  if (!p || typeof p !== 'object') return null
+  const id = typeof p.id === 'string' ? p.id : String(p.id ?? '')
+  const name = typeof p.name === 'string' ? p.name : String(p.name ?? '')
+  const description = typeof p.description === 'string' ? p.description : String(p.description ?? '')
+  const price = Number(p.price)
+  const quantity = typeof p.quantity === 'number' ? p.quantity : 0
+  const image = typeof p.image === 'string' ? p.image : String(p.image ?? '')
+  const photoUrl = typeof p.photoUrl === 'string' ? p.photoUrl : String(p.photoUrl ?? '')
+  const colorIds = Array.isArray(p.colorIds) ? p.colorIds.filter((x) => typeof x === 'string') : undefined
+  const compatibleWith = Array.isArray(p.compatibleWith)
+    ? p.compatibleWith.filter((x) => typeof x === 'string') as IPhoneModelId[]
+    : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+  const photoGallery = Array.isArray(p.photoGallery) ? p.photoGallery.filter((x) => typeof x === 'string') : undefined
+  const variantStocks =
+    p.variantStocks && typeof p.variantStocks === 'object' && !Array.isArray(p.variantStocks)
+      ? p.variantStocks
+      : undefined
+  const variantAvailableFromSupplier =
+    p.variantAvailableFromSupplier &&
+    typeof p.variantAvailableFromSupplier === 'object' &&
+    !Array.isArray(p.variantAvailableFromSupplier)
+      ? p.variantAvailableFromSupplier
+      : undefined
+  return {
+    id,
+    name,
+    description,
+    price: Number.isFinite(price) ? price : 0,
+    wholesalePrice: typeof p.wholesalePrice === 'number' ? p.wholesalePrice : undefined,
+    quantity,
+    variantStocks,
+    variantAvailableFromSupplier,
+    image,
+    colorIds: colorIds?.length ? colorIds : undefined,
+    photoUrl,
+    photoGallery: photoGallery?.length ? photoGallery : undefined,
+    compatibleWith: compatibleWith.length ? compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[]),
+  }
+}
+
 /** Clé unique pour une variante (couleur + modèle iPhone). */
 export function variantKey(colorId: string, phoneId: IPhoneModelId): string {
   return `${colorId || ''}|${phoneId}`

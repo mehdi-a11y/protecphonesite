@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { loadProducts, getAntichocById, SCREEN_PROTECTOR_UPSELL } from '../data'
+import { loadProducts, getAntichocById, normalizeProduct, SCREEN_PROTECTOR_UPSELL } from '../data'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
@@ -41,8 +41,9 @@ export function ProductPage() {
         if (cancelled) return
         const p = getAntichocById(id)
         if (cancelled) return
-        setProduct(p ?? null)
-        if (!p) setError('Produit introuvable')
+        const normalized = normalizeProduct(p ?? undefined)
+        setProduct(normalized)
+        if (!normalized) setError('Produit introuvable')
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Erreur')
       } finally {
@@ -116,7 +117,7 @@ export function ProductPage() {
   return (
     <div className="min-h-screen bg-brand-dark">
       <ProductDetailView
-        product={product}
+        product={normalizeProduct(product) ?? product}
         onCommander={goToCheckout}
         backLink={
           <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
