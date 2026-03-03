@@ -43,8 +43,14 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   }, [product.id])
 
   useEffect(() => {
-    if (phoneOptions.length === 1 && !selectedPhoneId) setSelectedPhoneId(phoneOptions[0])
-    if (colorOptions.length === 1 && !selectedColorId) setSelectedColorId(colorOptions[0].id)
+    if (phoneOptions.length === 1 && !selectedPhoneId) {
+      const first = phoneOptions[0]
+      if (first) setSelectedPhoneId(first)
+    }
+    if (colorOptions.length === 1 && !selectedColorId) {
+      const first = colorOptions[0]
+      if (first?.id) setSelectedColorId(first.id)
+    }
   }, [phoneOptions, colorOptions, selectedPhoneId, selectedColorId])
   useEffect(() => {
     if (selectedPhoneId && colorOptions.length > 0 && selectedColorId && !orderableColorIdsForSelectedPhone.has(selectedColorId)) {
@@ -66,8 +72,12 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     selectedVariantOrderable
 
   useEffect(() => {
-    trackViewContent(product.name, [product.id], product.price, 'DZD')
-  }, [product.id, product.name, product.price])
+    try {
+      trackViewContent(product?.name, product?.id ? [product.id] : [], product?.price ?? 0, 'DZD')
+    } catch {
+      // ignore pixel errors
+    }
+  }, [product?.id, product?.name, product?.price])
 
   const handleCommander = () => {
     if (!selectedPhoneId) return
