@@ -20,6 +20,7 @@ import {
   dbGetOrders,
   dbSaveOrder,
   dbSetOrderStatus,
+  dbSetOrderAchatDone,
   dbDecrementStockForOrder,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
@@ -415,6 +416,7 @@ function orderToApi(o) {
     yalidineSentAt: o.yalidineSentAt,
     yalidineStopdeskId: o.yalidineStopdeskId,
     yalidineStopdeskName: o.yalidineStopdeskName,
+    achatFournisseurDone: o.achatFournisseurDone === true,
   }
 }
 
@@ -436,6 +438,7 @@ function apiToOrder(a) {
     yalidineSentAt: a.yalidineSentAt,
     yalidineStopdeskId: a.yalidineStopdeskId,
     yalidineStopdeskName: a.yalidineStopdeskName,
+    achatFournisseurDone: a.achatFournisseurDone === true,
   }
 }
 
@@ -504,6 +507,17 @@ app.patch('/api/orders/:id/yalidine', async (req, res) => {
     const { tracking, sentAt } = req.body
     if (!tracking || !sentAt) return res.status(400).json({ error: 'tracking et sentAt requis' })
     await dbUpdateOrderYalidine(id, tracking, sentAt)
+    res.status(200).json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.patch('/api/orders/:id/achat-done', async (req, res) => {
+  try {
+    const { id } = req.params
+    const done = req.body?.done === true
+    await dbSetOrderAchatDone(id, done)
     res.status(200).json({ ok: true })
   } catch (e) {
     res.status(500).json({ error: e.message })

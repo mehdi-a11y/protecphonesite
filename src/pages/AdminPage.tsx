@@ -4,6 +4,7 @@ import {
   getOrders,
   confirmOrder,
   setOrderStatus,
+  setOrderAchatDone,
   updateOrderYalidine,
   deleteOrder,
   isAdminAuthenticated,
@@ -409,6 +410,7 @@ export function AdminPage() {
     const productMap = new Map(products.map((p) => [p.id, p]))
     let n = 0
     for (const order of confirmedOrders) {
+      if (order.achatFournisseurDone) continue
       for (const item of order.items) {
         if (item.isUpsell || !item.selectedPhoneId) continue
         const product = productMap.get(item.antichoc.id) ?? item.antichoc
@@ -686,53 +688,63 @@ export function AdminPage() {
                 variantLabel: colorId ? `${colorName} — ${phoneName}` : phoneName,
               })
             }
-            // Seules les commandes avec au moins une ligne à acheter (stock 0 + fournisseur) apparaissent ici
             if (linesToBuy.length > 0) ordersWithBuyList.push({ order, linesToBuy })
           }
+          const ordersAFaire = ordersWithBuyList.filter(({ order }) => !order.achatFournisseurDone)
+          const ordersTermine = ordersWithBuyList.filter(({ order }) => order.achatFournisseurDone)
+          const handleToggleAchatDone = (orderId: string, done: boolean) => {
+            setOrderAchatDone(orderId, done).then(() => getOrders().then(setOrders)).catch(() => {})
+          }
+          const renderOrderCard = ({ order, linesToBuy }: { order: Order; linesToBuy: BuyLine[] }, done: boolean) => (
+            <li key={order.id} className={done ? 'rounded-xl p-4 border bg-brand-card/50 border-white/10' : 'rounded-xl p-4 border bg-brand-card border-amber-500/30'}>
+              <div className="flex items-start gap-3">
+                <label className="flex-shrink-0 mt-0.5 flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={done} onChange={(e) => handleToggleAchatDone(order.id, e.target.checked)} className="rounded border-white/30 bg-brand-dark text-brand-accent focus:ring-brand-accent w-5 h-5" />
+                  <span className="text-sm text-white select-none">{done ? 'Acheté' : 'À acheter'}</span>
+                </label>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span className="font-medium text-white">{order.id}</span>
+                    <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
+                  </div>
+                  <p className="text-amber-400 text-sm font-medium mb-2">À commander chez le fournisseur :</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-white">
+                    {linesToBuy.map((line, idx) => <li key={idx}>{line.productName} — {line.variantLabel}</li>)}
+                  </ul>
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">Voir la commande</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          )
           return (
             <div className="space-y-6">
               <p className="text-brand-muted text-sm">
-                Priorité au stock : si la commande confirmée est couverte par le stock, elle n’apparaît pas. Sinon, si une variante est en stock 0 mais « disponible chez le fournisseur », elle est listée ici pour achat.
+                Priorité au stock : si la commande confirmée est couverte par le stock, elle n’apparaît pas. Cochez quand vous avez passé la commande chez le fournisseur.
               </p>
               <section>
                 <h2 className="text-lg font-semibold text-white mb-3">
-                  Commandes à acheter chez le fournisseur ({ordersWithBuyList.length})
+                  À faire ({ordersAFaire.length})
                 </h2>
-                {ordersWithBuyList.length === 0 ? (
-                  <p className="text-brand-muted text-sm">Aucune. Toutes les commandes confirmées sont couvertes par le stock actuel.</p>
+                {ordersAFaire.length === 0 ? (
+                  <p className="text-brand-muted text-sm">
+                    {ordersWithBuyList.length === 0 ? 'Aucune. Toutes les commandes confirmées sont couvertes par le stock actuel.' : "Tout est coché. Aucune commande en attente d'achat."}
+                  </p>
                 ) : (
                   <ul className="space-y-4">
-                    {ordersWithBuyList.map(({ order, linesToBuy }) => (
-                      <li
-                        key={order.id}
-                        className="rounded-xl bg-brand-card border border-amber-500/30 p-4"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="font-medium text-white">{order.id}</span>
-                          <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
-                        </div>
-                        <p className="text-amber-400 text-sm font-medium mb-2">À commander chez le fournisseur :</p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-white">
-                          {linesToBuy.map((line, idx) => (
-                            <li key={idx}>
-                              {line.productName} — {line.variantLabel}
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="mt-3 pt-3 border-t border-white/10">
-                          <button
-                            type="button"
-                            onClick={() => setTab('commandes')}
-                            className="text-brand-accent text-sm hover:underline"
-                          >
-                            Voir la commande
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                    {ordersAFaire.map((entry) => renderOrderCard(entry, false))}
                   </ul>
                 )}
               </section>
+              {ordersTermine.length > 0 && (
+                <section>
+                  <h2 className="text-lg font-semibold text-brand-muted mb-3">Terminé ({ordersTermine.length})</h2>
+                  <ul className="space-y-4">
+                    {ordersTermine.map((entry) => renderOrderCard(entry, true))}
+                  </ul>
+                </section>
+              )}
             </div>
           )
         })()}

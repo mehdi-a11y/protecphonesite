@@ -43,6 +43,8 @@ export interface Order {
   yalidineStopdeskId?: string
   /** Nom du bureau pour affichage */
   yalidineStopdeskName?: string
+  /** Coche "à acheter" : true = achat fournisseur fait pour cette commande */
+  achatFournisseurDone?: boolean
 }
 
 export const ADMIN_PASSWORD = 'admin' // à changer en production
@@ -80,6 +82,10 @@ export async function updateOrderYalidine(
 
 export async function deleteOrder(orderId: string): Promise<void> {
   await api.apiDeleteOrder(orderId)
+}
+
+export async function setOrderAchatDone(orderId: string, done: boolean): Promise<void> {
+  await api.apiSetOrderAchatDone(orderId, done)
 }
 
 export function isAdminAuthenticated(): boolean {

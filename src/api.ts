@@ -59,6 +59,13 @@ export async function apiDeleteOrder(orderId: string): Promise<void> {
   })
 }
 
+export async function apiSetOrderAchatDone(orderId: string, done: boolean): Promise<void> {
+  await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/achat-done`, {
+    method: 'PATCH',
+    body: JSON.stringify({ done }),
+  })
+}
+
 export interface YalidineStopdesk {
   id: number | string
   name: string
