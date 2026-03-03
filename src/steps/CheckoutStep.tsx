@@ -77,7 +77,9 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   )
   const total = totalMain + deliveryPrice
 
-  const canSubmitBureau = (deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)) && (!wilaya || commune.trim() !== '')
+  const canSubmitBureau =
+    (deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)) &&
+    (deliveryType !== 'domicile' || !wilaya || commune.trim() !== '')
 
   const invalidCartItems = useMemo(() => {
     return cart.filter((item) => {
@@ -104,7 +106,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       id: orderId,
       customerName: name,
       phone,
-      address: commune.trim(),
+      address: deliveryType === 'domicile' ? commune.trim() : '',
       wilaya,
       deliveryType,
       deliveryPrice,
@@ -210,7 +212,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
               ))}
             </select>
           </div>
-          {wilaya && (
+          {wilaya && deliveryType === 'domicile' && (
             <div>
               <label className="block text-sm text-brand-muted mb-1">Commune</label>
               <select
