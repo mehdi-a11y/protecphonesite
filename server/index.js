@@ -241,7 +241,7 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
             const fromApi = normalize(data, wilaya)
             if (fromApi.length > 0) return res.json({ stopdesks: fromApi })
           }
-          if (response.status !== 404) return res.status(response.status).json(data)
+          // En cas d'erreur API (401, 500, etc.) ou liste vide : on passe à la liste statique pour que le client ait toujours des bureaux
         } catch (_) {}
       }
     }
