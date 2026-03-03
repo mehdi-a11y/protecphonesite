@@ -120,7 +120,6 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       confirmationCode,
       ...(deliveryType === 'yalidine' && selectedStopdeskId
         ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
-        : {},
         : {}),
     })
     trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
