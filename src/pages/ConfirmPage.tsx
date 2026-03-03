@@ -284,6 +284,9 @@ export function ConfirmPage() {
                 <p className="text-brand-muted text-xs">Livraison : {selectedOrder.deliveryPrice} DA</p>
               )}
               {selectedOrder.yalidineTracking && (
+                <p className="text-brand-muted text-xs">Livraison : gratuite</p>
+              )}
+              {selectedOrder.yalidineTracking && (
                 <p className="text-emerald-400 text-xs mt-1">
                   Yalidine : {selectedOrder.yalidineTracking}{' '}
                   <a

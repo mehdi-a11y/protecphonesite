@@ -212,26 +212,6 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
               ))}
             </select>
           </div>
-          {wilaya && deliveryType === 'domicile' && (
-            <div>
-              <label className="block text-sm text-brand-muted mb-1">Commune</label>
-              <select
-                required
-                value={commune}
-                onChange={(e) => setCommune(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-              >
-                <option value="">
-                  {communesLoading ? 'Chargement des communes…' : communes.length === 0 ? 'Aucune commune' : 'Choisir une commune'}
-                </option>
-                {communes.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           <div>
             <label className="block text-sm text-brand-muted mb-2">Choix de livraison</label>
             <div className="flex gap-4">
@@ -298,6 +278,26 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
               </p>
             )}
           </div>
+          {wilaya && deliveryType === 'domicile' && (
+            <div>
+              <label className="block text-sm text-brand-muted mb-1">Commune</label>
+              <select
+                required
+                value={commune}
+                onChange={(e) => setCommune(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+              >
+                <option value="">
+                  {communesLoading ? 'Chargement des communes…' : communes.length === 0 ? 'Aucune commune' : 'Choisir une commune'}
+                </option>
+                {communes.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="pt-4 space-y-1">
             {deliveryPrice > 0 && (
