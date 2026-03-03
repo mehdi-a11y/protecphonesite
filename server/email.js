@@ -29,23 +29,36 @@ function getConfirmateurEmails() {
   return CONFIRMATEUR_EMAILS_DEFAULT
 }
 
-function getTransporter() {
+let transporterPromise = null
+
+/** Résout le host en IPv4 pour éviter ENETUNREACH sur Render (pas d'IPv6 sortant). */
+async function getTransporter() {
   const host = process.env.SMTP_HOST || ''
   const user = process.env.SMTP_USER || ''
   const pass = process.env.SMTP_PASS || ''
   if (!host || !user || !pass) return null
+  if (transporterPromise) return transporterPromise
   const port = parseInt(process.env.SMTP_PORT || '587', 10)
   const secure = process.env.SMTP_SECURE === '1' || process.env.SMTP_SECURE === 'true'
-  return nodemailer.createTransport({
-    host,
+  let connectHost = host
+  if (host && !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    try {
+      const { address } = await dns.promises.lookup(host, { family: 4 })
+      connectHost = address
+    } catch (_) {}
+  }
+  const transport = nodemailer.createTransport({
+    host: connectHost,
     port: Number.isNaN(port) ? 587 : port,
     secure,
     auth: { user, pass },
-    // Timeouts plus longs : sur hébergement gratuit (ex. Render), la connexion à Gmail peut être lente
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
+    ...(connectHost !== host && { tls: { servername: host } }),
   })
+  transporterPromise = transport
+  return transport
 }
 
 /**
@@ -63,7 +76,7 @@ export function isEmailConfigured() {
 }
 
 export async function sendNewOrderNotificationToConfirmateurs(order) {
-  const transporter = getTransporter()
+  const transporter = await getTransporter()
   if (!transporter) {
     console.warn('[Email] SMTP non configuré. Définissez SMTP_HOST, SMTP_USER et SMTP_PASS dans .env puis redémarrez le serveur.')
     return { ok: false, error: 'SMTP non configuré' }
@@ -145,7 +158,7 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
 export async function sendTestEmail() {
-  const transporter = getTransporter()
+  const transporter = await getTransporter()
   if (!transporter) return { ok: false, error: 'SMTP non configuré (SMTP_HOST, SMTP_USER, SMTP_PASS)' }
   const to = getConfirmateurEmails()
   if (to.length === 0) return { ok: false, error: 'Aucune adresse confirmateur' }
