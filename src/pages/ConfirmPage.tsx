@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
 import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, type Antichoc, type IPhoneModelId } from '../data'
+import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { apiGetProducts } from '../api'
+
+const INCLASSABLE_PRODUCT_ID = 'upsell-protecteur-ecran-incassable'
 
 type FilterStatus =
   | 'all'
@@ -222,6 +225,26 @@ export function ConfirmPage() {
       return { ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }
     })
   }
+
+  const hasIncassable = editItems.some((i) => i.antichoc?.id === INCLASSABLE_PRODUCT_ID)
+  const toggleIncassable = (checked: boolean) => {
+    if (checked) {
+      if (hasIncassable) return
+      const incassable = getScreenProtectorUpsell()
+      const newItem: CartItem = { antichoc: incassable, isUpsell: true }
+      setEditForm((f) => {
+        const next = [...(f.items ?? []), newItem]
+        return { ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }
+      })
+    } else {
+      setEditForm((f) => {
+        const next = (f.items ?? []).filter((i) => i.antichoc?.id !== INCLASSABLE_PRODUCT_ID)
+        return { ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }
+      })
+    }
+  }
+
+  const productsForSelect = products.some((p) => p.id === INCLASSABLE_PRODUCT_ID) ? products : [getScreenProtectorUpsell(), ...products]
 
   const handleSaveEditOrder = async () => {
     if (!editingOrder) return
@@ -637,16 +660,16 @@ export function ConfirmPage() {
                         <select
                           value={antichoc?.id ?? ''}
                           onChange={(e) => {
-                            const p = products.find((x) => x.id === e.target.value)
+                            const p = productsForSelect.find((x) => x.id === e.target.value)
                             if (p) {
                               const cids = p.colorIds?.length ? p.colorIds : [ANTICHOC_COLORS[0]?.id ?? '']
                               const pids = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
-                              updateEditItem(index, { antichoc: { ...p }, selectedColorId: cids[0] ?? '', selectedPhoneId: pids[0], isUpsell: item.isUpsell })
+                              updateEditItem(index, { antichoc: { ...p }, selectedColorId: cids[0] ?? '', selectedPhoneId: pids[0], isUpsell: p.id === INCLASSABLE_PRODUCT_ID })
                             }
                           }}
                           className="flex-1 min-w-0 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
                         >
-                          {products.map((p) => (
+                          {productsForSelect.map((p) => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
                         </select>
@@ -668,15 +691,15 @@ export function ConfirmPage() {
                             <option key={pid} value={pid}>{IPHONE_MODELS.find((m) => m.id === pid)?.name ?? pid}</option>
                           ))}
                         </select>
-                        <label className="flex items-center gap-1 text-xs text-brand-muted whitespace-nowrap">
-                          <input type="checkbox" checked={!!item.isUpsell} onChange={(e) => updateEditItem(index, { isUpsell: e.target.checked })} className="rounded border-white/30 bg-brand-dark text-brand-accent" />
-                          Upsell
-                        </label>
                         <span className="text-brand-accent text-xs font-medium">{item.antichoc?.price ?? 0} DA</span>
                         <button type="button" onClick={() => removeEditItem(index)} className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30">Supprimer</button>
                       </div>
                     )
                   })}
+                  <label className="flex items-center gap-2 mt-2 text-sm text-white">
+                    <input type="checkbox" checked={hasIncassable} onChange={(e) => toggleIncassable(e.target.checked)} className="rounded border-white/30 bg-brand-dark text-brand-accent" />
+                    Incassable
+                  </label>
                   <button type="button" onClick={addEditItem} disabled={products.length === 0} className="mt-2 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20 disabled:opacity-50">
                     + Ajouter une ligne
                   </button>
