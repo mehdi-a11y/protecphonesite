@@ -9,9 +9,11 @@ import { ConfirmPage } from './pages/ConfirmPage.tsx'
 import { ProductLandingPage } from './pages/ProductLandingPage.tsx'
 import { CollectionPage } from './pages/CollectionPage.tsx'
 import { initFacebookPixel } from './facebookPixel'
+import { initTikTokPixel } from './tiktokPixel'
 import './index.css'
 
 initFacebookPixel()
+initTikTokPixel()
 
 import { ProductPageWrapper } from './pages/ProductPageWrapper'
 

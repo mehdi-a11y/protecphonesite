@@ -11,6 +11,7 @@ import { ProductDetailView } from '../components/ProductDetailView'
 import { CheckoutStep } from '../steps/CheckoutStep'
 import { ConfirmationStep } from '../steps/ConfirmationStep'
 import { trackAddToCart } from '../facebookPixel'
+import { trackTikTokAddToCart } from '../tiktokPixel'
 
 type Step = 'landing' | 'checkout' | 'confirmation'
 
@@ -71,6 +72,7 @@ export function ProductLandingPage() {
     if (addUpsellScreenProtector) items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')
+    trackTikTokAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
   }
   const goBack = () => setStep('landing')

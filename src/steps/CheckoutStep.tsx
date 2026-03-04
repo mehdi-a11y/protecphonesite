@@ -8,6 +8,7 @@ import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
 import { apiGetYalidineStopdesks, apiGetCommunes, type YalidineStopdesk } from '../api'
 import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
+import { trackTikTokCompletePayment, trackTikTokInitiateCheckout } from '../tiktokPixel'
 
 interface Props {
   cart: CartItem[]
@@ -96,7 +97,10 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const canSubmitOrder = canSubmitBureau && invalidCartItems.length === 0
 
   useEffect(() => {
-    if (cart.length > 0) trackInitiateCheckout(total, 'DZD', cart.length)
+    if (cart.length > 0) {
+      trackInitiateCheckout(total, 'DZD', cart.length)
+      trackTikTokInitiateCheckout(total, 'DZD', cart.map((i) => i.antichoc.id))
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,6 +127,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
         : {}),
     })
     trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+    trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
     onConfirm(orderId, confirmationCode)
   }
 

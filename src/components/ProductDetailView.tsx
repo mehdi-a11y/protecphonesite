@@ -4,6 +4,7 @@ import type { IPhoneModelId } from '../data'
 import { IPHONE_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone } from '../data'
 import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
+import { trackTikTokViewContent } from '../tiktokPixel'
 
 interface Props {
   product: Antichoc
@@ -77,6 +78,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   useEffect(() => {
     try {
       trackViewContent(product?.name, product?.id ? [product.id] : [], product?.price ?? 0, 'DZD')
+      trackTikTokViewContent(product?.name, product?.id ? [product.id] : [], product?.price ?? 0, 'DZD')
     } catch {
       // ignore pixel errors
     }

@@ -4,6 +4,7 @@ import type { Antichoc } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { CartItem } from '../types'
 import { trackAddToCart } from '../facebookPixel'
+import { trackTikTokAddToCart } from '../tiktokPixel'
 
 const ProductDetailView = lazy(() => import('../components/ProductDetailView').then((m) => ({ default: m.ProductDetailView })))
 const CheckoutStep = lazy(() => import('../steps/CheckoutStep').then((m) => ({ default: m.CheckoutStep })))
@@ -69,6 +70,7 @@ export function ProductPage({ id }: ProductPageProps) {
     }
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')
+    trackTikTokAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
   }
   const goBack = () => setStep('product')
