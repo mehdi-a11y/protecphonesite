@@ -153,9 +153,12 @@ export function isVariantBlockedNoSupplier(
 export const ANTICHOC_COLORS = [
   { id: 'noir-mat', name: 'Noir mat', emoji: '⬛', hex: '#1a1a1a' },
   { id: 'bleu-nuit', name: 'Bleu nuit', emoji: '🔵', hex: '#1e3a5f' },
+  { id: 'bleu-ciel', name: 'Bleu ciel', emoji: '🩵', hex: '#7dd3fc' },
   { id: 'rouge', name: 'Rouge', emoji: '🔴', hex: '#b91c1c' },
+  { id: 'orange', name: 'Orange', emoji: '🟠', hex: '#ea580c' },
   { id: 'vert-foret', name: 'Vert forêt', emoji: '🟢', hex: '#166534' },
   { id: 'transparent', name: 'Transparent', emoji: '🔲', hex: '#e5e5e5' },
+  { id: 'gris', name: 'Gris', emoji: '⬜', hex: '#6b7280' },
   { id: 'lavande', name: 'Lavande', emoji: '🟣', hex: '#6b21a8' },
   { id: 'rose-gold', name: 'Rose gold', emoji: '🌸', hex: '#e8b4b8' },
   { id: 'camouflage', name: 'Camouflage', emoji: '🟫', hex: '#4a5568' },

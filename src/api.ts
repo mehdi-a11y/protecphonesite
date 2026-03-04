@@ -184,6 +184,17 @@ export async function apiCreateLanding(landing: { slug: string; antichocId: stri
   })
 }
 
+export async function apiUpdateLanding(
+  slug: string,
+  data: { slug?: string; antichocId?: string; title?: string | null },
+): Promise<LandingPage> {
+  return fetchJson<LandingPage>('/api/landing-pages/' + encodeURIComponent(slug), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
 export async function apiDeleteLanding(slug: string): Promise<void> {
   const res = await fetch('/api/landing-pages/' + encodeURIComponent(slug), { method: 'DELETE' })
   if (!res.ok && res.status !== 204) {

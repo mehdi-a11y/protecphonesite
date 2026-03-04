@@ -517,6 +517,33 @@ export async function dbDeleteLanding(slug) {
   memoryLandingPages.delete(slug)
 }
 
+/** Met à jour une landing (slug, title, antichocId). Si le slug change, met à jour les collections qui référencent l'ancien slug. */
+export async function dbUpdateLanding(oldSlug, { slug: newSlug, antichocId, title }) {
+  const existing = await dbGetLandingBySlug(oldSlug)
+  if (!existing) return null
+  const slug = (newSlug && String(newSlug).trim()) || oldSlug
+  const cleanSlug = slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '') || slug
+  const antichocIdVal = antichocId != null ? String(antichocId).trim() : null
+  const titleVal = title !== undefined ? (title ? String(title).trim() : null) : null
+
+  if (cleanSlug !== oldSlug) {
+    const collections = await dbGetCollections()
+    for (const col of collections) {
+      const slugs = col.landingSlugs || []
+      if (slugs.includes(oldSlug)) {
+        const next = slugs.map((s) => (s === oldSlug ? cleanSlug : s))
+        await dbSaveCollection({ ...col, landingSlugs: next })
+      }
+    }
+    await dbDeleteLanding(oldSlug)
+  }
+
+  const finalAntichocId = antichocIdVal ?? existing.antichocId
+  const finalTitle = titleVal !== null ? titleVal : existing.title
+  await dbSaveLanding({ slug: cleanSlug, antichocId: finalAntichocId, title: finalTitle })
+  return dbGetLandingBySlug(cleanSlug)
+}
+
 // --- Collections (1 ou plusieurs landing pages) ---
 function rowToCollection(r) {
   const slugs = r.landing_slugs != null && Array.isArray(r.landing_slugs) ? r.landing_slugs : (r.landing_slugs && r.landing_slugs.data ? r.landing_slugs.data : []) || []

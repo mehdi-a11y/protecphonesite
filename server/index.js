@@ -37,6 +37,7 @@ import {
   dbGetLandingBySlug,
   dbSaveLanding,
   dbDeleteLanding,
+  dbUpdateLanding,
   dbGetCollections,
   dbGetCollectionBySlug,
   dbSaveCollection,
@@ -756,6 +757,21 @@ app.post('/api/landing-pages', async (req, res) => {
     if (!cleanSlug) return res.status(400).json({ error: 'slug invalide' })
     await dbSaveLanding({ slug: cleanSlug, antichocId: antichocId.trim(), title: title ? String(title).trim() : null })
     res.json(await dbGetLandingBySlug(cleanSlug))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.patch('/api/landing-pages/:slug', async (req, res) => {
+  try {
+    const { slug: newSlug, antichocId, title } = req.body || {}
+    const updated = await dbUpdateLanding(req.params.slug, {
+      slug: newSlug,
+      antichocId,
+      title,
+    })
+    if (!updated) return res.status(404).json({ error: 'Landing page introuvable' })
+    res.json(updated)
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

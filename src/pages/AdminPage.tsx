@@ -32,6 +32,7 @@ import {
 import {
   apiGetLandingPages,
   apiCreateLanding,
+  apiUpdateLanding,
   apiDeleteLanding,
   apiAddProduct,
   apiGetCollections,
@@ -118,6 +119,10 @@ export function AdminPage() {
   const [yalidineSyncing, setYalidineSyncing] = useState(false)
   const [yalidineSyncMessage, setYalidineSyncMessage] = useState<string | null>(null)
   const [landingPages, setLandingPages] = useState<LandingPage[]>([])
+  const [editingLanding, setEditingLanding] = useState<LandingPage | null>(null)
+  const [editLandingSlug, setEditLandingSlug] = useState('')
+  const [editLandingTitle, setEditLandingTitle] = useState('')
+  const [editLandingAntichocId, setEditLandingAntichocId] = useState('')
   const [newLandingSlug, setNewLandingSlug] = useState('')
   const [newLandingAntichocId, setNewLandingAntichocId] = useState('')
   const [newLandingTitle, setNewLandingTitle] = useState('')
@@ -1450,6 +1455,52 @@ export function AdminPage() {
                 </p>
               </div>
             </section>
+
+            <section className="rounded-xl bg-brand-card border border-white/10 p-4 overflow-x-auto">
+              <h2 className="text-sm font-semibold text-white mb-3">Par produit (stock, chiffre d&apos;affaires, prix de gros)</h2>
+              <p className="text-xs text-brand-muted mb-3">
+                Chiffre d&apos;affaires = somme des ventes (commandes confirmées) pour ce produit. Stock = quantité actuelle.
+              </p>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 text-left text-brand-muted">
+                    <th className="py-2 pr-4 font-medium">Produit</th>
+                    <th className="py-2 pr-4 font-medium text-right">Stock</th>
+                    <th className="py-2 pr-4 font-medium text-right">Chiffre d&apos;affaires (DA)</th>
+                    <th className="py-2 pr-4 font-medium text-right">Prix de gros (DA)</th>
+                    <th className="py-2 font-medium text-right">Valeur stock (DA)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((p) => {
+                    const stock =
+                      p.variantStocks && Object.keys(p.variantStocks).length > 0
+                        ? Object.values(p.variantStocks).reduce((a, b) => a + b, 0)
+                        : p.quantity ?? 0
+                    const revenue = orders
+                      .filter((o) => o.status === 'confirmed' || o.status === 'livre')
+                      .reduce((sum, o) => {
+                        const itemTotal = (o.items || []).reduce(
+                          (s, it) => (it.antichoc?.id === p.id ? s + (it.antichoc?.price ?? 0) : s),
+                          0,
+                        )
+                        return sum + itemTotal
+                      }, 0)
+                    const wholesalePrice = p.wholesalePrice ?? 0
+                    const stockValue = wholesalePrice * stock
+                    return (
+                      <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 pr-4 text-white">{p.name}</td>
+                        <td className="py-2 pr-4 text-right text-white">{stock.toLocaleString('fr-FR')}</td>
+                        <td className="py-2 pr-4 text-right text-brand-accent">{revenue.toLocaleString('fr-FR')}</td>
+                        <td className="py-2 pr-4 text-right text-white">{wholesalePrice.toLocaleString('fr-FR')}</td>
+                        <td className="py-2 text-right text-white">{stockValue.toLocaleString('fr-FR')}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </section>
           </div>
         )}
 
@@ -2046,6 +2097,84 @@ export function AdminPage() {
             </div>
             <div>
               <h3 className="font-semibold text-white mb-2">Landing pages existantes</h3>
+              {editingLanding && (
+                <div className="rounded-xl bg-brand-card border border-brand-accent/30 p-4 mb-4 max-w-lg space-y-3">
+                  <h4 className="text-white font-medium">Modifier la landing page</h4>
+                  <div>
+                    <label className="block text-xs text-brand-muted mb-1">URL (slug)</label>
+                    <input
+                      type="text"
+                      value={editLandingSlug}
+                      onChange={(e) => setEditLandingSlug(e.target.value)}
+                      placeholder="ex: coque-noir"
+                      className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-brand-muted mb-1">Titre (optionnel)</label>
+                    <input
+                      type="text"
+                      value={editLandingTitle}
+                      onChange={(e) => setEditLandingTitle(e.target.value)}
+                      placeholder="Titre de la page"
+                      className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-brand-muted mb-1">Produit</label>
+                    <select
+                      value={editLandingAntichocId}
+                      onChange={(e) => setEditLandingAntichocId(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none text-sm"
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — {p.price} DA
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const cleanSlug = editLandingSlug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '') || editLandingSlug.trim()
+                        if (!cleanSlug) {
+                          setLandingMessage('Slug invalide.')
+                          return
+                        }
+                        try {
+                          await apiUpdateLanding(editingLanding.slug, {
+                            slug: cleanSlug,
+                            title: editLandingTitle.trim() || null,
+                            antichocId: editLandingAntichocId,
+                          })
+                          setLandingMessage('Landing mise à jour.')
+                          setEditingLanding(null)
+                          apiGetLandingPages().then(setLandingPages)
+                          apiGetCollections().then(setCollections)
+                          setTimeout(() => setLandingMessage(null), 2000)
+                        } catch (e) {
+                          setLandingMessage('Erreur : ' + (e instanceof Error ? e.message : String(e)))
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm hover:bg-brand-accentDim"
+                    >
+                      Enregistrer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLanding(null)
+                        setLandingMessage(null)
+                      }}
+                      className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
               {landingPages.length === 0 ? (
                 <p className="text-brand-muted text-sm">Aucune landing page.</p>
               ) : (
@@ -2063,6 +2192,18 @@ export function AdminPage() {
                           {product && <span className="ml-2 text-white text-sm">({product.name})</span>}
                         </div>
                         <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingLanding(lp)
+                              setEditLandingSlug(lp.slug)
+                              setEditLandingTitle(lp.title ?? '')
+                              setEditLandingAntichocId(lp.antichocId)
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                          >
+                            Modifier
+                          </button>
                           <Link
                             to={`/p/${lp.slug}`}
                             target="_blank"
