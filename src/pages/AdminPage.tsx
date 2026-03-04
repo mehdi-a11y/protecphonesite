@@ -953,7 +953,10 @@ export function AdminPage() {
                     <span className="font-medium text-white">{order.id}</span>
                     <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
                   </div>
-                  <p className="text-emerald-400 text-sm mb-2">Tout en stock</p>
+                  <p className="text-emerald-400 text-sm mb-1">Tout en stock</p>
+                  <p className="text-white/90 text-sm mb-2">
+                    {(order.items || []).map((item) => formatOrderItemLabel(item)).join(' · ')}
+                  </p>
                   <div className="pt-3 border-t border-white/10">
                     <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">Voir la commande</button>
                   </div>

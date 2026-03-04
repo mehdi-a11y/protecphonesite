@@ -256,7 +256,7 @@ export function ConfirmPage() {
     setEditSaving(true)
     setError('')
     try {
-      const totalToSave = itemsToSave.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (editForm.deliveryPrice ?? 0)
+      const totalToSave = typeof editForm.total === 'number' && editForm.total >= 0 ? editForm.total : computedTotal
       const updated = await updateOrder(editingOrder.id, {
         customerName: editForm.customerName,
         phone: editForm.phone,
@@ -705,8 +705,18 @@ export function ConfirmPage() {
                   </button>
                 </div>
 
-                <p className="text-xs text-brand-muted">Total (DA) — recalculé</p>
-                <p className="text-lg font-semibold text-brand-accent">{computedTotal} DA</p>
+                <div>
+                  <label className="block text-xs text-brand-muted mb-1">Total (DA) — modifiable</label>
+                  <p className="text-xs text-brand-muted mb-1">Calculé : {computedTotal} DA</p>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editForm.total ?? computedTotal}
+                    onChange={(e) => setEditForm((f) => ({ ...f, total: Math.max(0, parseInt(String(e.target.value), 10) || 0) }))}
+                    className="w-full max-w-[140px] px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-lg font-semibold focus:border-brand-accent focus:outline-none"
+                  />
+                  <span className="ml-2 text-brand-muted">DA</span>
+                </div>
               </div>
               <div className="flex gap-2 pt-2">
                 <button
