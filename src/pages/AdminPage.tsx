@@ -1359,6 +1359,7 @@ export function AdminPage() {
                       {
                         orders.filter(
                           (o) =>
+                            o.status === 'none' ||
                             o.status === 'tentative1' ||
                             o.status === 'tentative2' ||
                             o.status === 'tentative3' ||
@@ -1379,6 +1380,12 @@ export function AdminPage() {
               <div className="rounded-xl bg-brand-card border border-white/10 p-4">
                 <h2 className="text-sm font-semibold text-white mb-3">Par statut</h2>
                 <ul className="space-y-1 text-sm text-brand-muted">
+                  <li className="flex justify-between">
+                    <span>Pas de statut</span>
+                    <span className="text-white">
+                      {orders.filter((o) => o.status === 'none').length}
+                    </span>
+                  </li>
                   <li className="flex justify-between">
                     <span>Tentative 1</span>
                     <span className="text-white">
@@ -2399,6 +2406,11 @@ function OrderCard({
             >
               Confirmer
             </button>
+          )}
+          {order.status === 'none' && (
+            <span className="px-2 py-1 rounded bg-white/10 text-brand-muted text-xs font-medium">
+              Pas de statut
+            </span>
           )}
           {order.status === 'confirmed' && (
             <>

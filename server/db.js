@@ -3,7 +3,7 @@
  */
 
 const ORDER_STATUSES = [
-  'tentative1', 'tentative2', 'tentative3', 'callback',
+  'none', 'tentative1', 'tentative2', 'tentative3', 'callback',
   'confirmed', 'livre', 'retourne', 'cancelled',
 ]
 
@@ -43,7 +43,7 @@ async function runMigrations() {
         delivery_type TEXT,
         delivery_price INTEGER,
         total INTEGER NOT NULL,
-        status TEXT NOT NULL DEFAULT 'tentative1',
+        status TEXT NOT NULL DEFAULT 'none',
         confirmation_code TEXT NOT NULL,
         yalidine_tracking TEXT,
         yalidine_sent_at TEXT,
@@ -115,6 +115,9 @@ async function runMigrations() {
     `).catch(() => {})
     await client.query(`
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS change_requested_reason TEXT
+    `).catch(() => {})
+    await client.query(`
+      ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'none'
     `).catch(() => {})
   } finally {
     client.release()
@@ -194,19 +197,19 @@ export async function dbSetOrderChangeRequested(orderId, value) {
   if (o) o.changeRequestedByAdmin = value === true
 }
 
-/** Demande de changement : passe la commande en tentative1, pose le flag et la raison. */
+/** Demande de changement : passe la commande en « pas de statut », pose le flag et la raison. */
 export async function dbRequestOrderChange(orderId, reason) {
   const reasonStr = reason && String(reason).trim() ? String(reason).trim() : null
   if (pool) {
     await pool.query(
       'UPDATE orders SET status = $1, change_requested_by_admin = true, change_requested_reason = $2 WHERE id = $3',
-      ['tentative1', reasonStr, orderId]
+      ['none', reasonStr, orderId]
     )
     return
   }
   const o = memoryOrders.find((x) => x.id === orderId)
   if (o) {
-    o.status = 'tentative1'
+    o.status = 'none'
     o.changeRequestedByAdmin = true
     o.changeRequestedReason = reasonStr || undefined
   }
@@ -317,7 +320,7 @@ function orderToRow(o) {
     delivery_type: o.deliveryType || null,
     delivery_price: o.deliveryPrice ?? null,
     total: o.total,
-    status: o.status || 'tentative1',
+    status: o.status || 'none',
     confirmation_code: o.confirmationCode,
     yalidine_tracking: o.yalidineTracking || null,
     yalidine_sent_at: o.yalidineSentAt || null,

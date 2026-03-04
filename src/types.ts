@@ -25,6 +25,7 @@ export interface Order {
   items: CartItem[]
   total: number
   status:
+    | 'none'
     | 'tentative1'
     | 'tentative2'
     | 'tentative3'

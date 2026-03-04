@@ -393,7 +393,7 @@ app.post('/api/yalidine/webhook', async (req, res) => {
 })
 
 // --- Webhook WhatsApp (réponse du client : confirmation de commande) ---
-const PENDING_STATUSES = ['tentative1', 'tentative2', 'tentative3', 'callback']
+const PENDING_STATUSES = ['none', 'tentative1', 'tentative2', 'tentative3', 'callback']
 const CONFIRM_LIST_IDS = ['received', 'ok', 'confirm', 'confirmed', 'تم الاستلام']
 
 app.post('/api/whatsapp/webhook', async (req, res) => {
@@ -639,7 +639,7 @@ app.post('/api/orders/:id/request-change', async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Commande introuvable' })
     await dbRequestOrderChange(id, reason || undefined)
     const updatedOrders = await dbGetOrders()
-    const updatedOrder = updatedOrders.find((o) => o.id === id) || { ...order, status: 'tentative1', changeRequestedByAdmin: true, changeRequestedReason: reason || undefined }
+    const updatedOrder = updatedOrders.find((o) => o.id === id) || { ...order, status: 'none', changeRequestedByAdmin: true, changeRequestedReason: reason || undefined }
     sendOrderChangeRequestToConfirmateurs(updatedOrder).then((result) => {
       if (!result.ok) console.error('[API] request-change email:', result.error)
     }).catch((err) => console.error('[API] request-change email:', err.message))

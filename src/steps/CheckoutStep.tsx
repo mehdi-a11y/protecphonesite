@@ -115,7 +115,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
       deliveryPrice,
       items: finalCart,
       total,
-      status: 'tentative1',
+      status: 'none',
       createdAt: new Date().toISOString(),
       confirmationCode,
       ...(deliveryType === 'yalidine' && selectedStopdeskId

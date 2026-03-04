@@ -25,7 +25,7 @@ export async function apiGetOrders(): Promise<Order[]> {
   const list = await fetchJson<Order[]>('/api/orders')
   return (list || []).map((o) => ({
     ...o,
-    status: o.status === 'pending' ? 'tentative1' : o.status,
+    status: o.status === 'pending' ? 'none' : o.status,
   })) as Order[]
 }
 
