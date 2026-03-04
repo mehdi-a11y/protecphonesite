@@ -274,9 +274,9 @@ export function ConfirmPage() {
       o.phone.toLowerCase().includes(q)
     )
   })
-  const ordersSentYalidine = filteredOrders.filter((o) => o.yalidineTracking)
-  const ordersNotSentYalidine = filteredOrders.filter((o) => !o.yalidineTracking)
-  const ordersToSendToYalidine = ordersNotSentYalidine.filter((o) => o.status === 'confirmed')
+  const ordersSentYalidine = filteredOrders.filter((o) => o.status === 'confirmed' && o.yalidineTracking)
+  const ordersNotSentYalidine = filteredOrders.filter((o) => o.status === 'confirmed' && !o.yalidineTracking)
+  const ordersToSendToYalidine = ordersNotSentYalidine
 
   return (
     <div className="min-h-screen bg-brand-dark">
