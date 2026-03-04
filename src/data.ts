@@ -229,7 +229,11 @@ function getCatalog(): Antichoc[] {
 }
 
 export function getAntichocsForPhone(phoneId: IPhoneModelId): Antichoc[] {
-  return getCatalog().filter((a) => (a.compatibleWith && Array.isArray(a.compatibleWith) ? a.compatibleWith : []).includes(phoneId))
+  return getCatalog().filter(
+    (a) =>
+      (a.compatibleWith && Array.isArray(a.compatibleWith) ? a.compatibleWith : []).includes(phoneId) &&
+      hasOrderableVariantForPhone(a, phoneId),
+  )
 }
 
 export function getAllAntichocs(): Antichoc[] {
