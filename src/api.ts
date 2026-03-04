@@ -80,10 +80,11 @@ export async function apiSetOrderDepotDone(orderId: string, done: boolean): Prom
   })
 }
 
-/** Demande de changement de commande (article introuvable chez le fournisseur). Notifie les confirmateurs par email. */
-export async function apiRequestOrderChange(orderId: string): Promise<void> {
+/** Demande de changement de commande : passe en non confirmée et notifie les confirmateurs (avec raison). */
+export async function apiRequestOrderChange(orderId: string, reason: string): Promise<void> {
   await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/request-change`, {
     method: 'POST',
+    body: JSON.stringify({ reason: reason.trim() || undefined }),
   })
 }
 

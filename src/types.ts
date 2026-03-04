@@ -47,8 +47,10 @@ export interface Order {
   achatFournisseurDone?: boolean
   /** Coche "dépôt" : true = expédition / préparation dépôt traitée pour cette commande */
   depotExpedieDone?: boolean
-  /** true = l'admin a demandé un changement (article introuvable chez le fournisseur) ; le confirmateur doit contacter le client et reconfirmer */
+  /** true = l'admin a demandé un changement ; le confirmateur doit contacter le client et reconfirmer */
   changeRequestedByAdmin?: boolean
+  /** Raison du changement demandé (indiquée par l'admin pour le confirmateur) */
+  changeRequestedReason?: string
 }
 
 export const ADMIN_PASSWORD = 'mehdi2026dz'

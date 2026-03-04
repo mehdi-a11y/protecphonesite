@@ -183,10 +183,10 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
 }
 
 /**
- * Envoie un email aux confirmateurs : l'admin demande un changement de commande
- * (article introuvable chez le fournisseur). Le confirmateur doit contacter le client
+ * Envoie un email aux confirmateurs : l'admin demande un changement de commande.
+ * La commande a été repassée en « non confirmée ». Le confirmateur doit contacter le client
  * et reconfirmer / modifier la commande.
- * @param {object} order - Commande { id, customerName, phone, confirmationCode, items }
+ * @param {object} order - Commande { id, customerName, phone, confirmationCode, items, changeRequestedReason }
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
 export async function sendOrderChangeRequestToConfirmateurs(order) {
@@ -198,13 +198,17 @@ export async function sendOrderChangeRequestToConfirmateurs(order) {
 
   console.log('[Email] Envoi demande changement commande', order.id, 'vers', to.length, 'destinataire(s)')
 
-  const subject = `[ProtecPhone] Changer la commande ${order.id} — article introuvable chez le fournisseur`
+  const reason = order.changeRequestedReason ? String(order.changeRequestedReason).trim() : ''
+  const reasonLabel = reason || 'Article(s) introuvable(s) chez le fournisseur.'
+  const subject = `[ProtecPhone] Changer la commande ${order.id} — à reconfirmer`
   const itemsList = (order.items || [])
     .map((i) => `- ${i.antichoc?.name || 'Article'} ${i.isUpsell ? '(offre)' : ''}`)
     .join('\n')
 
   const text = [
-    `L'administrateur demande de faire changer la commande ${order.id} : article(s) introuvable(s) chez le fournisseur.`,
+    `L'administrateur demande de faire changer la commande ${order.id}. La commande a été repassée en « non confirmée ».`,
+    '',
+    `Raison indiquée par l'admin : ${reasonLabel}`,
     '',
     'Action requise :',
     '- Contacter le client (téléphone ci-dessous) pour lui demander de modifier sa commande.',
@@ -224,8 +228,10 @@ export async function sendOrderChangeRequestToConfirmateurs(order) {
 <html>
 <head><meta charset="utf-8"><title>Changer la commande ${order.id}</title></head>
 <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 16px;">
-  <h2 style="color: #f59e0b;">Changer la commande — article introuvable chez le fournisseur</h2>
-  <p>L'administrateur signale que la commande <strong>${order.id}</strong> contient des articles introuvables chez le fournisseur.</p>
+  <h2 style="color: #f59e0b;">Changer la commande — à reconfirmer</h2>
+  <p>L'administrateur a demandé un changement pour la commande <strong>${order.id}</strong>. La commande a été repassée en « non confirmée ».</p>
+  <p><strong>Raison indiquée par l'admin :</strong></p>
+  <p style="background: #fef3c7; padding: 10px; border-radius: 6px;">${reasonLabel.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
   <p><strong>À faire :</strong></p>
   <ul>
     <li>Contacter le client (téléphone ci-dessous) pour lui demander de modifier sa commande.</li>

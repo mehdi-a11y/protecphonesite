@@ -23,6 +23,7 @@ import {
   dbSetOrderAchatDone,
   dbSetOrderDepotDone,
   dbSetOrderChangeRequested,
+  dbRequestOrderChange,
   dbDecrementStockForOrder,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
@@ -457,6 +458,7 @@ function orderToApi(o) {
     achatFournisseurDone: o.achatFournisseurDone === true,
     depotExpedieDone: o.depotExpedieDone === true,
     changeRequestedByAdmin: o.changeRequestedByAdmin === true,
+    changeRequestedReason: o.changeRequestedReason || undefined,
   }
 }
 
@@ -481,6 +483,7 @@ function apiToOrder(a) {
     achatFournisseurDone: a.achatFournisseurDone === true,
     depotExpedieDone: a.depotExpedieDone === true,
     changeRequestedByAdmin: a.changeRequestedByAdmin === true,
+    changeRequestedReason: a.changeRequestedReason || undefined,
   }
 }
 
@@ -630,11 +633,14 @@ app.patch('/api/orders/:id/depot-done', async (req, res) => {
 app.post('/api/orders/:id/request-change', async (req, res) => {
   try {
     const { id } = req.params
+    const reason = req.body?.reason != null ? String(req.body.reason).trim() : ''
     const orders = await dbGetOrders()
     const order = orders.find((o) => o.id === id)
     if (!order) return res.status(404).json({ error: 'Commande introuvable' })
-    await dbSetOrderChangeRequested(id, true)
-    sendOrderChangeRequestToConfirmateurs(order).then((result) => {
+    await dbRequestOrderChange(id, reason || undefined)
+    const updatedOrders = await dbGetOrders()
+    const updatedOrder = updatedOrders.find((o) => o.id === id) || { ...order, status: 'tentative1', changeRequestedByAdmin: true, changeRequestedReason: reason || undefined }
+    sendOrderChangeRequestToConfirmateurs(updatedOrder).then((result) => {
       if (!result.ok) console.error('[API] request-change email:', result.error)
     }).catch((err) => console.error('[API] request-change email:', err.message))
     res.status(200).json({ ok: true })

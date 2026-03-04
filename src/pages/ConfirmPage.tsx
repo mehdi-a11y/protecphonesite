@@ -49,7 +49,9 @@ export function ConfirmPage() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [filterChangeRequestOnly, setFilterChangeRequestOnly] = useState(false)
   const [yalidineSending, setYalidineSending] = useState(false)
+  const [yalidineSendingAll, setYalidineSendingAll] = useState(false)
   const [yalidineMsg, setYalidineMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [yalidineSyncing, setYalidineSyncing] = useState(false)
   const [yalidineSyncMsg, setYalidineSyncMsg] = useState<string | null>(null)
@@ -225,6 +227,32 @@ export function ConfirmPage() {
     }
   }
 
+  const handleSendAllToYalidine = async () => {
+    if (ordersToSendToYalidine.length === 0) return
+    setYalidineSendingAll(true)
+    setYalidineMsg(null)
+    let ok = 0
+    const errors: string[] = []
+    for (const order of ordersToSendToYalidine) {
+      const result = await createParcelOnYalidine(order)
+      if (result.success) {
+        await updateOrderYalidine(order.id, { tracking: result.tracking, sentAt: new Date().toISOString() })
+        ok++
+      } else {
+        errors.push(`${order.id}: ${result.error}`)
+      }
+    }
+    const orders = await getOrders()
+    setOrders(orders)
+    setSelectedOrder(null)
+    setYalidineSendingAll(false)
+    if (errors.length === 0) {
+      setYalidineMsg({ type: 'success', text: `${ok} commande(s) envoyée(s) à Yalidine.` })
+    } else {
+      setYalidineMsg({ type: 'error', text: `${ok} envoyée(s), ${errors.length} échec(s). ${errors.slice(0, 2).join(' — ')}${errors.length > 2 ? '…' : ''}` })
+    }
+  }
+
   const pendingCount = orders.filter(
     (o) =>
       o.status !== 'confirmed' &&
@@ -234,7 +262,9 @@ export function ConfirmPage() {
   ).length
   const confirmedCount = orders.filter((o) => o.status === 'confirmed').length
 
+  const changeRequestedCount = orders.filter((o) => o.changeRequestedByAdmin).length
   const filteredOrders = orders.filter((o) => {
+    if (filterChangeRequestOnly && !o.changeRequestedByAdmin) return false
     if (filterStatus !== 'all' && o.status !== filterStatus) return false
     if (!searchText.trim()) return true
     const q = searchText.toLowerCase()
@@ -244,6 +274,9 @@ export function ConfirmPage() {
       o.phone.toLowerCase().includes(q)
     )
   })
+  const ordersSentYalidine = filteredOrders.filter((o) => o.yalidineTracking)
+  const ordersNotSentYalidine = filteredOrders.filter((o) => !o.yalidineTracking)
+  const ordersToSendToYalidine = ordersNotSentYalidine.filter((o) => o.status === 'confirmed')
 
   return (
     <div className="min-h-screen bg-brand-dark">
@@ -303,8 +336,11 @@ export function ConfirmPage() {
         {selectedOrder && (
           <section className="rounded-xl bg-brand-card border border-white/10 p-4 space-y-3">
             {selectedOrder.changeRequestedByAdmin && (
-              <div className="rounded-lg p-3 bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm">
-                <strong>Changement demandé par l&apos;admin</strong> — article introuvable chez le fournisseur. Contacter le client pour qu&apos;il modifie sa commande, puis reconfirmer la commande.
+              <div className="rounded-lg p-3 bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm space-y-1">
+                <p><strong>Changement demandé par l&apos;admin</strong> — la commande a été repassée en « non confirmée ». Contacter le client pour qu&apos;il modifie sa commande, puis reconfirmer.</p>
+                {selectedOrder.changeRequestedReason && (
+                  <p className="mt-2 pt-2 border-t border-amber-500/30"><strong>Raison :</strong> {selectedOrder.changeRequestedReason}</p>
+                )}
               </div>
             )}
             <div className="flex flex-wrap justify-between gap-2">
@@ -521,6 +557,12 @@ export function ConfirmPage() {
                 <p className="text-xs text-brand-muted">Confirmées</p>
                 <p className="text-lg font-semibold text-emerald-400">{confirmedCount}</p>
               </div>
+              {changeRequestedCount > 0 && (
+                <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                  <p className="text-xs text-amber-300">À appeler (changement)</p>
+                  <p className="text-lg font-semibold text-amber-300">{changeRequestedCount}</p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleSyncYalidine}
@@ -534,6 +576,20 @@ export function ConfirmPage() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterChangeRequestOnly(!filterChangeRequestOnly)}
+                className={`px-3 py-1.5 rounded-full text-xs ${
+                  filterChangeRequestOnly
+                    ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50'
+                    : 'bg-white/5 text-brand-muted hover:text-white'
+                }`}
+              >
+                À appeler (changement)
+                {changeRequestedCount > 0 && (
+                  <span className="ml-1 font-semibold">({changeRequestedCount})</span>
+                )}
+              </button>
               <button
                 type="button"
                 onClick={() => setFilterStatus('all')}
@@ -646,90 +702,144 @@ export function ConfirmPage() {
             />
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full text-sm">
-              <thead className="bg-white/5 text-brand-muted">
-                <tr>
-                  <th className="px-3 py-2 text-left">Commande</th>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">Client</th>
-                  <th className="px-3 py-2 text-left">Téléphone</th>
-                  <th className="px-3 py-2 text-left">Total</th>
-                  <th className="px-3 py-2 text-left">Confirmation</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-3 py-4 text-center text-brand-muted text-sm"
+          {(() => {
+            const renderOrderRow = (o: Order) => {
+              const date = new Date(o.createdAt).toLocaleString('fr-FR')
+              return (
+                <tr key={o.id} className="border-t border-white/5">
+                  <td className="px-3 py-2 text-white font-mono text-xs">{o.id}</td>
+                  <td className="px-3 py-2 text-brand-muted text-xs">{date}</td>
+                  <td className="px-3 py-2 text-white">{o.customerName}</td>
+                  <td className="px-3 py-2 text-brand-muted text-xs">{o.phone}</td>
+                  <td className="px-3 py-2 text-brand-accent font-semibold">{o.total} DA</td>
+                  <td className="px-3 py-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-white/5 text-xs text-white">
+                      {getStatusLabel(o.status)}
+                    </span>
+                    {o.changeRequestedByAdmin && (
+                      <span className="ml-1 inline-flex items-center px-2 py-1 rounded-full bg-amber-500/25 text-amber-300 text-xs" title="Changement demandé par l'admin">
+                        Changer
+                      </span>
+                    )}
+                    {o.yalidineTracking && (
+                      <span className="ml-1 inline-flex items-center">
+                        <a
+                          href={`https://www.yalidine.com/suivre-un-colis/?tracking=${encodeURIComponent(o.yalidineTracking)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-400 text-xs hover:underline"
+                        >
+                          {o.yalidineTracking}
+                        </a>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrder(o)}
+                      className="px-3 py-1 rounded-lg border border-white/15 text-xs text-white hover:bg-white/10"
                     >
-                      Aucune commande à afficher.
-                    </td>
-                  </tr>
-                )}
-                {filteredOrders.map((o) => {
-                  const date = new Date(o.createdAt).toLocaleString('fr-FR')
-                  return (
-                    <tr key={o.id} className="border-t border-white/5">
-                      <td className="px-3 py-2 text-white font-mono text-xs">
-                        {o.id}
-                      </td>
-                      <td className="px-3 py-2 text-brand-muted text-xs">
-                        {date}
-                      </td>
-                      <td className="px-3 py-2 text-white">
-                        {o.customerName}
-                      </td>
-                      <td className="px-3 py-2 text-brand-muted text-xs">
-                        {o.phone}
-                      </td>
-                      <td className="px-3 py-2 text-brand-accent font-semibold">
-                        {o.total} DA
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full bg-white/5 text-xs text-white">
-                          {getStatusLabel(o.status)}
-                        </span>
-                        {o.changeRequestedByAdmin && (
-                          <span className="ml-1 inline-flex items-center px-2 py-1 rounded-full bg-amber-500/25 text-amber-300 text-xs" title="Changement demandé par l'admin">
-                            Changer
-                          </span>
+                      Détails
+                    </button>
+                    <select
+                      value={o.status}
+                      onChange={(e) => handleStatusChange(o, e.target.value as Order['status'])}
+                      className="px-2 py-1 rounded-lg bg-brand-dark border border-white/15 text-xs text-white focus:border-brand-accent focus:outline-none"
+                    >
+                      <option value="tentative1">Tentative 1</option>
+                      <option value="tentative2">Tentative 2</option>
+                      <option value="tentative3">Tentative 3</option>
+                      <option value="callback">Rappel</option>
+                      <option value="confirmed">Confirmé</option>
+                      <option value="livre">Livrée</option>
+                      <option value="retourne">Retournée</option>
+                      <option value="cancelled">Annulé</option>
+                    </select>
+                  </td>
+                </tr>
+              )
+            }
+            return (
+              <>
+                <section className="mb-8">
+                  <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                    Envoyées à Yalidine
+                    <span className="text-brand-muted font-normal text-sm">({ordersSentYalidine.length})</span>
+                  </h2>
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="w-full text-sm">
+                      <thead className="bg-white/5 text-brand-muted">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Commande</th>
+                          <th className="px-3 py-2 text-left">Date</th>
+                          <th className="px-3 py-2 text-left">Client</th>
+                          <th className="px-3 py-2 text-left">Téléphone</th>
+                          <th className="px-3 py-2 text-left">Total</th>
+                          <th className="px-3 py-2 text-left">Statut / Suivi</th>
+                          <th className="px-3 py-2 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersSentYalidine.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-3 py-4 text-center text-brand-muted text-sm">
+                              Aucune commande envoyée à Yalidine.
+                            </td>
+                          </tr>
+                        ) : (
+                          ordersSentYalidine.map(renderOrderRow)
                         )}
-                      </td>
-                      <td className="px-3 py-2 text-right space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(o)}
-                          className="px-3 py-1 rounded-lg border border-white/15 text-xs text-white hover:bg-white/10"
-                        >
-                          Détails
-                        </button>
-                        <select
-                          value={o.status}
-                          onChange={(e) =>
-                            handleStatusChange(o, e.target.value as Order['status'])
-                          }
-                          className="px-2 py-1 rounded-lg bg-brand-dark border border-white/15 text-xs text-white focus:border-brand-accent focus:outline-none"
-                        >
-                          <option value="tentative1">Tentative 1</option>
-                          <option value="tentative2">Tentative 2</option>
-                          <option value="tentative3">Tentative 3</option>
-                          <option value="callback">Rappel</option>
-                          <option value="confirmed">Confirmé</option>
-                          <option value="livre">Livrée</option>
-                          <option value="retourne">Retournée</option>
-                          <option value="cancelled">Annulé</option>
-                        </select>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-3 flex-wrap">
+                    Non envoyées
+                    <span className="text-brand-muted font-normal text-sm">({ordersNotSentYalidine.length})</span>
+                    {ordersToSendToYalidine.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleSendAllToYalidine}
+                        disabled={yalidineSendingAll}
+                        className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {yalidineSendingAll ? `Envoi… (${ordersToSendToYalidine.length})` : `Envoyer tout à Yalidine (${ordersToSendToYalidine.length})`}
+                      </button>
+                    )}
+                  </h2>
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="w-full text-sm">
+                      <thead className="bg-white/5 text-brand-muted">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Commande</th>
+                          <th className="px-3 py-2 text-left">Date</th>
+                          <th className="px-3 py-2 text-left">Client</th>
+                          <th className="px-3 py-2 text-left">Téléphone</th>
+                          <th className="px-3 py-2 text-left">Total</th>
+                          <th className="px-3 py-2 text-left">Statut</th>
+                          <th className="px-3 py-2 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersNotSentYalidine.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-3 py-4 text-center text-brand-muted text-sm">
+                              Aucune commande non envoyée.
+                            </td>
+                          </tr>
+                        ) : (
+                          ordersNotSentYalidine.map(renderOrderRow)
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </>
+            )
+          })()}
         </section>
       </main>
     </div>

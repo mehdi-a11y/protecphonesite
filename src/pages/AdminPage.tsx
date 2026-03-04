@@ -147,6 +147,8 @@ export function AdminPage() {
   const [stockModalDraft, setStockModalDraft] = useState<Record<string, number>>({})
   const [stockModalSupplierDraft, setStockModalSupplierDraft] = useState<Record<string, boolean>>({})
   const [requestChangeOrderId, setRequestChangeOrderId] = useState<string | null>(null)
+  const [changeReasonOrderId, setChangeReasonOrderId] = useState<string | null>(null)
+  const [changeReasonInput, setChangeReasonInput] = useState('')
 
   useEffect(() => {
     if (auth) {
@@ -773,11 +775,9 @@ export function AdminPage() {
           const handleToggleAchatDone = (orderId: string, done: boolean) => {
             setOrderAchatDone(orderId, done).then(() => getOrders().then(setOrders)).catch(() => {})
           }
-          const handleRequestOrderChange = (orderId: string) => {
-            setRequestChangeOrderId(orderId)
-            apiRequestOrderChange(orderId)
-              .then(() => getOrders().then(setOrders))
-              .finally(() => setRequestChangeOrderId(null))
+          const handleOpenChangeReason = (orderId: string) => {
+            setChangeReasonOrderId(orderId)
+            setChangeReasonInput('')
           }
           const renderOrderCard = ({ order, linesToBuy }: { order: Order; linesToBuy: BuyLine[] }, done: boolean) => (
             <li key={order.id} className={done ? 'rounded-xl p-4 border bg-brand-card/50 border-white/10' : 'rounded-xl p-4 border bg-brand-card border-amber-500/30'}>
@@ -803,11 +803,10 @@ export function AdminPage() {
                     {!done && (
                       <button
                         type="button"
-                        onClick={() => handleRequestOrderChange(order.id)}
-                        disabled={requestChangeOrderId === order.id}
-                        className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50"
+                        onClick={() => handleOpenChangeReason(order.id)}
+                        className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
                       >
-                        {requestChangeOrderId === order.id ? 'Envoi…' : 'Changer la commande'}
+                        Changer la commande
                       </button>
                     )}
                   </div>
@@ -900,15 +899,12 @@ export function AdminPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setRequestChangeOrderId(order.id)
-                            apiRequestOrderChange(order.id)
-                              .then(() => getOrders().then(setOrders))
-                              .finally(() => setRequestChangeOrderId(null))
+                            setChangeReasonOrderId(order.id)
+                            setChangeReasonInput('')
                           }}
-                          disabled={requestChangeOrderId === order.id}
-                          className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50"
+                          className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
                         >
-                          {requestChangeOrderId === order.id ? 'Envoi…' : 'Changer la commande'}
+                          Changer la commande
                         </button>
                       </div>
                     </li>
@@ -2301,6 +2297,55 @@ export function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Modal : raison du changement de commande (pour le confirmateur) */}
+      {changeReasonOrderId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => !requestChangeOrderId && setChangeReasonOrderId(null)}>
+          <div className="rounded-xl bg-brand-card border border-white/10 w-full max-w-md shadow-xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-white font-semibold">Changer la commande {changeReasonOrderId}</h3>
+            <p className="text-brand-muted text-sm">La commande sera repassée en « non confirmée ». Indiquez la raison pour le confirmateur (obligatoire).</p>
+            <label className="block">
+              <span className="text-brand-muted text-xs">Raison du changement</span>
+              <textarea
+                value={changeReasonInput}
+                onChange={(e) => setChangeReasonInput(e.target.value)}
+                placeholder="Ex : Article introuvable chez le fournisseur, demander une autre couleur..."
+                rows={3}
+                className="mt-1 w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm placeholder-brand-muted focus:border-brand-accent focus:outline-none"
+              />
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => { setChangeReasonOrderId(null); setChangeReasonInput('') }}
+                className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!changeReasonInput.trim() || requestChangeOrderId === changeReasonOrderId}
+                onClick={() => {
+                  const reason = changeReasonInput.trim()
+                  if (!reason) return
+                  setRequestChangeOrderId(changeReasonOrderId)
+                  apiRequestOrderChange(changeReasonOrderId, reason)
+                    .then(() => getOrders().then(setOrders))
+                    .finally(() => {
+                      setRequestChangeOrderId(null)
+                      setChangeReasonOrderId(null)
+                      setChangeReasonInput('')
+                    })
+                }}
+                className="px-4 py-2 rounded-lg bg-amber-500 text-brand-dark font-medium text-sm hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {requestChangeOrderId === changeReasonOrderId ? 'Envoi…' : 'Envoyer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
