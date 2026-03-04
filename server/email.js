@@ -18,6 +18,37 @@ if (dns.setDefaultResultOrder) {
 
 const CONFIRMATEUR_EMAILS_DEFAULT = ['protecphonedz@gmail.com']
 
+/** Noms des modèles iPhone (id → name) pour le libellé complet dans les emails. */
+const PHONE_NAMES = {
+  'iphone-11': 'iPhone 11', 'iphone-11-pro': 'iPhone 11 Pro', 'iphone-11-pro-max': 'iPhone 11 Pro Max',
+  'iphone-12': 'iPhone 12', 'iphone-12-pro': 'iPhone 12 Pro', 'iphone-12-pro-max': 'iPhone 12 Pro Max',
+  'iphone-13': 'iPhone 13', 'iphone-13-pro': 'iPhone 13 Pro', 'iphone-13-pro-max': 'iPhone 13 Pro Max',
+  'iphone-14': 'iPhone 14', 'iphone-14-pro': 'iPhone 14 Pro', 'iphone-14-pro-max': 'iPhone 14 Pro Max',
+  'iphone-15': 'iPhone 15', 'iphone-15-pro': 'iPhone 15 Pro', 'iphone-15-pro-max': 'iPhone 15 Pro Max',
+  'iphone-16': 'iPhone 16', 'iphone-16-pro': 'iPhone 16 Pro', 'iphone-16-pro-max': 'iPhone 16 Pro Max',
+  'iphone-17': 'iPhone 17', 'iphone-17-pro': 'iPhone 17 Pro', 'iphone-17-pro-max': 'iPhone 17 Pro Max',
+}
+/** Noms des couleurs (id → name) pour le libellé complet dans les emails. */
+const COLOR_NAMES = {
+  'noir-mat': 'Noir mat', 'bleu-nuit': 'Bleu nuit', 'bleu-ciel': 'Bleu ciel', rouge: 'Rouge', orange: 'Orange',
+  'vert-foret': 'Vert forêt', transparent: 'Transparent', gris: 'Gris', lavande: 'Lavande',
+  'rose-gold': 'Rose gold', camouflage: 'Camouflage',
+}
+
+/**
+ * Libellé complet d'une ligne de commande : nom produit + variante (couleur, modèle iPhone) + offre si upsell.
+ * @param {object} item - { antichoc: { name }, selectedColorId?, selectedPhoneId?, isUpsell? }
+ * @returns {string}
+ */
+function formatOrderItemLabel(item) {
+  const name = item.antichoc?.name || 'Article'
+  const colorName = item.selectedColorId ? (COLOR_NAMES[item.selectedColorId] || item.selectedColorId) : ''
+  const phoneName = item.selectedPhoneId ? (PHONE_NAMES[item.selectedPhoneId] || item.selectedPhoneId) : ''
+  const variant = [colorName, phoneName].filter(Boolean).join(' — ')
+  const suffix = item.isUpsell ? ' (offre -50%)' : ''
+  return variant ? `${name} — ${variant}${suffix}` : `${name}${suffix}`
+}
+
 function getConfirmateurEmails() {
   const env = (process.env.CONFIRMATEUR_EMAILS || '').trim()
   if (env) return env.split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean)
@@ -111,7 +142,7 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
     ? `Bureau Yalidine${order.yalidineStopdeskName ? ` : ${order.yalidineStopdeskName}` : ''}`
     : 'À domicile'
   const itemsList = (order.items || [])
-    .map((i) => `- ${i.antichoc?.name || 'Article'} ${i.isUpsell ? '(offre)' : ''} : ${i.antichoc?.price ?? 0} DA`)
+    .map((i) => `- ${formatOrderItemLabel(i)} : ${i.antichoc?.price ?? 0} DA`)
     .join('\n')
 
   const text = [
@@ -144,7 +175,7 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
   <p><strong>Total :</strong> ${order.total ?? 0} DA</p>
   <p><strong>Code de confirmation :</strong> <code>${order.confirmationCode || '-'}</code></p>
   <h3>Articles</h3>
-  <ul>${(order.items || []).map((i) => `<li>${i.antichoc?.name || 'Article'}${i.isUpsell ? ' (offre)' : ''} — ${i.antichoc?.price ?? 0} DA</li>`).join('') || '<li>-</li>'}</ul>
+  <ul>${(order.items || []).map((i) => `<li>${formatOrderItemLabel(i)} — ${i.antichoc?.price ?? 0} DA</li>`).join('') || '<li>-</li>'}</ul>
   <p style="color: #64748b; font-size: 12px;">Plateforme de confirmation : accédez au site pour confirmer et envoyer à Yalidine.</p>
 </body>
 </html>
@@ -202,7 +233,7 @@ export async function sendOrderChangeRequestToConfirmateurs(order) {
   const reasonLabel = reason || 'Article(s) introuvable(s) chez le fournisseur.'
   const subject = `[ProtecPhone] Changer la commande ${order.id} — à reconfirmer`
   const itemsList = (order.items || [])
-    .map((i) => `- ${i.antichoc?.name || 'Article'} ${i.isUpsell ? '(offre)' : ''}`)
+    .map((i) => `- ${formatOrderItemLabel(i)}`)
     .join('\n')
 
   const text = [
@@ -242,7 +273,7 @@ export async function sendOrderChangeRequestToConfirmateurs(order) {
   <p><strong>Téléphone :</strong> ${order.phone || '-'}</p>
   <p><strong>Code de confirmation :</strong> <code>${order.confirmationCode || '-'}</code></p>
   <h3>Articles actuels</h3>
-  <ul>${(order.items || []).map((i) => `<li>${i.antichoc?.name || 'Article'}${i.isUpsell ? ' (offre)' : ''}</li>`).join('') || '<li>-</li>'}</ul>
+  <ul>${(order.items || []).map((i) => `<li>${formatOrderItemLabel(i)}</li>`).join('') || '<li>-</li>'}</ul>
   <p style="color: #64748b; font-size: 12px;">Accédez à la plateforme confirmateur pour voir cette commande et la gérer.</p>
 </body>
 </html>

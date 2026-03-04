@@ -457,14 +457,17 @@ export function AdminPage() {
     }
     return n
   })()
-  /** Commandes avec au moins une ligne bloquée : stock 0 et indisponible chez le fournisseur. */
+  /** Commandes avec au moins une ligne bloquée : stock 0 ET indisponible chez le fournisseur (ou produit introuvable). */
   const ordersBlockedCount = (() => {
     let n = 0
     for (const order of confirmedOrders) {
       for (const item of order.items) {
         if (item.isUpsell || !item.selectedPhoneId) continue
         const product = productMapForStock.get(item.antichoc.id)
-        if (!product) continue
+        if (!product) {
+          n++
+          break
+        }
         if (isVariantBlockedNoSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
           n++
           break
@@ -858,9 +861,15 @@ export function AdminPage() {
             for (const item of order.items) {
               if (item.isUpsell || !item.selectedPhoneId) continue
               const product = productMapForStock.get(item.antichoc.id)
-              if (!product) continue
               const colorId = item.selectedColorId ?? ''
               const phoneId = item.selectedPhoneId
+              if (!product) {
+                blockedLines.push({
+                  productName: item.antichoc.name,
+                  variantLabel: 'Produit introuvable dans le catalogue',
+                })
+                continue
+              }
               if (!isVariantBlockedNoSupplier(product, colorId, phoneId)) continue
               const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
@@ -874,7 +883,7 @@ export function AdminPage() {
           return (
             <div className="space-y-6">
               <p className="text-brand-muted text-sm">
-                Commandes confirmées contenant au moins un article en <strong>stock 0</strong> et <strong>indisponible chez le fournisseur</strong>. Impossible à honorer sans demander au client de changer sa commande.
+                Commandes confirmées contenant au moins un article <strong>en stock 0 et indisponible chez le fournisseur</strong> (ou produit introuvable dans le catalogue). Ces commandes ne peuvent pas être honorées sans demander au client de modifier sa commande.
               </p>
               {ordersWithBlocked.length === 0 ? (
                 <p className="text-brand-muted text-sm">
