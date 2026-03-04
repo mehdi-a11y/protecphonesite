@@ -12,7 +12,7 @@ import {
   ADMIN_PASSWORD,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, needToBuyVariantFromSupplier } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, needToBuyVariantFromSupplier, formatOrderItemLabel } from '../data'
 import { IPHONE_MODELS, type IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import {
@@ -97,7 +97,7 @@ function compressImageToDataUrl(
   })
 }
 
-type Tab = 'commandes' | 'achats' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
+type Tab = 'commandes' | 'achats' | 'depot' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
 
 export function AdminPage() {
   const [auth, setAuth] = useState(isAdminAuthenticated())
@@ -410,20 +410,39 @@ export function AdminPage() {
   const retourneOrders = orders.filter((o) => o.status === 'retourne')
   const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
 
+  const productMapForStock = new Map(products.map((p) => [p.id, p]))
   const ordersToBuyCount = (() => {
-    const productMap = new Map(products.map((p) => [p.id, p]))
     let n = 0
     for (const order of confirmedOrders) {
       if (order.achatFournisseurDone) continue
       for (const item of order.items) {
         if (item.isUpsell || !item.selectedPhoneId) continue
-        const product = productMap.get(item.antichoc.id)
+        const product = productMapForStock.get(item.antichoc.id)
         if (!product) continue
         if (needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
           n++
           break
         }
       }
+    }
+    return n
+  })()
+  /** Commandes confirmées entièrement couvertes par le stock (aucun achat fournisseur nécessaire). */
+  const ordersInDepotCount = (() => {
+    let n = 0
+    for (const order of confirmedOrders) {
+      let hasMainItem = false
+      let allInStock = true
+      for (const item of order.items) {
+        if (item.isUpsell || !item.selectedPhoneId) continue
+        hasMainItem = true
+        const product = productMapForStock.get(item.antichoc.id)
+        if (!product || needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
+          allInStock = false
+          break
+        }
+      }
+      if (hasMainItem && allInStock) n++
     }
     return n
   })()
@@ -471,6 +490,22 @@ export function AdminPage() {
           {ordersToBuyCount > 0 && (
             <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-300 text-xs">
               {ordersToBuyCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('depot')}
+          className={`px-6 py-3 font-medium text-sm ${
+            tab === 'depot'
+              ? 'text-brand-accent border-b-2 border-brand-accent'
+              : 'text-brand-muted hover:text-white'
+          }`}
+        >
+          Dépôt
+          {ordersInDepotCount > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 text-xs">
+              {ordersInDepotCount}
             </span>
           )}
         </button>
@@ -751,6 +786,51 @@ export function AdminPage() {
                     {ordersTermine.map((entry) => renderOrderCard(entry, true))}
                   </ul>
                 </section>
+              )}
+            </div>
+          )
+        })()}
+
+        {tab === 'depot' && (() => {
+          const ordersDepot: Order[] = []
+          for (const order of confirmedOrders) {
+            let hasMainItem = false
+            let allInStock = true
+            for (const item of order.items) {
+              if (item.isUpsell || !item.selectedPhoneId) continue
+              hasMainItem = true
+              const product = productMapForStock.get(item.antichoc.id)
+              if (!product || needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
+                allInStock = false
+                break
+              }
+            }
+            if (hasMainItem && allInStock) ordersDepot.push(order)
+          }
+          return (
+            <div className="space-y-6">
+              <p className="text-brand-muted text-sm">
+                Commandes confirmées entièrement couvertes par le stock actuel (prêtes à expédier, rien à commander chez le fournisseur).
+              </p>
+              {ordersDepot.length === 0 ? (
+                <p className="text-brand-muted text-sm">
+                  Aucune. Soit il n’y a pas de commande confirmée, soit chaque commande confirmée a au moins un article à acheter chez le fournisseur.
+                </p>
+              ) : (
+                <ul className="space-y-4">
+                  {ordersDepot.map((order) => (
+                    <li key={order.id} className="rounded-xl p-4 border bg-brand-card border-emerald-500/20">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span className="font-medium text-white">{order.id}</span>
+                        <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
+                      </div>
+                      <p className="text-emerald-400 text-sm mb-2">Tout en stock</p>
+                      <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">
+                        Voir la commande
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )
@@ -2216,8 +2296,8 @@ function OrderCard({
       )}
       <div className="mt-2 pt-2 border-t border-white/10">
         {order.items.map((item) => (
-          <div key={item.antichoc.id} className="flex justify-between text-sm text-white">
-            <span>{item.antichoc.name}{item.isUpsell ? ' (offre -50%)' : ''}</span>
+          <div key={item.antichoc.id + (item.selectedPhoneId ?? '') + (item.selectedColorId ?? '')} className="flex justify-between text-sm text-white">
+            <span>{formatOrderItemLabel(item)}</span>
             <span>{item.antichoc.price} DA</span>
           </div>
         ))}

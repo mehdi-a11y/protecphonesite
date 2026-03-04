@@ -149,6 +149,25 @@ export const ANTICHOC_COLORS = [
   { id: 'camouflage', name: 'Camouflage', emoji: '🟫', hex: '#4a5568' },
 ] as const;
 
+/** Libellé complet d’une ligne de commande : nom produit + variante (couleur, modèle iPhone) + offre si upsell. */
+export function formatOrderItemLabel(item: {
+  antichoc: { name: string }
+  selectedColorId?: string
+  selectedPhoneId?: string
+  isUpsell?: boolean
+}): string {
+  const name = item.antichoc.name
+  const colorName = item.selectedColorId
+    ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
+    : ''
+  const phoneName = item.selectedPhoneId
+    ? IPHONE_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? item.selectedPhoneId
+    : ''
+  const variant = [colorName, phoneName].filter(Boolean).join(' — ')
+  const suffix = item.isUpsell ? ' (offre -50%)' : ''
+  return variant ? `${name} — ${variant}${suffix}` : `${name}${suffix}`
+}
+
 const colors = ANTICHOC_COLORS
 const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id)
 

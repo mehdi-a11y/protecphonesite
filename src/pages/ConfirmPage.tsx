@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
+import { formatOrderItemLabel } from '../data'
 
 type FilterStatus =
   | 'all'
@@ -366,13 +367,10 @@ export function ConfirmPage() {
               <p className="text-sm text-brand-muted mb-1">Articles</p>
               {selectedOrder.items.map((item) => (
                 <div
-                  key={item.antichoc.id + (item.isUpsell ? '-upsell' : '')}
+                  key={item.antichoc.id + (item.selectedPhoneId ?? '') + (item.selectedColorId ?? '') + (item.isUpsell ? '-upsell' : '')}
                   className="flex justify-between text-sm text-white"
                 >
-                  <span>
-                    {item.antichoc.name}
-                    {item.isUpsell ? ' (offre -50%)' : ''}
-                  </span>
+                  <span>{formatOrderItemLabel(item)}</span>
                   <span>{item.antichoc.price} DA</span>
                 </div>
               ))}

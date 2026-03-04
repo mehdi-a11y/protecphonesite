@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { IPHONE_MODELS, ANTICHOC_COLORS, isVariantOrderable } from '../data'
+import { isVariantOrderable, formatOrderItemLabel } from '../data'
 import { saveOrder } from '../types'
 import type { CartItem } from '../types'
 import type { IPhoneModelId } from '../data'
@@ -146,27 +146,12 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
         {/* Récap panier */}
         <div className="rounded-xl bg-brand-card border border-white/10 p-4 mb-6">
           <p className="text-sm text-brand-muted mb-2">Votre commande</p>
-          {cart.map((item) => {
-            const phoneName = item.selectedPhoneId
-              ? IPHONE_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? item.selectedPhoneId
-              : null
-            const colorName = item.selectedColorId
-              ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
-              : null
-            return (
-              <div key={item.antichoc.id} className="flex justify-between text-white">
-                <span>
-                  {item.antichoc.name}
-                  {(phoneName || colorName) && (
-                    <span className="block text-xs text-brand-muted font-normal mt-0.5">
-                      {[phoneName, colorName].filter(Boolean).join(' — ')}
-                    </span>
-                  )}
-                </span>
+          {cart.map((item) => (
+              <div key={item.antichoc.id + (item.selectedPhoneId ?? '') + (item.selectedColorId ?? '')} className="flex justify-between text-white">
+                <span>{formatOrderItemLabel(item)}</span>
                 <span>{item.antichoc.price} DA</span>
               </div>
-            )
-          })}
+            ))}
         </div>
 
         {invalidCartItems.length > 0 && (
