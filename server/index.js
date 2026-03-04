@@ -569,6 +569,7 @@ app.patch('/api/orders/:id', async (req, res) => {
       total: partial.total !== undefined ? partial.total : existing.total,
       yalidineStopdeskId: partial.yalidineStopdeskId !== undefined ? partial.yalidineStopdeskId : existing.yalidineStopdeskId,
       yalidineStopdeskName: partial.yalidineStopdeskName !== undefined ? partial.yalidineStopdeskName : existing.yalidineStopdeskName,
+      items: Array.isArray(partial.items) ? partial.items : existing.items,
     }
     await dbSaveOrder(merged)
     res.status(200).json(orderToApi(merged))

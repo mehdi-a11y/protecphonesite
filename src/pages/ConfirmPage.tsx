@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order } from '../types'
+import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
-import { formatOrderItemLabel } from '../data'
+import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, type Antichoc, type IPhoneModelId } from '../data'
+import { apiGetProducts } from '../api'
 
 type FilterStatus =
   | 'all'
@@ -61,7 +62,8 @@ export function ConfirmPage() {
   const [yalidineSyncMsg, setYalidineSyncMsg] = useState<string | null>(null)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [editSaving, setEditSaving] = useState(false)
-  const [editForm, setEditForm] = useState<Partial<Order>>({})
+  const [editForm, setEditForm] = useState<Partial<Order> & { items?: CartItem[] }>({})
+  const [products, setProducts] = useState<Antichoc[]>([])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,6 +117,15 @@ export function ConfirmPage() {
     })
   }, [])
 
+  useEffect(() => {
+    if (auth) {
+      apiGetProducts().then((list) => {
+        const normalized = (list || []).map((p) => normalizeProduct(p)).filter(Boolean) as Antichoc[]
+        setProducts(normalized)
+      })
+    }
+  }, [auth])
+
   const refreshOrders = () => {
     getOrders().then(setOrders)
   }
@@ -166,6 +177,10 @@ export function ConfirmPage() {
 
   const openEditOrder = (order: Order) => {
     setEditingOrder(order)
+    const itemsCopy: CartItem[] = (order.items || []).map((i) => ({
+      ...i,
+      antichoc: { ...i.antichoc },
+    }))
     setEditForm({
       customerName: order.customerName ?? '',
       phone: order.phone ?? '',
@@ -176,14 +191,49 @@ export function ConfirmPage() {
       total: order.total,
       yalidineStopdeskId: order.yalidineStopdeskId ?? '',
       yalidineStopdeskName: order.yalidineStopdeskName ?? '',
+      items: itemsCopy,
+    })
+  }
+
+  const editItems = editForm.items ?? []
+  const computedTotal = editItems.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (editForm.deliveryPrice ?? 0)
+  const updateEditItem = (index: number, patch: Partial<CartItem>) => {
+    const next = [...editItems]
+    next[index] = { ...next[index], ...patch }
+    setEditForm((f) => ({ ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }))
+  }
+  const removeEditItem = (index: number) => {
+    const next = editItems.filter((_, i) => i !== index)
+    setEditForm((f) => ({ ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }))
+  }
+  const addEditItem = () => {
+    const first = products[0]
+    if (!first) return
+    const colorIds = first.colorIds?.length ? first.colorIds : [ANTICHOC_COLORS[0]?.id ?? '']
+    const phoneIds = first.compatibleWith?.length ? first.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+    const newItem: CartItem = {
+      antichoc: { ...first },
+      selectedColorId: colorIds[0] ?? '',
+      selectedPhoneId: phoneIds[0],
+      isUpsell: false,
+    }
+    setEditForm((f) => {
+      const next = [...(f.items ?? []), newItem]
+      return { ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }
     })
   }
 
   const handleSaveEditOrder = async () => {
     if (!editingOrder) return
+    const itemsToSave = editForm.items ?? []
+    if (itemsToSave.length === 0) {
+      setError('La commande doit avoir au moins un article.')
+      return
+    }
     setEditSaving(true)
     setError('')
     try {
+      const totalToSave = itemsToSave.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (editForm.deliveryPrice ?? 0)
       const updated = await updateOrder(editingOrder.id, {
         customerName: editForm.customerName,
         phone: editForm.phone,
@@ -191,7 +241,8 @@ export function ConfirmPage() {
         wilaya: editForm.wilaya,
         deliveryType: editForm.deliveryType,
         deliveryPrice: editForm.deliveryPrice,
-        total: editForm.total,
+        total: totalToSave,
+        items: itemsToSave,
         yalidineStopdeskId: editForm.yalidineStopdeskId || undefined,
         yalidineStopdeskName: editForm.yalidineStopdeskName || undefined,
       })
@@ -510,7 +561,7 @@ export function ConfirmPage() {
         {/* Modal Modifier la commande */}
         {editingOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => !editSaving && setEditingOrder(null)}>
-            <div className="rounded-xl bg-brand-card border border-white/10 w-full max-w-md shadow-xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="rounded-xl bg-brand-card border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-white font-semibold">Modifier la commande {editingOrder.id}</h3>
               <div className="space-y-2">
                 <label className="block text-xs text-brand-muted">Nom client</label>
@@ -572,14 +623,67 @@ export function ConfirmPage() {
                   onChange={(e) => setEditForm((f) => ({ ...f, deliveryPrice: e.target.value === '' ? undefined : Number(e.target.value) }))}
                   className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
                 />
-                <label className="block text-xs text-brand-muted">Total (DA)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={editForm.total ?? ''}
-                  onChange={(e) => setEditForm((f) => ({ ...f, total: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                  className="w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none"
-                />
+
+                <div className="pt-2 border-t border-white/10">
+                  <p className="text-xs text-brand-muted mb-2">Articles</p>
+                  {editItems.map((item, index) => {
+                    const antichoc = item.antichoc
+                    const colorIds = antichoc?.colorIds?.length ? antichoc.colorIds : ['']
+                    const phoneIds = (antichoc?.compatibleWith?.length ? antichoc.compatibleWith : IPHONE_MODELS.map((m) => m.id)) as IPhoneModelId[]
+                    const safeColorId = item.selectedColorId && colorIds.includes(item.selectedColorId) ? item.selectedColorId : (colorIds[0] ?? '')
+                    const safePhoneId = item.selectedPhoneId && phoneIds.includes(item.selectedPhoneId) ? item.selectedPhoneId : phoneIds[0]
+                    return (
+                      <div key={index} className="flex flex-wrap items-center gap-2 py-2 border-b border-white/5 last:border-0">
+                        <select
+                          value={antichoc?.id ?? ''}
+                          onChange={(e) => {
+                            const p = products.find((x) => x.id === e.target.value)
+                            if (p) {
+                              const cids = p.colorIds?.length ? p.colorIds : [ANTICHOC_COLORS[0]?.id ?? '']
+                              const pids = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+                              updateEditItem(index, { antichoc: { ...p }, selectedColorId: cids[0] ?? '', selectedPhoneId: pids[0], isUpsell: item.isUpsell })
+                            }
+                          }}
+                          className="flex-1 min-w-0 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
+                        >
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={safeColorId}
+                          onChange={(e) => updateEditItem(index, { selectedColorId: e.target.value })}
+                          className="w-28 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
+                        >
+                          {colorIds.map((cid) => (
+                            <option key={cid || 'none'} value={cid}>{cid ? (ANTICHOC_COLORS.find((c) => c.id === cid)?.name ?? cid) : '—'}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={safePhoneId ?? ''}
+                          onChange={(e) => updateEditItem(index, { selectedPhoneId: e.target.value as IPhoneModelId })}
+                          className="w-32 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
+                        >
+                          {phoneIds.map((pid) => (
+                            <option key={pid} value={pid}>{IPHONE_MODELS.find((m) => m.id === pid)?.name ?? pid}</option>
+                          ))}
+                        </select>
+                        <label className="flex items-center gap-1 text-xs text-brand-muted whitespace-nowrap">
+                          <input type="checkbox" checked={!!item.isUpsell} onChange={(e) => updateEditItem(index, { isUpsell: e.target.checked })} className="rounded border-white/30 bg-brand-dark text-brand-accent" />
+                          Upsell
+                        </label>
+                        <span className="text-brand-accent text-xs font-medium">{item.antichoc?.price ?? 0} DA</span>
+                        <button type="button" onClick={() => removeEditItem(index)} className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30">Supprimer</button>
+                      </div>
+                    )
+                  })}
+                  <button type="button" onClick={addEditItem} disabled={products.length === 0} className="mt-2 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20 disabled:opacity-50">
+                    + Ajouter une ligne
+                  </button>
+                </div>
+
+                <p className="text-xs text-brand-muted">Total (DA) — recalculé</p>
+                <p className="text-lg font-semibold text-brand-accent">{computedTotal} DA</p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button
