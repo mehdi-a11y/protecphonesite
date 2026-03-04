@@ -417,7 +417,8 @@ export function AdminPage() {
       if (order.achatFournisseurDone) continue
       for (const item of order.items) {
         if (item.isUpsell || !item.selectedPhoneId) continue
-        const product = productMap.get(item.antichoc.id) ?? item.antichoc
+        const product = productMap.get(item.antichoc.id)
+        if (!product) continue
         if (needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
           n++
           break
@@ -682,8 +683,10 @@ export function AdminPage() {
               const phoneId = item.selectedPhoneId
               if (!phoneId) continue
               const colorId = item.selectedColorId ?? ''
-              const product = productMap.get(item.antichoc.id) ?? item.antichoc
-              // Priorité stock : si la variante a du stock, on n'achète pas → la ligne n'est pas ajoutée
+              // Toujours utiliser le produit actuel (stock à jour). Si absent de la liste, ne pas proposer à acheter.
+              const product = productMap.get(item.antichoc.id)
+              if (!product) continue
+              // Priorité stock : si la variante a du stock, on n'achète pas (même si dispo fournisseur)
               if (!needToBuyVariantFromSupplier(product, colorId, phoneId)) continue
               const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
