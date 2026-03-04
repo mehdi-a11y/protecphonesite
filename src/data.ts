@@ -137,6 +137,18 @@ export function needToBuyVariantFromSupplier(
   return antichoc.variantAvailableFromSupplier?.[key] === true
 }
 
+/** Variante bloquée : stock = 0 et pas disponible chez le fournisseur (impossible à honorer sans changer la commande). */
+export function isVariantBlockedNoSupplier(
+  antichoc: Antichoc,
+  colorId: string,
+  phoneId: IPhoneModelId,
+): boolean {
+  const stock = getVariantStock(antichoc, colorId, phoneId)
+  if (stock > 0) return false
+  const key = variantKey(colorId, phoneId)
+  return antichoc.variantAvailableFromSupplier?.[key] !== true
+}
+
 /** Couleurs disponibles pour les antichocs (sélection dans l'admin) */
 export const ANTICHOC_COLORS = [
   { id: 'noir-mat', name: 'Noir mat', emoji: '⬛', hex: '#1a1a1a' },

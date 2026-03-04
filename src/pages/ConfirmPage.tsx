@@ -302,6 +302,11 @@ export function ConfirmPage() {
 
         {selectedOrder && (
           <section className="rounded-xl bg-brand-card border border-white/10 p-4 space-y-3">
+            {selectedOrder.changeRequestedByAdmin && (
+              <div className="rounded-lg p-3 bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm">
+                <strong>Changement demandé par l&apos;admin</strong> — article introuvable chez le fournisseur. Contacter le client pour qu&apos;il modifie sa commande, puis reconfirmer la commande.
+              </div>
+            )}
             <div className="flex flex-wrap justify-between gap-2">
               <div>
                 <p className="text-xs text-brand-muted">N° commande</p>
@@ -688,6 +693,11 @@ export function ConfirmPage() {
                         <span className="inline-flex items-center px-2 py-1 rounded-full bg-white/5 text-xs text-white">
                           {getStatusLabel(o.status)}
                         </span>
+                        {o.changeRequestedByAdmin && (
+                          <span className="ml-1 inline-flex items-center px-2 py-1 rounded-full bg-amber-500/25 text-amber-300 text-xs" title="Changement demandé par l'admin">
+                            Changer
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right space-x-2">
                         <button

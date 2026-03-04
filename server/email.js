@@ -183,6 +183,96 @@ export async function sendNewOrderNotificationToConfirmateurs(order) {
 }
 
 /**
+ * Envoie un email aux confirmateurs : l'admin demande un changement de commande
+ * (article introuvable chez le fournisseur). Le confirmateur doit contacter le client
+ * et reconfirmer / modifier la commande.
+ * @param {object} order - Commande { id, customerName, phone, confirmationCode, items }
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function sendOrderChangeRequestToConfirmateurs(order) {
+  const to = getConfirmateurEmails()
+  if (to.length === 0) {
+    console.warn('[Email] Aucune adresse confirmateur configurée.')
+    return { ok: false, error: 'Aucune adresse' }
+  }
+
+  console.log('[Email] Envoi demande changement commande', order.id, 'vers', to.length, 'destinataire(s)')
+
+  const subject = `[ProtecPhone] Changer la commande ${order.id} — article introuvable chez le fournisseur`
+  const itemsList = (order.items || [])
+    .map((i) => `- ${i.antichoc?.name || 'Article'} ${i.isUpsell ? '(offre)' : ''}`)
+    .join('\n')
+
+  const text = [
+    `L'administrateur demande de faire changer la commande ${order.id} : article(s) introuvable(s) chez le fournisseur.`,
+    '',
+    'Action requise :',
+    '- Contacter le client (téléphone ci-dessous) pour lui demander de modifier sa commande.',
+    '- Une fois le client d\'accord, reconfirmer la commande sur la plateforme (changement de produit / variante, puis confirmation).',
+    '',
+    `Commande : ${order.id}`,
+    `Client : ${order.customerName || '-'}`,
+    `Téléphone : ${order.phone || '-'}`,
+    `Code de confirmation : ${order.confirmationCode || '-'}`,
+    '',
+    'Articles actuels :',
+    itemsList || '-',
+  ].join('\n')
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Changer la commande ${order.id}</title></head>
+<body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 16px;">
+  <h2 style="color: #f59e0b;">Changer la commande — article introuvable chez le fournisseur</h2>
+  <p>L'administrateur signale que la commande <strong>${order.id}</strong> contient des articles introuvables chez le fournisseur.</p>
+  <p><strong>À faire :</strong></p>
+  <ul>
+    <li>Contacter le client (téléphone ci-dessous) pour lui demander de modifier sa commande.</li>
+    <li>Une fois le client d'accord, reconfirmer la commande sur la plateforme (changement de produit / variante si besoin, puis confirmation).</li>
+  </ul>
+  <p><strong>Commande :</strong> ${order.id}</p>
+  <p><strong>Client :</strong> ${order.customerName || '-'}</p>
+  <p><strong>Téléphone :</strong> ${order.phone || '-'}</p>
+  <p><strong>Code de confirmation :</strong> <code>${order.confirmationCode || '-'}</code></p>
+  <h3>Articles actuels</h3>
+  <ul>${(order.items || []).map((i) => `<li>${i.antichoc?.name || 'Article'}${i.isUpsell ? ' (offre)' : ''}</li>`).join('') || '<li>-</li>'}</ul>
+  <p style="color: #64748b; font-size: 12px;">Accédez à la plateforme confirmateur pour voir cette commande et la gérer.</p>
+</body>
+</html>
+`.trim()
+
+  if ((process.env.RESEND_API_KEY || '').trim()) {
+    const result = await sendViaResend({ to, subject, text, html })
+    if (result.ok) console.log('[Email] Demande changement envoyée (Resend) vers', to.join(', '))
+    else console.error('[Email] Resend:', result.error)
+    return result
+  }
+
+  const transporter = await getTransporter()
+  if (!transporter) {
+    console.warn('[Email] Ni RESEND_API_KEY ni SMTP configuré.')
+    return { ok: false, error: 'Email non configuré (Resend ou SMTP)' }
+  }
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@protecphone.dz'
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      html,
+    })
+    console.log('[Email] Demande changement envoyée vers', to.join(', '))
+    return { ok: true }
+  } catch (err) {
+    const message = err.message || String(err)
+    console.error('[Email] Erreur envoi demande changement:', message)
+    return { ok: false, error: message }
+  }
+}
+
+/**
  * Envoie un email de test aux confirmateurs (pour vérifier la config SMTP).
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */

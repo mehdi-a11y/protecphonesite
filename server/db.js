@@ -107,6 +107,12 @@ async function runMigrations() {
     await client.query(`
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS achat_fournisseur_done BOOLEAN DEFAULT false
     `).catch(() => {})
+    await client.query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS depot_expedie_done BOOLEAN DEFAULT false
+    `).catch(() => {})
+    await client.query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS change_requested_by_admin BOOLEAN DEFAULT false
+    `).catch(() => {})
   } finally {
     client.release()
   }
@@ -134,12 +140,12 @@ export async function dbSaveOrder(order) {
   const row = orderToRow(order)
   if (pool) {
     await pool.query(
-      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17)
+      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19)
        ON CONFLICT (id) DO UPDATE SET
          customer_name=$2, phone=$3, address=$4, wilaya=$5, delivery_type=$6, delivery_price=$7, total=$8, status=$9,
-         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17`,
-      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true]
+         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19`,
+      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true]
     )
     return
   }
@@ -165,6 +171,24 @@ export async function dbSetOrderAchatDone(orderId, done) {
   }
   const o = memoryOrders.find((x) => x.id === orderId)
   if (o) o.achatFournisseurDone = done === true
+}
+
+export async function dbSetOrderDepotDone(orderId, done) {
+  if (pool) {
+    await pool.query('UPDATE orders SET depot_expedie_done = $1 WHERE id = $2', [done === true, orderId])
+    return
+  }
+  const o = memoryOrders.find((x) => x.id === orderId)
+  if (o) o.depotExpedieDone = done === true
+}
+
+export async function dbSetOrderChangeRequested(orderId, value) {
+  if (pool) {
+    await pool.query('UPDATE orders SET change_requested_by_admin = $1 WHERE id = $2', [value === true, orderId])
+    return
+  }
+  const o = memoryOrders.find((x) => x.id === orderId)
+  if (o) o.changeRequestedByAdmin = value === true
 }
 
 /** Clé variante (couleur|modèle iPhone), comme dans le frontend. */
@@ -256,6 +280,8 @@ function rowToOrder(r) {
     yalidineStopdeskId: r.yalidine_stopdesk_id ?? undefined,
     yalidineStopdeskName: r.yalidine_stopdesk_name ?? undefined,
     achatFournisseurDone: r.achat_fournisseur_done === true,
+    depotExpedieDone: r.depot_expedie_done === true,
+    changeRequestedByAdmin: r.change_requested_by_admin === true,
   }
 }
 
@@ -278,6 +304,8 @@ function orderToRow(o) {
     created_at: o.createdAt || new Date().toISOString(),
     items: o.items || [],
     achat_fournisseur_done: o.achatFournisseurDone === true,
+    depot_expedie_done: o.depotExpedieDone === true,
+    change_requested_by_admin: o.changeRequestedByAdmin === true,
   }
 }
 

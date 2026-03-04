@@ -45,6 +45,10 @@ export interface Order {
   yalidineStopdeskName?: string
   /** Coche "à acheter" : true = achat fournisseur fait pour cette commande */
   achatFournisseurDone?: boolean
+  /** Coche "dépôt" : true = expédition / préparation dépôt traitée pour cette commande */
+  depotExpedieDone?: boolean
+  /** true = l'admin a demandé un changement (article introuvable chez le fournisseur) ; le confirmateur doit contacter le client et reconfirmer */
+  changeRequestedByAdmin?: boolean
 }
 
 export const ADMIN_PASSWORD = 'mehdi2026dz'
@@ -93,6 +97,10 @@ export async function deleteOrder(orderId: string): Promise<void> {
 
 export async function setOrderAchatDone(orderId: string, done: boolean): Promise<void> {
   await api.apiSetOrderAchatDone(orderId, done)
+}
+
+export async function setOrderDepotDone(orderId: string, done: boolean): Promise<void> {
+  await api.apiSetOrderDepotDone(orderId, done)
 }
 
 export function isAdminAuthenticated(): boolean {

@@ -5,6 +5,7 @@ import {
   confirmOrder,
   setOrderStatus,
   setOrderAchatDone,
+  setOrderDepotDone,
   updateOrderYalidine,
   deleteOrder,
   isAdminAuthenticated,
@@ -12,7 +13,7 @@ import {
   ADMIN_PASSWORD,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, needToBuyVariantFromSupplier, formatOrderItemLabel } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
 import { IPHONE_MODELS, type IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import {
@@ -37,6 +38,7 @@ import {
   apiCreateCollection,
   apiUpdateCollection,
   apiDeleteCollection,
+  apiRequestOrderChange,
   type LandingPage,
   type Collection,
 } from '../api'
@@ -97,7 +99,7 @@ function compressImageToDataUrl(
   })
 }
 
-type Tab = 'commandes' | 'achats' | 'depot' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
+type Tab = 'commandes' | 'achats' | 'bloquees' | 'depot' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
 
 export function AdminPage() {
   const [auth, setAuth] = useState(isAdminAuthenticated())
@@ -144,6 +146,7 @@ export function AdminPage() {
   const [stockModalProductId, setStockModalProductId] = useState<string | null>(null)
   const [stockModalDraft, setStockModalDraft] = useState<Record<string, number>>({})
   const [stockModalSupplierDraft, setStockModalSupplierDraft] = useState<Record<string, boolean>>({})
+  const [requestChangeOrderId, setRequestChangeOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     if (auth) {
@@ -427,10 +430,11 @@ export function AdminPage() {
     }
     return n
   })()
-  /** Commandes confirmées entièrement couvertes par le stock (aucun achat fournisseur nécessaire). */
+  /** Commandes "dépôt" (tout en stock) pas encore cochées comme traitées — pour le badge. */
   const ordersInDepotCount = (() => {
     let n = 0
     for (const order of confirmedOrders) {
+      if (order.depotExpedieDone) continue
       let hasMainItem = false
       let allInStock = true
       for (const item of order.items) {
@@ -443,6 +447,22 @@ export function AdminPage() {
         }
       }
       if (hasMainItem && allInStock) n++
+    }
+    return n
+  })()
+  /** Commandes avec au moins une ligne bloquée : stock 0 et indisponible chez le fournisseur. */
+  const ordersBlockedCount = (() => {
+    let n = 0
+    for (const order of confirmedOrders) {
+      for (const item of order.items) {
+        if (item.isUpsell || !item.selectedPhoneId) continue
+        const product = productMapForStock.get(item.antichoc.id)
+        if (!product) continue
+        if (isVariantBlockedNoSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
+          n++
+          break
+        }
+      }
     }
     return n
   })()
@@ -490,6 +510,22 @@ export function AdminPage() {
           {ordersToBuyCount > 0 && (
             <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-300 text-xs">
               {ordersToBuyCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('bloquees')}
+          className={`px-6 py-3 font-medium text-sm ${
+            tab === 'bloquees'
+              ? 'text-brand-accent border-b-2 border-brand-accent'
+              : 'text-brand-muted hover:text-white'
+          }`}
+        >
+          Bloquées
+          {ordersBlockedCount > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-red-500/30 text-red-300 text-xs">
+              {ordersBlockedCount}
             </span>
           )}
         </button>
@@ -737,6 +773,12 @@ export function AdminPage() {
           const handleToggleAchatDone = (orderId: string, done: boolean) => {
             setOrderAchatDone(orderId, done).then(() => getOrders().then(setOrders)).catch(() => {})
           }
+          const handleRequestOrderChange = (orderId: string) => {
+            setRequestChangeOrderId(orderId)
+            apiRequestOrderChange(orderId)
+              .then(() => getOrders().then(setOrders))
+              .finally(() => setRequestChangeOrderId(null))
+          }
           const renderOrderCard = ({ order, linesToBuy }: { order: Order; linesToBuy: BuyLine[] }, done: boolean) => (
             <li key={order.id} className={done ? 'rounded-xl p-4 border bg-brand-card/50 border-white/10' : 'rounded-xl p-4 border bg-brand-card border-amber-500/30'}>
               <div className="flex items-start gap-3">
@@ -749,12 +791,25 @@ export function AdminPage() {
                     <span className="font-medium text-white">{order.id}</span>
                     <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
                   </div>
+                  {order.changeRequestedByAdmin && (
+                    <p className="text-amber-300 text-sm mb-2">Changement demandé : le confirmateur a été notifié.</p>
+                  )}
                   <p className="text-amber-400 text-sm font-medium mb-2">À commander chez le fournisseur :</p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-white">
                     {linesToBuy.map((line, idx) => <li key={idx}>{line.productName} — {line.variantLabel}</li>)}
                   </ul>
-                  <div className="mt-3 pt-3 border-t border-white/10">
+                  <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap gap-2">
                     <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">Voir la commande</button>
+                    {!done && (
+                      <button
+                        type="button"
+                        onClick={() => handleRequestOrderChange(order.id)}
+                        disabled={requestChangeOrderId === order.id}
+                        className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50"
+                      >
+                        {requestChangeOrderId === order.id ? 'Envoi…' : 'Changer la commande'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -791,6 +846,79 @@ export function AdminPage() {
           )
         })()}
 
+        {tab === 'bloquees' && (() => {
+          type BlockedLine = { productName: string; variantLabel: string }
+          const ordersWithBlocked: { order: Order; blockedLines: BlockedLine[] }[] = []
+          for (const order of confirmedOrders) {
+            const blockedLines: BlockedLine[] = []
+            for (const item of order.items) {
+              if (item.isUpsell || !item.selectedPhoneId) continue
+              const product = productMapForStock.get(item.antichoc.id)
+              if (!product) continue
+              const colorId = item.selectedColorId ?? ''
+              const phoneId = item.selectedPhoneId
+              if (!isVariantBlockedNoSupplier(product, colorId, phoneId)) continue
+              const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+              const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
+              blockedLines.push({
+                productName: item.antichoc.name,
+                variantLabel: colorId ? `${colorName} — ${phoneName}` : phoneName,
+              })
+            }
+            if (blockedLines.length > 0) ordersWithBlocked.push({ order, blockedLines })
+          }
+          return (
+            <div className="space-y-6">
+              <p className="text-brand-muted text-sm">
+                Commandes confirmées contenant au moins un article en <strong>stock 0</strong> et <strong>indisponible chez le fournisseur</strong>. Impossible à honorer sans demander au client de changer sa commande.
+              </p>
+              {ordersWithBlocked.length === 0 ? (
+                <p className="text-brand-muted text-sm">
+                  Aucune. Toutes les commandes confirmées ont soit du stock, soit des articles commandables chez le fournisseur.
+                </p>
+              ) : (
+                <ul className="space-y-4">
+                  {ordersWithBlocked.map(({ order, blockedLines }) => (
+                    <li key={order.id} className="rounded-xl p-4 border bg-brand-card border-red-500/30">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span className="font-medium text-white">{order.id}</span>
+                        <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
+                      </div>
+                      {order.changeRequestedByAdmin && (
+                        <p className="text-amber-300 text-sm mb-2">Changement demandé : le confirmateur a été notifié.</p>
+                      )}
+                      <p className="text-red-400 text-sm font-medium mb-2">Indisponible (stock 0, pas chez le fournisseur) :</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-white mb-3">
+                        {blockedLines.map((line, idx) => (
+                          <li key={idx}>{line.productName} — {line.variantLabel}</li>
+                        ))}
+                      </ul>
+                      <div className="pt-3 border-t border-white/10 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">
+                          Voir la commande
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRequestChangeOrderId(order.id)
+                            apiRequestOrderChange(order.id)
+                              .then(() => getOrders().then(setOrders))
+                              .finally(() => setRequestChangeOrderId(null))
+                          }}
+                          disabled={requestChangeOrderId === order.id}
+                          className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50"
+                        >
+                          {requestChangeOrderId === order.id ? 'Envoi…' : 'Changer la commande'}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )
+        })()}
+
         {tab === 'depot' && (() => {
           const ordersDepot: Order[] = []
           for (const order of confirmedOrders) {
@@ -807,30 +935,55 @@ export function AdminPage() {
             }
             if (hasMainItem && allInStock) ordersDepot.push(order)
           }
+          const ordersAFaire = ordersDepot.filter((o) => !o.depotExpedieDone)
+          const ordersTermine = ordersDepot.filter((o) => o.depotExpedieDone)
+          const handleToggleDepotDone = (orderId: string, done: boolean) => {
+            setOrderDepotDone(orderId, done).then(() => getOrders().then(setOrders)).catch(() => {})
+          }
+          const renderDepotCard = (order: Order, done: boolean) => (
+            <li key={order.id} className={done ? 'rounded-xl p-4 border bg-brand-card/50 border-white/10' : 'rounded-xl p-4 border bg-brand-card border-emerald-500/20'}>
+              <div className="flex items-start gap-3">
+                <label className="flex-shrink-0 mt-0.5 flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={done} onChange={(e) => handleToggleDepotDone(order.id, e.target.checked)} className="rounded border-white/30 bg-brand-dark text-brand-accent focus:ring-brand-accent w-5 h-5" />
+                  <span className="text-sm text-white select-none">{done ? 'Expédié / traité' : 'À expédier'}</span>
+                </label>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span className="font-medium text-white">{order.id}</span>
+                    <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
+                  </div>
+                  <p className="text-emerald-400 text-sm mb-2">Tout en stock</p>
+                  <div className="pt-3 border-t border-white/10">
+                    <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">Voir la commande</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          )
           return (
             <div className="space-y-6">
               <p className="text-brand-muted text-sm">
-                Commandes confirmées entièrement couvertes par le stock actuel (prêtes à expédier, rien à commander chez le fournisseur).
+                Commandes confirmées entièrement couvertes par le stock (prêtes à expédier). Cochez quand la commande est expédiée ou préparée.
               </p>
-              {ordersDepot.length === 0 ? (
-                <p className="text-brand-muted text-sm">
-                  Aucune. Soit il n’y a pas de commande confirmée, soit chaque commande confirmée a au moins un article à acheter chez le fournisseur.
-                </p>
-              ) : (
-                <ul className="space-y-4">
-                  {ordersDepot.map((order) => (
-                    <li key={order.id} className="rounded-xl p-4 border bg-brand-card border-emerald-500/20">
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <span className="font-medium text-white">{order.id}</span>
-                        <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
-                      </div>
-                      <p className="text-emerald-400 text-sm mb-2">Tout en stock</p>
-                      <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">
-                        Voir la commande
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              <section>
+                <h2 className="text-lg font-semibold text-white mb-3">À faire ({ordersAFaire.length})</h2>
+                {ordersAFaire.length === 0 ? (
+                  <p className="text-brand-muted text-sm">
+                    {ordersDepot.length === 0 ? 'Aucune. Soit il n’y a pas de commande confirmée couverte par le stock, soit chaque commande confirmée a au moins un article à acheter.' : 'Tout est coché. Aucune commande en attente d’expédition.'}
+                  </p>
+                ) : (
+                  <ul className="space-y-4">
+                    {ordersAFaire.map((order) => renderDepotCard(order, false))}
+                  </ul>
+                )}
+              </section>
+              {ordersTermine.length > 0 && (
+                <section>
+                  <h2 className="text-lg font-semibold text-brand-muted mb-3">Terminé ({ordersTermine.length})</h2>
+                  <ul className="space-y-4">
+                    {ordersTermine.map((order) => renderDepotCard(order, true))}
+                  </ul>
+                </section>
               )}
             </div>
           )

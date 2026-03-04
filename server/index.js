@@ -21,6 +21,8 @@ import {
   dbSaveOrder,
   dbSetOrderStatus,
   dbSetOrderAchatDone,
+  dbSetOrderDepotDone,
+  dbSetOrderChangeRequested,
   dbDecrementStockForOrder,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
@@ -41,7 +43,7 @@ import {
 } from './db.js'
 import { getBureauxByWilaya, getCommuneByStopdeskId } from './yalidine-bureaux.js'
 import { sendOrderConfirmationWhatsApp, normalizePhoneToE164 } from './whatsapp.js'
-import { sendNewOrderNotificationToConfirmateurs, isEmailConfigured, sendTestEmail } from './email.js'
+import { sendNewOrderNotificationToConfirmateurs, sendOrderChangeRequestToConfirmateurs, isEmailConfigured, sendTestEmail } from './email.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -453,6 +455,8 @@ function orderToApi(o) {
     yalidineStopdeskId: o.yalidineStopdeskId,
     yalidineStopdeskName: o.yalidineStopdeskName,
     achatFournisseurDone: o.achatFournisseurDone === true,
+    depotExpedieDone: o.depotExpedieDone === true,
+    changeRequestedByAdmin: o.changeRequestedByAdmin === true,
   }
 }
 
@@ -475,6 +479,8 @@ function apiToOrder(a) {
     yalidineStopdeskId: a.yalidineStopdeskId,
     yalidineStopdeskName: a.yalidineStopdeskName,
     achatFournisseurDone: a.achatFournisseurDone === true,
+    depotExpedieDone: a.depotExpedieDone === true,
+    changeRequestedByAdmin: a.changeRequestedByAdmin === true,
   }
 }
 
@@ -604,6 +610,33 @@ app.patch('/api/orders/:id/achat-done', async (req, res) => {
     const { id } = req.params
     const done = req.body?.done === true
     await dbSetOrderAchatDone(id, done)
+    res.status(200).json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.patch('/api/orders/:id/depot-done', async (req, res) => {
+  try {
+    const { id } = req.params
+    const done = req.body?.done === true
+    await dbSetOrderDepotDone(id, done)
+    res.status(200).json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.post('/api/orders/:id/request-change', async (req, res) => {
+  try {
+    const { id } = req.params
+    const orders = await dbGetOrders()
+    const order = orders.find((o) => o.id === id)
+    if (!order) return res.status(404).json({ error: 'Commande introuvable' })
+    await dbSetOrderChangeRequested(id, true)
+    sendOrderChangeRequestToConfirmateurs(order).then((result) => {
+      if (!result.ok) console.error('[API] request-change email:', result.error)
+    }).catch((err) => console.error('[API] request-change email:', err.message))
     res.status(200).json({ ok: true })
   } catch (e) {
     res.status(500).json({ error: e.message })
