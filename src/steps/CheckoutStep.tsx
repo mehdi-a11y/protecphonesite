@@ -33,6 +33,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
   const [selectedStopdeskId, setSelectedStopdeskId] = useState('')
   const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
   const [selectedStopdeskCommune, setSelectedStopdeskCommune] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (!wilaya) {
@@ -105,30 +106,35 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmitOrder) return
-    const orderId = 'CMD-' + Date.now()
-    const confirmationCode = generateConfirmationCode()
-    const finalCart: CartItem[] = [...cart]
-    await saveOrder({
-      id: orderId,
-      customerName: name,
-      phone,
-      address: deliveryType === 'domicile' ? commune.trim() : (deliveryType === 'yalidine' ? selectedStopdeskCommune : ''),
-      wilaya,
-      deliveryType,
-      deliveryPrice,
-      items: finalCart,
-      total,
-      status: 'none',
-      createdAt: new Date().toISOString(),
-      confirmationCode,
-      ...(deliveryType === 'yalidine' && selectedStopdeskId
-        ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
-        : {}),
-    })
-    trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
-    trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
-    onConfirm(orderId, confirmationCode)
+    if (!canSubmitOrder || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      const orderId = 'CMD-' + Date.now()
+      const confirmationCode = generateConfirmationCode()
+      const finalCart: CartItem[] = [...cart]
+      await saveOrder({
+        id: orderId,
+        customerName: name,
+        phone,
+        address: deliveryType === 'domicile' ? commune.trim() : (deliveryType === 'yalidine' ? selectedStopdeskCommune : ''),
+        wilaya,
+        deliveryType,
+        deliveryPrice,
+        items: finalCart,
+        total,
+        status: 'none',
+        createdAt: new Date().toISOString(),
+        confirmationCode,
+        ...(deliveryType === 'yalidine' && selectedStopdeskId
+          ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
+          : {}),
+      })
+      trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+      trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+      onConfirm(orderId, confirmationCode)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -310,10 +316,10 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
           <button
             type="submit"
-            disabled={!canSubmitOrder}
+            disabled={!canSubmitOrder || isSubmitting}
             className="w-full py-4 bg-brand-accent text-brand-dark font-semibold rounded-xl hover:bg-brand-accentDim transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmer la commande (COD)
+            {isSubmitting ? 'Envoi en cours…' : 'Confirmer la commande (COD)'}
           </button>
         </form>
       </div>
