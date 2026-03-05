@@ -428,6 +428,7 @@ export function AdminPage() {
   const ordersForSections = ordersStatusFilter
     ? ordersFilteredBySearch.filter((o) => {
         if (ordersStatusFilter === 'pending') return isPendingOrder(o)
+        if (ordersStatusFilter === 'yalidine') return Boolean(o.yalidineTracking?.trim())
         return o.status === ordersStatusFilter
       })
     : ordersFilteredBySearch
@@ -438,6 +439,7 @@ export function AdminPage() {
   const livreOrders = ordersForSections.filter((o) => o.status === 'livre').sort(sortByDateDesc)
   const retourneOrders = ordersForSections.filter((o) => o.status === 'retourne').sort(sortByDateDesc)
   const cancelledOrders = ordersForSections.filter((o) => o.status === 'cancelled').sort(sortByDateDesc)
+  const yalidineOrders = ordersForSections.filter((o) => o.yalidineTracking?.trim()).sort(sortByDateDesc)
 
   const productMapForStock = new Map(products.map((p) => [p.id, p]))
   const ordersToBuyCount = (() => {
@@ -758,6 +760,7 @@ export function AdminPage() {
           })
           const pendingToConfirm = pendingOrders.length
           const confirmedNoYalidine = confirmedOrders.filter((o) => !o.yalidineTracking?.trim()).length
+          const yalidineExpedieesCount = orders.filter((o) => o.yalidineTracking?.trim()).length
           return (
             <div className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -849,7 +852,7 @@ export function AdminPage() {
                 </div>
               </section>
 
-              <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
                   type="button"
                   onClick={() => setTab('commandes')}
@@ -870,6 +873,17 @@ export function AdminPage() {
                   <div>
                     <p className="font-semibold text-white">{confirmedNoYalidine} à envoyer à Yalidine</p>
                     <p className="text-brand-muted text-sm">Commandes confirmées sans suivi</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTab('commandes'); setOrdersStatusFilter('yalidine') }}
+                  className="rounded-xl bg-brand-card border border-white/10 p-4 text-left hover:border-sky-500/50 hover:bg-brand-card transition-colors flex items-center gap-3"
+                >
+                  <span className="w-12 h-12 rounded-xl bg-sky-500/20 flex items-center justify-center text-2xl">🚚</span>
+                  <div>
+                    <p className="font-semibold text-white">{yalidineExpedieesCount} expédiée{yalidineExpedieesCount !== 1 ? 's' : ''} (Yalidine)</p>
+                    <p className="text-brand-muted text-sm">Voir les colis avec suivi</p>
                   </div>
                 </button>
               </section>
@@ -929,6 +943,7 @@ export function AdminPage() {
                   <option value="">Tous les statuts</option>
                   <option value="pending">En attente</option>
                   <option value="confirmed">Confirmées</option>
+                  <option value="yalidine">Expédiées (Yalidine)</option>
                   <option value="livre">Livrées</option>
                   <option value="retourne">Retournées</option>
                   <option value="cancelled">Annulées</option>
@@ -949,7 +964,7 @@ export function AdminPage() {
                 <p className="text-brand-muted text-xs">
                   {ordersForSections.length} commande{ordersForSections.length !== 1 ? 's' : ''} affichée{ordersForSections.length !== 1 ? 's' : ''}
                   {ordersSearchQuery.trim() && ` pour « ${ordersSearchQuery.trim()} »`}
-                  {ordersStatusFilter && ` · statut: ${ordersStatusFilter === 'pending' ? 'En attente' : ordersStatusFilter === 'confirmed' ? 'Confirmées' : ordersStatusFilter === 'livre' ? 'Livrées' : ordersStatusFilter === 'retourne' ? 'Retournées' : 'Annulées'}`}
+                  {ordersStatusFilter && ` · ${ordersStatusFilter === 'pending' ? 'En attente' : ordersStatusFilter === 'confirmed' ? 'Confirmées' : ordersStatusFilter === 'yalidine' ? 'Expédiées (Yalidine)' : ordersStatusFilter === 'livre' ? 'Livrées' : ordersStatusFilter === 'retourne' ? 'Retournées' : 'Annulées'}`}
                 </p>
               )}
             </div>
@@ -991,6 +1006,32 @@ export function AdminPage() {
               ) : (
                 <ul className="space-y-4">
                   {confirmedOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onDelete={handleDeleteOrder}
+                      onSendToYalidine={handleSendToYalidine}
+                      onSetOrderStatus={handleSetOrderStatus}
+                      yalidineSending={yalidineSendingId === order.id}
+                      yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+            )}
+            {(!ordersStatusFilter || ordersStatusFilter === 'yalidine') && (
+            <section className="rounded-xl border border-white/10 bg-brand-card/30 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-sky-400" aria-hidden />
+                Expédiées par Yalidine ({yalidineOrders.length})
+              </h2>
+              <p className="text-brand-muted text-xs mb-3">Colis envoyés avec numéro de suivi Yalidine</p>
+              {yalidineOrders.length === 0 ? (
+                <p className="text-brand-muted text-sm">Aucune commande expédiée par Yalidine.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {yalidineOrders.map((order) => (
                     <OrderCard
                       key={order.id}
                       order={order}

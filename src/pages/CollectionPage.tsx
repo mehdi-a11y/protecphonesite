@@ -104,7 +104,7 @@ export function CollectionPage() {
         {items.length === 0 ? (
           <p className="text-brand-muted">Aucun produit dans cette collection.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {items.map(({ landingSlug, product: p }) => {
               const photo = p.photoGallery?.[0] ?? p.photoUrl
               return (
