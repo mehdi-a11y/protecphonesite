@@ -107,7 +107,7 @@ export function AdminPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [tab, setTab] = useState<Tab>('dashboard')
-  const [dashboardDateRange, setDashboardDateRange] = useState<'7d' | '30d'>('7d')
+  const [dashboardDateRange, setDashboardDateRange] = useState<'today' | 'yesterday' | '7d' | '30d'>('7d')
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersSearchQuery, setOrdersSearchQuery] = useState('')
   const [ordersStatusFilter, setOrdersStatusFilter] = useState<string>('')
@@ -667,33 +667,71 @@ export function AdminPage() {
       <main className="p-4 max-w-5xl mx-auto">
         {tab === 'dashboard' && (() => {
           const now = new Date()
-          const rangeDays = dashboardDateRange === '7d' ? 7 : 30
-          const startDate = new Date(now)
-          startDate.setDate(startDate.getDate() - rangeDays)
-          startDate.setHours(0, 0, 0, 0)
-          const ordersInRange = orders.filter((o) => new Date(o.createdAt) >= startDate)
+          let startDate: Date
+          let endDate: Date | null = null
+          let rangeLabel: string
+          if (dashboardDateRange === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+            endDate = now
+            rangeLabel = "aujourd'hui"
+          } else if (dashboardDateRange === 'yesterday') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0)
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999)
+            rangeLabel = 'hier'
+          } else {
+            const rangeDays = dashboardDateRange === '7d' ? 7 : 30
+            startDate = new Date(now)
+            startDate.setDate(startDate.getDate() - rangeDays)
+            startDate.setHours(0, 0, 0, 0)
+            rangeLabel = `sur les ${rangeDays} derniers jours`
+          }
+          const ordersInRange = orders.filter((o) => {
+            const t = new Date(o.createdAt).getTime()
+            if (t < startDate.getTime()) return false
+            if (endDate != null && t > endDate.getTime()) return false
+            return true
+          })
           const ordersConfirmedOrLivre = ordersInRange.filter((o) => o.status === 'confirmed' || o.status === 'livre')
           const totalSalesInRange = ordersConfirmedOrLivre.reduce((s, o) => s + (o.total ?? 0), 0)
           const ordersByDay: { date: string; count: number; label: string }[] = []
-          for (let i = rangeDays - 1; i >= 0; i--) {
-            const d = new Date(now)
-            d.setDate(d.getDate() - i)
-            d.setHours(0, 0, 0, 0)
-            const next = new Date(d)
-            next.setDate(next.getDate() + 1)
-            const count = orders.filter(
-              (o) => (o.createdAt && new Date(o.createdAt) >= d && new Date(o.createdAt) < next),
-            ).length
+          if (dashboardDateRange === 'today') {
+            const count = ordersInRange.length
             ordersByDay.push({
-              date: d.toISOString().slice(0, 10),
+              date: startDate.toISOString().slice(0, 10),
               count,
-              label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }),
+              label: "Aujourd'hui",
             })
+          } else if (dashboardDateRange === 'yesterday') {
+            const count = ordersInRange.length
+            ordersByDay.push({
+              date: startDate.toISOString().slice(0, 10),
+              count,
+              label: 'Hier',
+            })
+          } else {
+            const rangeDays = dashboardDateRange === '7d' ? 7 : 30
+            for (let i = rangeDays - 1; i >= 0; i--) {
+              const d = new Date(now)
+              d.setDate(d.getDate() - i)
+              d.setHours(0, 0, 0, 0)
+              const next = new Date(d)
+              next.setDate(next.getDate() + 1)
+              const count = orders.filter(
+                (o) => (o.createdAt && new Date(o.createdAt) >= d && new Date(o.createdAt) < next),
+              ).length
+              ordersByDay.push({
+                date: d.toISOString().slice(0, 10),
+                count,
+                label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }),
+              })
+            }
           }
           const maxOrdersInChart = Math.max(1, ...ordersByDay.map((x) => x.count))
           const salesByProduct = new Map<string, { name: string; revenue: number }>()
           for (const order of orders.filter((o) => o.status === 'confirmed' || o.status === 'livre')) {
-            if (new Date(order.createdAt) < startDate) continue
+            const t = new Date(order.createdAt).getTime()
+            if (t < startDate.getTime()) continue
+            if (endDate != null && t > endDate.getTime()) continue
             for (const item of order.items || []) {
               const id = item.antichoc?.id ?? ''
               const name = item.antichoc?.name ?? 'Article'
@@ -724,8 +762,30 @@ export function AdminPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <h1 className="text-xl font-bold text-white">Tableau de bord</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-brand-muted text-sm">Période :</span>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardDateRange('today')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      dashboardDateRange === 'today'
+                        ? 'bg-brand-accent text-brand-dark'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    Aujourd&apos;hui
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardDateRange('yesterday')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      dashboardDateRange === 'yesterday'
+                        ? 'bg-brand-accent text-brand-dark'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    Hier
+                  </button>
                   <button
                     type="button"
                     onClick={() => setDashboardDateRange('7d')}
@@ -755,7 +815,7 @@ export function AdminPage() {
                 <div className="rounded-xl bg-brand-card border border-white/10 p-4">
                   <p className="text-brand-muted text-xs font-medium uppercase tracking-wider mb-1">Commandes</p>
                   <p className="text-2xl font-bold text-white">{ordersInRange.length}</p>
-                  <p className="text-brand-muted text-xs mt-1">sur les {rangeDays} derniers jours</p>
+                  <p className="text-brand-muted text-xs mt-1">{rangeLabel}</p>
                 </div>
                 <div className="rounded-xl bg-brand-card border border-emerald-500/30 p-4">
                   <p className="text-brand-muted text-xs font-medium uppercase tracking-wider mb-1">Chiffre d&apos;affaires</p>
