@@ -6,10 +6,7 @@ export function SiteHeader() {
       {/* Barre d'infos */}
       <div className="bg-brand-topbar text-neutral-800 text-center py-2.5 px-4 text-sm font-medium">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
-          <span className="flex items-center justify-center gap-1">
-            <span className="text-amber-500">★★★★★</span>
-            <span>NOTÉ EXCELLENT</span>
-          </span>
+          <span>Livraison disponible 58 wilayas</span>
           <span className="hidden sm:inline text-neutral-400">|</span>
           <span>RETOURS SOUS 7 JOURS</span>
         </div>
