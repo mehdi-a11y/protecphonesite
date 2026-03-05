@@ -25,6 +25,7 @@ import {
   dbSetOrderChangeRequested,
   dbRequestOrderChange,
   dbDecrementStockForOrder,
+  dbIncrementStockForOrder,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
   dbFindOrderByYalidineTracking,
@@ -587,11 +588,13 @@ app.patch('/api/orders/:id/status', async (req, res) => {
     const { id } = req.params
     const { status } = req.body
     if (!status) return res.status(400).json({ error: 'status requis' })
-    if (status === 'confirmed') {
-      const orders = await dbGetOrders()
-      const order = orders.find((o) => o.id === id)
-      if (order && order.status !== 'confirmed') {
+    const orders = await dbGetOrders()
+    const order = orders.find((o) => o.id === id)
+    if (order) {
+      if (status === 'confirmed' && order.status !== 'confirmed') {
         await dbDecrementStockForOrder(order)
+      } else if (order.status === 'confirmed' && status !== 'confirmed') {
+        await dbIncrementStockForOrder(order)
       }
     }
     await dbSetOrderStatus(id, status)
@@ -642,6 +645,7 @@ app.post('/api/orders/:id/request-change', async (req, res) => {
     const orders = await dbGetOrders()
     const order = orders.find((o) => o.id === id)
     if (!order) return res.status(404).json({ error: 'Commande introuvable' })
+    if (order.status === 'confirmed') await dbIncrementStockForOrder(order)
     await dbRequestOrderChange(id, reason || undefined)
     const updatedOrders = await dbGetOrders()
     const updatedOrder = updatedOrders.find((o) => o.id === id) || { ...order, status: 'none', changeRequestedByAdmin: true, changeRequestedReason: reason || undefined }
