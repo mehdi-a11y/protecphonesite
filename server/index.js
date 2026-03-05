@@ -460,6 +460,7 @@ function orderToApi(o) {
     depotExpedieDone: o.depotExpedieDone === true,
     changeRequestedByAdmin: o.changeRequestedByAdmin === true,
     changeRequestedReason: o.changeRequestedReason || undefined,
+    colisExpedie: o.colisExpedie === true,
   }
 }
 
@@ -485,6 +486,7 @@ function apiToOrder(a) {
     depotExpedieDone: a.depotExpedieDone === true,
     changeRequestedByAdmin: a.changeRequestedByAdmin === true,
     changeRequestedReason: a.changeRequestedReason || undefined,
+    colisExpedie: a.colisExpedie === true,
   }
 }
 
@@ -571,6 +573,7 @@ app.patch('/api/orders/:id', async (req, res) => {
       yalidineStopdeskId: partial.yalidineStopdeskId !== undefined ? partial.yalidineStopdeskId : existing.yalidineStopdeskId,
       yalidineStopdeskName: partial.yalidineStopdeskName !== undefined ? partial.yalidineStopdeskName : existing.yalidineStopdeskName,
       items: Array.isArray(partial.items) ? partial.items : existing.items,
+      colisExpedie: partial.colisExpedie !== undefined ? partial.colisExpedie : existing.colisExpedie,
     }
     await dbSaveOrder(merged)
     res.status(200).json(orderToApi(merged))

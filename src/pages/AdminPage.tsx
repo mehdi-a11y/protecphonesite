@@ -6,6 +6,7 @@ import {
   setOrderStatus,
   setOrderAchatDone,
   setOrderDepotDone,
+  updateOrder,
   updateOrderYalidine,
   deleteOrder,
   isAdminAuthenticated,
@@ -215,6 +216,11 @@ export function AdminPage() {
 
   const handleSetOrderStatus = async (orderId: string, status: Order['status']) => {
     await setOrderStatus(orderId, status)
+    getOrders().then(setOrders)
+  }
+
+  const handleColisExpedieChange = async (orderId: string, colisExpedie: boolean) => {
+    await updateOrder(orderId, { colisExpedie })
     getOrders().then(setOrders)
   }
 
@@ -428,7 +434,7 @@ export function AdminPage() {
   const ordersForSections = ordersStatusFilter
     ? ordersFilteredBySearch.filter((o) => {
         if (ordersStatusFilter === 'pending') return isPendingOrder(o)
-        if (ordersStatusFilter === 'yalidine') return Boolean(o.yalidineTracking?.trim())
+        if (ordersStatusFilter === 'yalidine') return Boolean(o.yalidineTracking?.trim()) && o.colisExpedie === true
         return o.status === ordersStatusFilter
       })
     : ordersFilteredBySearch
@@ -439,7 +445,7 @@ export function AdminPage() {
   const livreOrders = ordersForSections.filter((o) => o.status === 'livre').sort(sortByDateDesc)
   const retourneOrders = ordersForSections.filter((o) => o.status === 'retourne').sort(sortByDateDesc)
   const cancelledOrders = ordersForSections.filter((o) => o.status === 'cancelled').sort(sortByDateDesc)
-  const yalidineOrders = ordersForSections.filter((o) => o.yalidineTracking?.trim()).sort(sortByDateDesc)
+  const yalidineOrders = ordersForSections.filter((o) => o.yalidineTracking?.trim() && o.colisExpedie === true).sort(sortByDateDesc)
 
   const productMapForStock = new Map(products.map((p) => [p.id, p]))
   const ordersToBuyCount = (() => {
@@ -760,7 +766,7 @@ export function AdminPage() {
           })
           const pendingToConfirm = pendingOrders.length
           const confirmedNoYalidine = confirmedOrders.filter((o) => !o.yalidineTracking?.trim()).length
-          const yalidineExpedieesCount = orders.filter((o) => o.yalidineTracking?.trim()).length
+          const yalidineExpedieesCount = orders.filter((o) => o.yalidineTracking?.trim() && o.colisExpedie === true).length
           return (
             <div className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -986,6 +992,7 @@ export function AdminPage() {
                       onConfirm={handleConfirm}
                       onDelete={handleDeleteOrder}
                       onSendToYalidine={handleSendToYalidine}
+                      onColisExpedieChange={handleColisExpedieChange}
                       yalidineSending={yalidineSendingId === order.id}
                       yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
                     />
@@ -1012,6 +1019,7 @@ export function AdminPage() {
                       onDelete={handleDeleteOrder}
                       onSendToYalidine={handleSendToYalidine}
                       onSetOrderStatus={handleSetOrderStatus}
+                      onColisExpedieChange={handleColisExpedieChange}
                       yalidineSending={yalidineSendingId === order.id}
                       yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
                     />
@@ -1026,9 +1034,9 @@ export function AdminPage() {
                 <span className="w-2 h-2 rounded-full bg-sky-400" aria-hidden />
                 Expédiées par Yalidine ({yalidineOrders.length})
               </h2>
-              <p className="text-brand-muted text-xs mb-3">Colis envoyés avec numéro de suivi Yalidine</p>
+              <p className="text-brand-muted text-xs mb-3">Colis avec suivi Yalidine et marqués comme remis au transporteur</p>
               {yalidineOrders.length === 0 ? (
-                <p className="text-brand-muted text-sm">Aucune commande expédiée par Yalidine.</p>
+                <p className="text-brand-muted text-sm">Aucune commande expédiée (remise au transporteur). Cochez « Colis expédié » sur les commandes envoyées à Yalidine.</p>
               ) : (
                 <ul className="space-y-4">
                   {yalidineOrders.map((order) => (
@@ -1038,6 +1046,7 @@ export function AdminPage() {
                       onDelete={handleDeleteOrder}
                       onSendToYalidine={handleSendToYalidine}
                       onSetOrderStatus={handleSetOrderStatus}
+                      onColisExpedieChange={handleColisExpedieChange}
                       yalidineSending={yalidineSendingId === order.id}
                       yalidineMsg={yalidineMessage?.orderId === order.id ? yalidineMessage : null}
                     />
@@ -2873,6 +2882,7 @@ function OrderCard({
   onDelete,
   onSetOrderStatus,
   onSendToYalidine,
+  onColisExpedieChange,
   yalidineSending,
   yalidineMsg,
 }: {
@@ -2881,6 +2891,7 @@ function OrderCard({
   onDelete?: (id: string) => void
   onSetOrderStatus?: (orderId: string, status: Order['status']) => void
   onSendToYalidine?: (order: Order) => void
+  onColisExpedieChange?: (orderId: string, colisExpedie: boolean) => void
   yalidineSending?: boolean
   yalidineMsg?: { type: 'success' | 'error'; text: string } | null
 }) {
@@ -2905,6 +2916,17 @@ function OrderCard({
             <div className="text-emerald-400 text-xs mt-1">
               Yalidine : {order.yalidineTracking}
             </div>
+          )}
+          {order.yalidineTracking && onColisExpedieChange && (
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={order.colisExpedie === true}
+                onChange={(e) => onColisExpedieChange(order.id, e.target.checked)}
+                className="rounded border-white/30 bg-brand-dark text-brand-accent focus:ring-brand-accent w-4 h-4"
+              />
+              <span className="text-xs text-brand-muted">Colis expédié (remis au transporteur)</span>
+            </label>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">

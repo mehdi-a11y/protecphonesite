@@ -117,6 +117,9 @@ async function runMigrations() {
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS change_requested_reason TEXT
     `).catch(() => {})
     await client.query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS colis_expedie BOOLEAN DEFAULT false
+    `).catch(() => {})
+    await client.query(`
       ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'none'
     `).catch(() => {})
   } finally {
@@ -146,12 +149,12 @@ export async function dbSaveOrder(order) {
   const row = orderToRow(order)
   if (pool) {
     await pool.query(
-      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin, change_requested_reason)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19,$20)
+      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin, change_requested_reason, colis_expedie)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19,$20,$21)
        ON CONFLICT (id) DO UPDATE SET
          customer_name=$2, phone=$3, address=$4, wilaya=$5, delivery_type=$6, delivery_price=$7, total=$8, status=$9,
-         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19, change_requested_reason=$20`,
-      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true, row.change_requested_reason || null]
+         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19, change_requested_reason=$20, colis_expedie=$21`,
+      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true, row.change_requested_reason || null, row.colis_expedie === true]
     )
     return
   }
@@ -307,6 +310,7 @@ function rowToOrder(r) {
     depotExpedieDone: r.depot_expedie_done === true,
     changeRequestedByAdmin: r.change_requested_by_admin === true,
     changeRequestedReason: r.change_requested_reason || undefined,
+    colisExpedie: r.colis_expedie === true,
   }
 }
 
@@ -332,6 +336,7 @@ function orderToRow(o) {
     depot_expedie_done: o.depotExpedieDone === true,
     change_requested_by_admin: o.changeRequestedByAdmin === true,
     change_requested_reason: o.changeRequestedReason || null,
+    colis_expedie: o.colisExpedie === true,
   }
 }
 

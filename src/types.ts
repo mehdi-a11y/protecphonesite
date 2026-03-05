@@ -40,6 +40,8 @@ export interface Order {
   yalidineTracking?: string
   /** Date d'envoi vers Yalidine */
   yalidineSentAt?: string
+  /** true = colis remis au transporteur (expédié), pas seulement envoyé à Yalidine */
+  colisExpedie?: boolean
   /** ID du bureau Yalidine (stop desk) choisi par le client */
   yalidineStopdeskId?: string
   /** Nom du bureau pour affichage */
