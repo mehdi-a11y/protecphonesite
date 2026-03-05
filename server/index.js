@@ -12,6 +12,7 @@
 
 import express from 'express'
 import cors from 'cors'
+import compression from 'compression'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
@@ -26,6 +27,7 @@ import {
   dbRequestOrderChange,
   dbDecrementStockForOrder,
   dbIncrementStockForOrder,
+  dbSetOrderVariantsStockDecremented,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
   dbFindOrderByYalidineTracking,
@@ -69,6 +71,7 @@ function loadEnv() {
 loadEnv()
 
 const app = express()
+app.use(compression())
 app.use(cors())
 // Limite très élevée pour l'enregistrement des produits avec photos en base64 (compressées côté client)
 app.use(express.json({ limit: '100mb' }))
@@ -426,7 +429,8 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
 
     if (order) {
-      await dbDecrementStockForOrder(order)
+      const { decrementedKeys } = await dbDecrementStockForOrder(order)
+      await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
       await dbSetOrderStatus(order.id, 'confirmed')
       console.log('[WhatsApp webhook] Commande', order.id, 'confirmée par le client (réponse liste)')
     }
@@ -592,7 +596,8 @@ app.patch('/api/orders/:id/status', async (req, res) => {
     const order = orders.find((o) => o.id === id)
     if (order) {
       if (status === 'confirmed' && order.status !== 'confirmed') {
-        await dbDecrementStockForOrder(order)
+        const { decrementedKeys } = await dbDecrementStockForOrder(order)
+        await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
       } else if (order.status === 'confirmed' && status !== 'confirmed') {
         await dbIncrementStockForOrder(order)
       }

@@ -120,6 +120,9 @@ async function runMigrations() {
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS colis_expedie BOOLEAN DEFAULT false
     `).catch(() => {})
     await client.query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS variants_stock_decremented_at_confirm JSONB DEFAULT '[]'
+    `).catch(() => {})
+    await client.query(`
       ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'none'
     `).catch(() => {})
   } finally {
@@ -149,12 +152,12 @@ export async function dbSaveOrder(order) {
   const row = orderToRow(order)
   if (pool) {
     await pool.query(
-      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin, change_requested_reason, colis_expedie)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19,$20,$21)
+      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin, change_requested_reason, colis_expedie, variants_stock_decremented_at_confirm)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19,$20,$21,$22::jsonb)
        ON CONFLICT (id) DO UPDATE SET
          customer_name=$2, phone=$3, address=$4, wilaya=$5, delivery_type=$6, delivery_price=$7, total=$8, status=$9,
-         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19, change_requested_reason=$20, colis_expedie=$21`,
-      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true, row.change_requested_reason || null, row.colis_expedie === true]
+         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19, change_requested_reason=$20, colis_expedie=$21, variants_stock_decremented_at_confirm=$22::jsonb`,
+      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true, row.change_requested_reason || null, row.colis_expedie === true, JSON.stringify(row.variants_stock_decremented_at_confirm || [])]
     )
     return
   }
@@ -223,10 +226,26 @@ function variantKey(colorId, phoneId) {
   return `${colorId || ''}|${phoneId || ''}`
 }
 
-/** Décrémente le stock des produits d'une commande (1 par ligne). À appeler quand la commande passe en "confirmed". */
+/** Clé pour enregistrer quelles variantes ont été décrémentées (productId|colorId|phoneId). */
+function decrementedKey(productId, colorId, phoneId) {
+  return `${productId || ''}|${colorId || ''}|${phoneId || ''}`
+}
+
+/** Retourne le stock actuel d'une variante (même logique que le frontend). */
+function getVariantStock(product, colorId, phoneId) {
+  const key = variantKey(colorId, phoneId)
+  if (product.variantStocks && Object.keys(product.variantStocks).length > 0) {
+    if (product.variantStocks[key] !== undefined) return Number(product.variantStocks[key]) || 0
+    if (colorId && product.variantStocks[colorId] !== undefined) return Number(product.variantStocks[colorId]) || 0
+  }
+  return Number(product.quantity ?? 0) || 0
+}
+
+/** Décrémente le stock uniquement pour les variantes avec stock > 0. Retourne les clés des variantes effectivement décrémentées (à enregistrer sur la commande). */
 export async function dbDecrementStockForOrder(order) {
   const items = order.items && Array.isArray(order.items) ? order.items : []
-  if (items.length === 0) return
+  const decrementedKeys = []
+  if (items.length === 0) return { decrementedKeys }
   const products = await dbGetProducts()
   let changed = false
   for (const item of items) {
@@ -236,40 +255,43 @@ export async function dbDecrementStockForOrder(order) {
     if (!product) continue
     const colorId = item.selectedColorId || ''
     const phoneId = item.selectedPhoneId || (antichoc.compatibleWith && antichoc.compatibleWith[0]) || ''
+    const stock = getVariantStock(product, colorId, phoneId)
+    if (stock <= 0) continue
     const key = variantKey(colorId, phoneId)
     if (product.variantStocks && Object.keys(product.variantStocks).length > 0) {
       if (product.variantStocks[key] !== undefined) {
-        product.variantStocks[key] = Math.max(0, Number(product.variantStocks[key]) - 1)
+        product.variantStocks[key] = Number(product.variantStocks[key]) - 1
       } else if (colorId && product.variantStocks[colorId] !== undefined) {
-        product.variantStocks[colorId] = Math.max(0, Number(product.variantStocks[colorId]) - 1)
+        product.variantStocks[colorId] = Number(product.variantStocks[colorId]) - 1
       } else {
-        product.quantity = Math.max(0, Number(product.quantity ?? 0) - 1)
+        product.quantity = Number(product.quantity ?? 0) - 1
       }
     } else {
-      product.quantity = Math.max(0, Number(product.quantity ?? 0) - 1)
+      product.quantity = Number(product.quantity ?? 0) - 1
     }
+    decrementedKeys.push(decrementedKey(product.id, colorId, phoneId))
     changed = true
   }
   if (changed) await dbSaveProducts(products)
+  return { decrementedKeys }
 }
 
-/** Incrémente le stock des produits d'une commande (1 par ligne). À appeler quand une commande confirmée change de statut (annulée, livrée, retournée, etc.). */
+/** Incrémente le stock uniquement pour les variantes qui avaient été décrémentées à la confirmation (stock > 0 à ce moment-là). */
 export async function dbIncrementStockForOrder(order) {
-  const items = order.items && Array.isArray(order.items) ? order.items : []
-  if (items.length === 0) return
+  const keys = order.variantsStockDecrementedAtConfirm
+  if (!Array.isArray(keys) || keys.length === 0) return
   const products = await dbGetProducts()
   let changed = false
-  for (const item of items) {
-    const antichoc = item.antichoc
-    if (!antichoc || !antichoc.id) continue
-    const product = products.find((p) => p.id === antichoc.id)
+  for (const key of keys) {
+    const parts = key.split('|')
+    if (parts.length < 3) continue
+    const [productId, colorId, phoneId] = parts
+    const product = products.find((p) => p.id === productId)
     if (!product) continue
-    const colorId = item.selectedColorId || ''
-    const phoneId = item.selectedPhoneId || (antichoc.compatibleWith && antichoc.compatibleWith[0]) || ''
-    const key = variantKey(colorId, phoneId)
+    const vkey = variantKey(colorId, phoneId)
     if (product.variantStocks && Object.keys(product.variantStocks).length > 0) {
-      if (product.variantStocks[key] !== undefined) {
-        product.variantStocks[key] = Number(product.variantStocks[key]) + 1
+      if (product.variantStocks[vkey] !== undefined) {
+        product.variantStocks[vkey] = Number(product.variantStocks[vkey]) + 1
       } else if (colorId && product.variantStocks[colorId] !== undefined) {
         product.variantStocks[colorId] = Number(product.variantStocks[colorId]) + 1
       } else {
@@ -281,6 +303,20 @@ export async function dbIncrementStockForOrder(order) {
     changed = true
   }
   if (changed) await dbSaveProducts(products)
+  await dbSetOrderVariantsStockDecremented(order.id, [])
+}
+
+export async function dbSetOrderVariantsStockDecremented(orderId, keys) {
+  const arr = Array.isArray(keys) ? keys : []
+  if (pool) {
+    await pool.query(
+      'UPDATE orders SET variants_stock_decremented_at_confirm = $1::jsonb WHERE id = $2',
+      [JSON.stringify(arr), orderId]
+    )
+    return
+  }
+  const o = memoryOrders.find((x) => x.id === orderId)
+  if (o) o.variantsStockDecrementedAtConfirm = arr
 }
 
 export async function dbUpdateOrderYalidine(orderId, tracking, sentAt) {
@@ -341,6 +377,7 @@ function rowToOrder(r) {
     changeRequestedByAdmin: r.change_requested_by_admin === true,
     changeRequestedReason: r.change_requested_reason || undefined,
     colisExpedie: r.colis_expedie === true,
+    variantsStockDecrementedAtConfirm: Array.isArray(r.variants_stock_decremented_at_confirm) ? r.variants_stock_decremented_at_confirm : [],
   }
 }
 
@@ -367,6 +404,7 @@ function orderToRow(o) {
     change_requested_by_admin: o.changeRequestedByAdmin === true,
     change_requested_reason: o.changeRequestedReason || null,
     colis_expedie: o.colisExpedie === true,
+    variants_stock_decremented_at_confirm: Array.isArray(o.variantsStockDecrementedAtConfirm) ? o.variantsStockDecrementedAtConfirm : [],
   }
 }
 
