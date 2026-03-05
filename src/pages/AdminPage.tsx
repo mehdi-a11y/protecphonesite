@@ -14,7 +14,7 @@ import {
   ADMIN_PASSWORD,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
 import { IPHONE_MODELS, type IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import {
@@ -464,7 +464,7 @@ export function AdminPage() {
     }
     return n
   })()
-  /** Commandes "dépôt" (tout en stock) pas encore cochées comme traitées — pour le badge. */
+  /** Commandes "dépôt" (toutes les lignes ont stock > 0) pas encore cochées comme traitées — pour le badge. */
   const ordersInDepotCount = (() => {
     let n = 0
     for (const order of confirmedOrders) {
@@ -475,7 +475,7 @@ export function AdminPage() {
         if (item.isUpsell || !item.selectedPhoneId) continue
         hasMainItem = true
         const product = productMapForStock.get(item.antichoc.id)
-        if (!product || needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
+        if (!product || getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) <= 0) {
           allInStock = false
           break
         }
@@ -1199,7 +1199,7 @@ export function AdminPage() {
                 </h2>
                 {ordersAFaire.length === 0 ? (
                   <p className="text-brand-muted text-sm">
-                    {ordersWithBuyList.length === 0 ? 'Aucune. Toutes les commandes confirmées sont couvertes par le stock actuel.' : "Tout est coché. Aucune commande en attente d'achat."}
+                    {ordersWithBuyList.length === 0 ? 'Aucune. Aucune commande avec une ligne à acheter (stock 0, disponible fournisseur).' : "Tout est coché. Aucune commande en attente d'achat."}
                   </p>
                 ) : (
                   <ul className="space-y-4">
@@ -1304,7 +1304,7 @@ export function AdminPage() {
               if (item.isUpsell || !item.selectedPhoneId) continue
               hasMainItem = true
               const product = productMapForStock.get(item.antichoc.id)
-              if (!product || needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
+              if (!product || getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) <= 0) {
                 allInStock = false
                 break
               }
@@ -1328,7 +1328,7 @@ export function AdminPage() {
                     <span className="font-medium text-white">{order.id}</span>
                     <span className="text-brand-muted text-sm">{order.customerName} — {order.phone}</span>
                   </div>
-                  <p className="text-emerald-400 text-sm mb-1">Tout en stock</p>
+                  <p className="text-emerald-400 text-sm mb-1">Toutes les lignes en stock (stock &gt; 0)</p>
                   <p className="text-white/90 text-sm mb-2">
                     {(order.items || []).map((item) => formatOrderItemLabel(item)).join(' · ')}
                   </p>
