@@ -100,14 +100,17 @@ function compressImageToDataUrl(
   })
 }
 
-type Tab = 'commandes' | 'achats' | 'bloquees' | 'depot' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
+type Tab = 'dashboard' | 'commandes' | 'achats' | 'bloquees' | 'depot' | 'produits' | 'statistiques' | 'benefice' | 'livraison' | 'yalidine' | 'landings' | 'collections'
 
 export function AdminPage() {
   const [auth, setAuth] = useState(isAdminAuthenticated())
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<Tab>('commandes')
+  const [tab, setTab] = useState<Tab>('dashboard')
+  const [dashboardDateRange, setDashboardDateRange] = useState<'7d' | '30d'>('7d')
   const [orders, setOrders] = useState<Order[]>([])
+  const [ordersSearchQuery, setOrdersSearchQuery] = useState('')
+  const [ordersStatusFilter, setOrdersStatusFilter] = useState<string>('')
   const [products, setProducts] = useState<Antichoc[]>([])
   const [deliveryPrices, setDeliveryPrices] = useState<DeliveryPrices>({})
   const [yalidineApiId, setYalidineApiId] = useState('')
@@ -408,17 +411,33 @@ export function AdminPage() {
     )
   }
 
-  const pendingOrders = orders.filter(
-    (o) =>
-      o.status !== 'confirmed' &&
-      o.status !== 'cancelled' &&
-      o.status !== 'livre' &&
-      o.status !== 'retourne',
-  )
-  const confirmedOrders = orders.filter((o) => o.status === 'confirmed')
-  const livreOrders = orders.filter((o) => o.status === 'livre')
-  const retourneOrders = orders.filter((o) => o.status === 'retourne')
-  const cancelledOrders = orders.filter((o) => o.status === 'cancelled')
+  const isPendingOrder = (o: Order) =>
+    o.status !== 'confirmed' && o.status !== 'cancelled' && o.status !== 'livre' && o.status !== 'retourne'
+  const ordersSearch = ordersSearchQuery.trim().toLowerCase()
+  const ordersSearchNorm = ordersSearch.replace(/\s/g, '')
+  const ordersFilteredBySearch =
+    ordersSearch === ''
+      ? orders
+      : orders.filter(
+          (o) =>
+            (o.id && o.id.toLowerCase().includes(ordersSearch)) ||
+            (o.customerName && o.customerName.toLowerCase().includes(ordersSearch)) ||
+            (o.phone && o.phone.replace(/\s/g, '').includes(ordersSearchNorm)) ||
+            (o.confirmationCode && o.confirmationCode.includes(ordersSearch)),
+        )
+  const ordersForSections = ordersStatusFilter
+    ? ordersFilteredBySearch.filter((o) => {
+        if (ordersStatusFilter === 'pending') return isPendingOrder(o)
+        return o.status === ordersStatusFilter
+      })
+    : ordersFilteredBySearch
+  const sortByDateDesc = (a: Order, b: Order) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const pendingOrders = ordersForSections.filter(isPendingOrder).sort(sortByDateDesc)
+  const confirmedOrders = ordersForSections.filter((o) => o.status === 'confirmed').sort(sortByDateDesc)
+  const livreOrders = ordersForSections.filter((o) => o.status === 'livre').sort(sortByDateDesc)
+  const retourneOrders = ordersForSections.filter((o) => o.status === 'retourne').sort(sortByDateDesc)
+  const cancelledOrders = ordersForSections.filter((o) => o.status === 'cancelled').sort(sortByDateDesc)
 
   const productMapForStock = new Map(products.map((p) => [p.id, p]))
   const ordersToBuyCount = (() => {
@@ -495,11 +514,22 @@ export function AdminPage() {
         </div>
       </header>
 
-      <div className="flex border-b border-white/10">
+      <div className="flex border-b border-white/10 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setTab('dashboard')}
+          className={`px-6 py-3 font-medium text-sm whitespace-nowrap ${
+            tab === 'dashboard'
+              ? 'text-brand-accent border-b-2 border-brand-accent'
+              : 'text-brand-muted hover:text-white'
+          }`}
+        >
+          Tableau de bord
+        </button>
         <button
           type="button"
           onClick={() => setTab('commandes')}
-          className={`px-6 py-3 font-medium text-sm ${
+          className={`px-6 py-3 font-medium text-sm whitespace-nowrap ${
             tab === 'commandes'
               ? 'text-brand-accent border-b-2 border-brand-accent'
               : 'text-brand-muted hover:text-white'
@@ -635,28 +665,241 @@ export function AdminPage() {
       </div>
 
       <main className="p-4 max-w-5xl mx-auto">
+        {tab === 'dashboard' && (() => {
+          const now = new Date()
+          const rangeDays = dashboardDateRange === '7d' ? 7 : 30
+          const startDate = new Date(now)
+          startDate.setDate(startDate.getDate() - rangeDays)
+          startDate.setHours(0, 0, 0, 0)
+          const ordersInRange = orders.filter((o) => new Date(o.createdAt) >= startDate)
+          const ordersConfirmedOrLivre = ordersInRange.filter((o) => o.status === 'confirmed' || o.status === 'livre')
+          const totalSalesInRange = ordersConfirmedOrLivre.reduce((s, o) => s + (o.total ?? 0), 0)
+          const ordersByDay: { date: string; count: number; label: string }[] = []
+          for (let i = rangeDays - 1; i >= 0; i--) {
+            const d = new Date(now)
+            d.setDate(d.getDate() - i)
+            d.setHours(0, 0, 0, 0)
+            const next = new Date(d)
+            next.setDate(next.getDate() + 1)
+            const count = orders.filter(
+              (o) => (o.createdAt && new Date(o.createdAt) >= d && new Date(o.createdAt) < next),
+            ).length
+            ordersByDay.push({
+              date: d.toISOString().slice(0, 10),
+              count,
+              label: d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }),
+            })
+          }
+          const maxOrdersInChart = Math.max(1, ...ordersByDay.map((x) => x.count))
+          const salesByProduct = new Map<string, { name: string; revenue: number }>()
+          for (const order of orders.filter((o) => o.status === 'confirmed' || o.status === 'livre')) {
+            if (new Date(order.createdAt) < startDate) continue
+            for (const item of order.items || []) {
+              const id = item.antichoc?.id ?? ''
+              const name = item.antichoc?.name ?? 'Article'
+              const rev = (item.antichoc?.price ?? 0)
+              const cur = salesByProduct.get(id) ?? { name, revenue: 0 }
+              salesByProduct.set(id, { name: cur.name, revenue: cur.revenue + rev })
+            }
+          }
+          const topProducts = [...salesByProduct.entries()]
+            .map(([id, v]) => ({ id, ...v }))
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 10)
+          const ordersByPhone = new Map<string, number>()
+          for (const o of orders) {
+            const phone = (o.phone || '').replace(/\s/g, '')
+            if (!phone) continue
+            ordersByPhone.set(phone, (ordersByPhone.get(phone) ?? 0) + 1)
+          }
+          let newCustomers = 0
+          let returningCustomers = 0
+          ordersByPhone.forEach((count) => {
+            if (count === 1) newCustomers++
+            else if (count >= 2) returningCustomers++
+          })
+          const pendingToConfirm = pendingOrders.length
+          const confirmedNoYalidine = confirmedOrders.filter((o) => !o.yalidineTracking?.trim()).length
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <h1 className="text-xl font-bold text-white">Tableau de bord</h1>
+                <div className="flex items-center gap-2">
+                  <span className="text-brand-muted text-sm">Période :</span>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardDateRange('7d')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      dashboardDateRange === '7d'
+                        ? 'bg-brand-accent text-brand-dark'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    7 jours
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardDateRange('30d')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      dashboardDateRange === '30d'
+                        ? 'bg-brand-accent text-brand-dark'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    30 jours
+                  </button>
+                </div>
+              </div>
+
+              <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="rounded-xl bg-brand-card border border-white/10 p-4">
+                  <p className="text-brand-muted text-xs font-medium uppercase tracking-wider mb-1">Commandes</p>
+                  <p className="text-2xl font-bold text-white">{ordersInRange.length}</p>
+                  <p className="text-brand-muted text-xs mt-1">sur les {rangeDays} derniers jours</p>
+                </div>
+                <div className="rounded-xl bg-brand-card border border-emerald-500/30 p-4">
+                  <p className="text-brand-muted text-xs font-medium uppercase tracking-wider mb-1">Chiffre d&apos;affaires</p>
+                  <p className="text-2xl font-bold text-emerald-400">{totalSalesInRange.toLocaleString('fr-FR')} DA</p>
+                  <p className="text-brand-muted text-xs mt-1">confirmées + livrées</p>
+                </div>
+                <div className="rounded-xl bg-brand-card border border-white/10 p-4">
+                  <p className="text-brand-muted text-xs font-medium uppercase tracking-wider mb-1">Confirmées</p>
+                  <p className="text-2xl font-bold text-brand-accent">{ordersConfirmedOrLivre.length}</p>
+                  <p className="text-brand-muted text-xs mt-1">dans la période</p>
+                </div>
+                <div className="rounded-xl bg-brand-card border border-amber-500/30 p-4">
+                  <p className="text-brand-muted text-xs font-medium uppercase tracking-wider mb-1">En attente</p>
+                  <p className="text-2xl font-bold text-amber-400">{pendingOrders.length}</p>
+                  <p className="text-brand-muted text-xs mt-1">à confirmer</p>
+                </div>
+              </section>
+
+              <section className="rounded-xl bg-brand-card border border-white/10 p-4">
+                <h2 className="text-sm font-semibold text-white mb-4">Commandes par jour</h2>
+                <div className="flex items-end gap-1 h-32">
+                  {ordersByDay.map((day) => (
+                    <div key={day.date} className="flex-1 flex flex-col items-center gap-1" title={`${day.label}: ${day.count} commande(s)`}>
+                      <div
+                        className="w-full min-w-[8px] rounded-t bg-brand-accent/80 hover:bg-brand-accent transition-colors"
+                        style={{ height: `${(day.count / maxOrdersInChart) * 100}%`, minHeight: day.count > 0 ? '4px' : '0' }}
+                      />
+                      <span className="text-[10px] text-brand-muted truncate max-w-full">{day.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setTab('commandes')}
+                  className="rounded-xl bg-brand-card border border-white/10 p-4 text-left hover:border-brand-accent/50 hover:bg-brand-card transition-colors flex items-center gap-3"
+                >
+                  <span className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-2xl">📋</span>
+                  <div>
+                    <p className="font-semibold text-white">{pendingToConfirm} commande{pendingToConfirm !== 1 ? 's' : ''} en attente</p>
+                    <p className="text-brand-muted text-sm">À confirmer</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('commandes')}
+                  className="rounded-xl bg-brand-card border border-white/10 p-4 text-left hover:border-brand-accent/50 hover:bg-brand-card transition-colors flex items-center gap-3"
+                >
+                  <span className="w-12 h-12 rounded-xl bg-brand-accent/20 flex items-center justify-center text-2xl">📦</span>
+                  <div>
+                    <p className="font-semibold text-white">{confirmedNoYalidine} à envoyer à Yalidine</p>
+                    <p className="text-brand-muted text-sm">Commandes confirmées sans suivi</p>
+                  </div>
+                </button>
+              </section>
+
+              <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="rounded-xl bg-brand-card border border-white/10 p-4">
+                  <h2 className="text-sm font-semibold text-white mb-3">Chiffre d&apos;affaires par produit</h2>
+                  {topProducts.length === 0 ? (
+                    <p className="text-brand-muted text-sm">Aucune vente sur la période.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {topProducts.map((p) => (
+                        <li key={p.id} className="flex justify-between text-sm">
+                          <span className="text-white truncate pr-2">{p.name}</span>
+                          <span className="text-brand-accent font-medium shrink-0">{p.revenue.toLocaleString('fr-FR')} DA</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="rounded-xl bg-brand-card border border-white/10 p-4">
+                  <h2 className="text-sm font-semibold text-white mb-3">Clients nouveaux vs récurrents</h2>
+                  <div className="flex gap-4">
+                    <div className="flex-1 rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                      <p className="text-2xl font-bold text-white">{newCustomers}</p>
+                      <p className="text-brand-muted text-xs mt-1">Nouveaux (1 commande)</p>
+                    </div>
+                    <div className="flex-1 rounded-lg bg-white/5 border border-white/10 p-4 text-center">
+                      <p className="text-2xl font-bold text-brand-accent">{returningCustomers}</p>
+                      <p className="text-brand-muted text-xs mt-1">Récurrents (2+ commandes)</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )
+        })()}
+
         {tab === 'commandes' && (
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleSyncYalidine}
-                disabled={yalidineSyncing || orders.filter((o) => o.yalidineTracking).length === 0}
-                className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {yalidineSyncing ? 'Synchronisation…' : 'Synchroniser avec Yalidine'}
-              </button>
+            <div className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-brand-dark/95 border-b border-white/10 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="search"
+                  value={ordersSearchQuery}
+                  onChange={(e) => setOrdersSearchQuery(e.target.value)}
+                  placeholder="Rechercher (n° commande, client, tél., code…)"
+                  className="flex-1 min-w-[200px] max-w-md px-4 py-2 rounded-lg bg-brand-card border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
+                  aria-label="Rechercher dans les commandes"
+                />
+                <select
+                  value={ordersStatusFilter}
+                  onChange={(e) => setOrdersStatusFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none text-sm"
+                  aria-label="Filtrer par statut"
+                >
+                  <option value="">Tous les statuts</option>
+                  <option value="pending">En attente</option>
+                  <option value="confirmed">Confirmées</option>
+                  <option value="livre">Livrées</option>
+                  <option value="retourne">Retournées</option>
+                  <option value="cancelled">Annulées</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSyncYalidine}
+                  disabled={yalidineSyncing || orders.filter((o) => o.yalidineTracking).length === 0}
+                  className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {yalidineSyncing ? 'Synchronisation…' : 'Sync Yalidine'}
+                </button>
+              </div>
               {yalidineSyncMessage && (
-                <span className="text-brand-muted text-sm">{yalidineSyncMessage}</span>
+                <span className="text-brand-muted text-sm block">{yalidineSyncMessage}</span>
               )}
-              <span className="text-brand-muted text-xs">
-                Met à jour Livré / Retourné / Annulé depuis Yalidine
-              </span>
+              {(ordersSearchQuery.trim() || ordersStatusFilter) && (
+                <p className="text-brand-muted text-xs">
+                  {ordersForSections.length} commande{ordersForSections.length !== 1 ? 's' : ''} affichée{ordersForSections.length !== 1 ? 's' : ''}
+                  {ordersSearchQuery.trim() && ` pour « ${ordersSearchQuery.trim()} »`}
+                  {ordersStatusFilter && ` · statut: ${ordersStatusFilter === 'pending' ? 'En attente' : ordersStatusFilter === 'confirmed' ? 'Confirmées' : ordersStatusFilter === 'livre' ? 'Livrées' : ordersStatusFilter === 'retourne' ? 'Retournées' : 'Annulées'}`}
+                </p>
+              )}
             </div>
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-3">
+            {(!ordersStatusFilter || ordersStatusFilter === 'pending') && (
+            <section className="rounded-xl border border-white/10 bg-brand-card/30 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400" aria-hidden />
                 En attente ({pendingOrders.length})
               </h2>
+              <p className="text-brand-muted text-xs mb-3">Pas de statut, tentatives, rappel</p>
               {pendingOrders.length === 0 ? (
                 <p className="text-brand-muted text-sm">Aucune commande en attente.</p>
               ) : (
@@ -675,11 +918,14 @@ export function AdminPage() {
                 </ul>
               )}
             </section>
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-3">
+            )}
+            {(!ordersStatusFilter || ordersStatusFilter === 'confirmed') && (
+            <section className="rounded-xl border border-white/10 bg-brand-card/30 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-accent" aria-hidden />
                 Confirmées ({confirmedOrders.length})
               </h2>
-              <p className="text-brand-muted text-xs mb-2">Client a confirmé — en attente de livraison</p>
+              <p className="text-brand-muted text-xs mb-3">Client a confirmé — en attente de livraison</p>
               {confirmedOrders.length === 0 ? (
                 <p className="text-brand-muted text-sm">Aucune commande confirmée.</p>
               ) : (
@@ -698,8 +944,11 @@ export function AdminPage() {
                 </ul>
               )}
             </section>
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-3">
+            )}
+            {(!ordersStatusFilter || ordersStatusFilter === 'livre') && (
+            <section className="rounded-xl border border-white/10 bg-brand-card/30 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden />
                 Livrées ({livreOrders.length})
               </h2>
               {livreOrders.length === 0 ? (
@@ -717,8 +966,11 @@ export function AdminPage() {
                 </ul>
               )}
             </section>
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-3">
+            )}
+            {(!ordersStatusFilter || ordersStatusFilter === 'retourne') && (
+            <section className="rounded-xl border border-white/10 bg-brand-card/30 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400" aria-hidden />
                 Retournées ({retourneOrders.length})
               </h2>
               {retourneOrders.length === 0 ? (
@@ -736,9 +988,12 @@ export function AdminPage() {
                 </ul>
               )}
             </section>
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-3">
-                Annulées / tentatives échouées ({cancelledOrders.length})
+            )}
+            {(!ordersStatusFilter || ordersStatusFilter === 'cancelled') && (
+            <section className="rounded-xl border border-white/10 bg-brand-card/30 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-400" aria-hidden />
+                Annulées ({cancelledOrders.length})
               </h2>
               {cancelledOrders.length === 0 ? (
                 <p className="text-brand-muted text-sm">Aucune commande annulée.</p>
@@ -750,6 +1005,7 @@ export function AdminPage() {
                 </ul>
               )}
             </section>
+            )}
           </div>
         )}
 
