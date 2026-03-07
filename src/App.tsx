@@ -24,7 +24,10 @@ export function App() {
     loadProducts().catch(() => {})
   }, [])
 
-  const goToIphone = () => setStep('iphone')
+  const goToIphone = () => {
+    setStep('iphone')
+    loadProducts().catch(() => {})
+  }
   const goToProducts = (phoneId: IPhoneModelId) => {
     setSelectedPhone(phoneId)
     setCart([])

@@ -204,6 +204,7 @@ export const ANTICHOCS: Antichoc[] = colors.map((c, i) => ({
 let productsCache: Antichoc[] | null = null
 
 export async function loadProducts(): Promise<Antichoc[]> {
+  if (productsCache != null) return productsCache.length ? productsCache : ANTICHOCS
   try {
     const { apiGetProducts } = await import('./api')
     productsCache = await apiGetProducts()

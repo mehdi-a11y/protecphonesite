@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getAntichocsForPhone } from '../data'
+import { loadProducts, getAntichocsForPhone } from '../data'
 import { ANTICHOC_COLORS } from '../data'
 import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
@@ -17,8 +17,28 @@ interface Props {
 }
 
 export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }: Props) {
-  const products = getAntichocsForPhone(phoneId)
+  const [products, setProducts] = useState<Antichoc[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedColorByProductId, setSelectedColorByProductId] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    loadProducts()
+      .then(() => {
+        if (!cancelled) {
+          setProducts(getAntichocsForPhone(phoneId))
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProducts(getAntichocsForPhone(phoneId))
+          setLoading(false)
+        }
+      })
+    return () => { cancelled = true }
+  }, [phoneId])
 
   const getColorOptions = (p: Antichoc) =>
     (p.colorIds?.length
@@ -41,9 +61,15 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
           Choisissez votre antichoc
         </h2>
         <p className="text-brand-muted text-sm mb-8">
-          {products.length} modèles disponibles pour votre iPhone.
+          {loading ? 'Chargement des modèles…' : `${products.length} modèles disponibles pour votre iPhone.`}
         </p>
 
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-2 border-brand-accent border-t-transparent rounded-full animate-spin" aria-hidden />
+            <span className="sr-only">Chargement</span>
+          </div>
+        ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {products.map((p) => {
             const colors = getColorOptions(p)
@@ -142,6 +168,7 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
             )
           })}
         </div>
+        )}
 
         {/* Barre panier en bas */}
         {cart.length > 0 && (
