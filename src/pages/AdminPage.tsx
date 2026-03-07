@@ -342,6 +342,14 @@ export function AdminPage() {
     })
   }
 
+  const handleRemoveProductPhoto = (id: string) => {
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, photoUrl: '', photoGallery: undefined } : p,
+      ),
+    )
+  }
+
   const resetToDefaultProducts = () => {
     if (confirm('Réinitialiser tous les produits aux valeurs par défaut ?')) {
       saveProducts(ANTICHOCS)
@@ -1488,6 +1496,15 @@ export function AdminPage() {
                           onChange={(e) => handlePhotoFileChange(p.id, e)}
                           className="mt-1 block text-[11px] text-brand-muted file:text-xs file:bg-white/10 file:border-0 file:px-2 file:py-1 file:rounded"
                         />
+                        {p.photoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProductPhoto(p.id)}
+                            className="mt-1 px-2 py-1 rounded text-[11px] bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                          >
+                            Supprimer la photo
+                          </button>
+                        )}
                       </td>
                       <td className="py-2 pr-0 align-middle text-right">
                         <div className="flex flex-wrap gap-2 justify-end">
@@ -1586,13 +1603,24 @@ export function AdminPage() {
                     </div>
                     <div>
                       <label className="block text-xs text-brand-muted mb-1">Photo (URL)</label>
-                      <input
-                        type="text"
-                        value={p.photoUrl}
-                        onChange={(e) => handleProductChange(p.id, 'photoUrl', e.target.value)}
-                        className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-                        placeholder="https://..."
-                      />
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={p.photoUrl}
+                          onChange={(e) => handleProductChange(p.id, 'photoUrl', e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                          placeholder="https://..."
+                        />
+                        {p.photoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProductPhoto(p.id)}
+                            className="px-3 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 text-sm shrink-0"
+                          >
+                            Supprimer la photo
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2 pt-2">
                       <button type="button" onClick={() => setEditingProductId(null)} className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium">
