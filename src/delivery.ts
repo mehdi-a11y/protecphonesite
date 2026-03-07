@@ -134,6 +134,7 @@ const DEFAULT_DELIVERY_PRICES: DeliveryPrices = {
 let deliveryCache: DeliveryPrices | null = null
 
 export async function loadDeliveryPrices(): Promise<DeliveryPrices> {
+  if (deliveryCache != null) return getDeliveryPrices()
   try {
     const { apiGetDeliveryPrices } = await import('./api')
     deliveryCache = await apiGetDeliveryPrices()

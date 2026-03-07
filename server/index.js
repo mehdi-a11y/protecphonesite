@@ -685,6 +685,7 @@ app.delete('/api/orders/:id', async (req, res) => {
 
 app.get('/api/products', async (_req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=30')
     const products = await dbGetProducts()
     res.json(products)
   } catch (e) {
@@ -733,6 +734,7 @@ app.delete('/api/products/:id', async (req, res) => {
 
 app.get('/api/delivery-prices', async (_req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60')
     const prices = await dbGetDeliveryPrices()
     res.json(prices)
   } catch (e) {

@@ -120,6 +120,7 @@ export function CollectionPage() {
                       <img
                         src={photo}
                         alt={p.name}
+                        loading="lazy"
                         className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300"
                       />
                     ) : (

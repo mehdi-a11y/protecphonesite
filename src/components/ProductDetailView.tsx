@@ -107,6 +107,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 <img
                   src={mainPhoto}
                   alt={product.name}
+                  fetchPriority="high"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -133,7 +134,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                         : 'border-white/20 hover:border-white/40'
                     }`}
                   >
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

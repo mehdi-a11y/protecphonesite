@@ -27,6 +27,7 @@ export function App() {
   const goToIphone = () => {
     setStep('iphone')
     loadProducts().catch(() => {})
+    loadDeliveryPrices().catch(() => {})
   }
   const goToProducts = (phoneId: IPhoneModelId) => {
     setSelectedPhone(phoneId)

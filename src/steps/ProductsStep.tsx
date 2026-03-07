@@ -92,6 +92,8 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
                     <img
                       src={photo}
                       alt={p.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300"
                     />
                   ) : (
