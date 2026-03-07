@@ -448,62 +448,42 @@ export function AdminPage() {
   const yalidineOrders = ordersForSections.filter((o) => o.yalidineTracking?.trim() && o.colisExpedie === true).sort(sortByDateDesc)
 
   const productMapForStock = new Map(products.map((p) => [p.id, p]))
-  const ordersToBuyCount = (() => {
-    let n = 0
-    for (const order of confirmedOrders) {
-      if (order.achatFournisseurDone) continue
-      for (const item of order.items) {
-        if (item.isUpsell || !item.selectedPhoneId) continue
-        const product = productMapForStock.get(item.antichoc.id)
-        if (!product) continue
-        if (getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) > 0) continue
-        if (needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
-          n++
-          break
-        }
-      }
+  /** Catégorie figée à la confirmation : si définie on l'utilise, sinon on recalcule (anciennes commandes). */
+  const isOrderInAchats = (o: Order) => {
+    if (o.confirmedOrderCategory !== undefined) return o.confirmedOrderCategory === 'achats'
+    for (const item of o.items || []) {
+      if (item.isUpsell || !item.selectedPhoneId) continue
+      const product = productMapForStock.get(item.antichoc.id)
+      if (!product) continue
+      if (getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) > 0) continue
+      if (needToBuyVariantFromSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) return true
     }
-    return n
-  })()
-  /** Commandes "dépôt" (toutes les lignes ont stock > 0) pas encore cochées comme traitées — pour le badge. */
-  const ordersInDepotCount = (() => {
-    let n = 0
-    for (const order of confirmedOrders) {
-      if (order.depotExpedieDone) continue
-      let hasMainItem = false
-      let allInStock = true
-      for (const item of order.items) {
-        if (item.isUpsell || !item.selectedPhoneId) continue
-        hasMainItem = true
-        const product = productMapForStock.get(item.antichoc.id)
-        if (!product || getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) <= 0) {
-          allInStock = false
-          break
-        }
-      }
-      if (hasMainItem && allInStock) n++
+    return false
+  }
+  const isOrderInDepot = (o: Order) => {
+    if (o.confirmedOrderCategory !== undefined) return o.confirmedOrderCategory === 'depot'
+    let hasMainItem = false
+    for (const item of o.items || []) {
+      if (item.isUpsell || !item.selectedPhoneId) continue
+      hasMainItem = true
+      const product = productMapForStock.get(item.antichoc.id)
+      if (!product || getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) <= 0) return false
     }
-    return n
-  })()
-  /** Commandes avec au moins une ligne bloquée : stock 0 ET indisponible chez le fournisseur (ou produit introuvable). */
-  const ordersBlockedCount = (() => {
-    let n = 0
-    for (const order of confirmedOrders) {
-      for (const item of order.items) {
-        if (item.isUpsell || !item.selectedPhoneId) continue
-        const product = productMapForStock.get(item.antichoc.id)
-        if (!product) {
-          n++
-          break
-        }
-        if (isVariantBlockedNoSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) {
-          n++
-          break
-        }
-      }
+    return hasMainItem
+  }
+  const isOrderInBloquees = (o: Order) => {
+    if (o.confirmedOrderCategory !== undefined) return o.confirmedOrderCategory === 'bloquees'
+    for (const item of o.items || []) {
+      if (item.isUpsell || !item.selectedPhoneId) continue
+      const product = productMapForStock.get(item.antichoc.id)
+      if (!product) return true
+      if (isVariantBlockedNoSupplier(product, item.selectedColorId ?? '', item.selectedPhoneId)) return true
     }
-    return n
-  })()
+    return false
+  }
+  const ordersToBuyCount = confirmedOrders.filter((o) => !o.achatFournisseurDone && isOrderInAchats(o)).length
+  const ordersInDepotCount = confirmedOrders.filter((o) => !o.depotExpedieDone && isOrderInDepot(o)).length
+  const ordersBlockedCount = confirmedOrders.filter(isOrderInBloquees).length
 
   return (
     <div className="min-h-screen bg-brand-dark">
@@ -1124,7 +1104,8 @@ export function AdminPage() {
           const productMap = new Map(products.map((p) => [p.id, p]))
           type BuyLine = { productName: string; variantLabel: string }
           const ordersWithBuyList: { order: Order; linesToBuy: BuyLine[] }[] = []
-          for (const order of confirmedOrders) {
+          const ordersInAchats = confirmedOrders.filter(isOrderInAchats)
+          for (const order of ordersInAchats) {
             const linesToBuy: BuyLine[] = []
             for (const item of order.items) {
               if (item.isUpsell) continue
@@ -1224,7 +1205,8 @@ export function AdminPage() {
         {tab === 'bloquees' && (() => {
           type BlockedLine = { productName: string; variantLabel: string }
           const ordersWithBlocked: { order: Order; blockedLines: BlockedLine[] }[] = []
-          for (const order of confirmedOrders) {
+          const ordersInBloquees = confirmedOrders.filter(isOrderInBloquees)
+          for (const order of ordersInBloquees) {
             const blockedLines: BlockedLine[] = []
             for (const item of order.items) {
               if (item.isUpsell || !item.selectedPhoneId) continue
@@ -1298,21 +1280,7 @@ export function AdminPage() {
         })()}
 
         {tab === 'depot' && (() => {
-          const ordersDepot: Order[] = []
-          for (const order of confirmedOrders) {
-            let hasMainItem = false
-            let allInStock = true
-            for (const item of order.items) {
-              if (item.isUpsell || !item.selectedPhoneId) continue
-              hasMainItem = true
-              const product = productMapForStock.get(item.antichoc.id)
-              if (!product || getVariantStock(product, item.selectedColorId ?? '', item.selectedPhoneId) <= 0) {
-                allInStock = false
-                break
-              }
-            }
-            if (hasMainItem && allInStock) ordersDepot.push(order)
-          }
+          const ordersDepot = confirmedOrders.filter(isOrderInDepot)
           const ordersAFaire = ordersDepot.filter((o) => !o.depotExpedieDone)
           const ordersTermine = ordersDepot.filter((o) => o.depotExpedieDone)
           const handleToggleDepotDone = (orderId: string, done: boolean) => {

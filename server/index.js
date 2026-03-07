@@ -28,6 +28,8 @@ import {
   dbDecrementStockForOrder,
   dbIncrementStockForOrder,
   dbSetOrderVariantsStockDecremented,
+  dbSetOrderConfirmedCategory,
+  getOrderCategoryAtConfirm,
   dbUpdateOrderYalidine,
   dbDeleteOrder,
   dbFindOrderByYalidineTracking,
@@ -429,8 +431,11 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
 
     if (order) {
+      const products = await dbGetProducts()
+      const category = getOrderCategoryAtConfirm(order, products)
       const { decrementedKeys } = await dbDecrementStockForOrder(order)
       await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
+      await dbSetOrderConfirmedCategory(order.id, category)
       await dbSetOrderStatus(order.id, 'confirmed')
       console.log('[WhatsApp webhook] Commande', order.id, 'confirmée par le client (réponse liste)')
     }
@@ -466,6 +471,7 @@ function orderToApi(o) {
     changeRequestedByAdmin: o.changeRequestedByAdmin === true,
     changeRequestedReason: o.changeRequestedReason || undefined,
     colisExpedie: o.colisExpedie === true,
+    confirmedOrderCategory: o.confirmedOrderCategory || undefined,
   }
 }
 
@@ -492,6 +498,7 @@ function apiToOrder(a) {
     changeRequestedByAdmin: a.changeRequestedByAdmin === true,
     changeRequestedReason: a.changeRequestedReason || undefined,
     colisExpedie: a.colisExpedie === true,
+    confirmedOrderCategory: a.confirmedOrderCategory === 'depot' || a.confirmedOrderCategory === 'achats' || a.confirmedOrderCategory === 'bloquees' ? a.confirmedOrderCategory : undefined,
   }
 }
 
@@ -596,8 +603,11 @@ app.patch('/api/orders/:id/status', async (req, res) => {
     const order = orders.find((o) => o.id === id)
     if (order) {
       if (status === 'confirmed' && order.status !== 'confirmed') {
+        const products = await dbGetProducts()
+        const category = getOrderCategoryAtConfirm(order, products)
         const { decrementedKeys } = await dbDecrementStockForOrder(order)
         await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
+        await dbSetOrderConfirmedCategory(order.id, category)
       } else if (order.status === 'confirmed' && status !== 'confirmed') {
         await dbIncrementStockForOrder(order)
       }

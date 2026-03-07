@@ -123,6 +123,9 @@ async function runMigrations() {
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS variants_stock_decremented_at_confirm JSONB DEFAULT '[]'
     `).catch(() => {})
     await client.query(`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmed_order_category TEXT
+    `).catch(() => {})
+    await client.query(`
       ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'none'
     `).catch(() => {})
   } finally {
@@ -152,12 +155,12 @@ export async function dbSaveOrder(order) {
   const row = orderToRow(order)
   if (pool) {
     await pool.query(
-      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin, change_requested_reason, colis_expedie, variants_stock_decremented_at_confirm)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19,$20,$21,$22::jsonb)
+      `INSERT INTO orders (id, customer_name, phone, address, wilaya, delivery_type, delivery_price, total, status, confirmation_code, yalidine_tracking, yalidine_sent_at, yalidine_stopdesk_id, yalidine_stopdesk_name, created_at, items, achat_fournisseur_done, depot_expedie_done, change_requested_by_admin, change_requested_reason, colis_expedie, variants_stock_decremented_at_confirm, confirmed_order_category)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16::jsonb,$17,$18,$19,$20,$21,$22::jsonb,$23)
        ON CONFLICT (id) DO UPDATE SET
          customer_name=$2, phone=$3, address=$4, wilaya=$5, delivery_type=$6, delivery_price=$7, total=$8, status=$9,
-         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19, change_requested_reason=$20, colis_expedie=$21, variants_stock_decremented_at_confirm=$22::jsonb`,
-      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true, row.change_requested_reason || null, row.colis_expedie === true, JSON.stringify(row.variants_stock_decremented_at_confirm || [])]
+         confirmation_code=$10, yalidine_tracking=$11, yalidine_sent_at=$12, yalidine_stopdesk_id=$13, yalidine_stopdesk_name=$14, created_at=$15::timestamptz, items=$16::jsonb, achat_fournisseur_done=$17, depot_expedie_done=$18, change_requested_by_admin=$19, change_requested_reason=$20, colis_expedie=$21, variants_stock_decremented_at_confirm=$22::jsonb, confirmed_order_category=$23`,
+      [row.id, row.customer_name, row.phone, row.address, row.wilaya, row.delivery_type, row.delivery_price, row.total, row.status, row.confirmation_code, row.yalidine_tracking, row.yalidine_sent_at, row.yalidine_stopdesk_id, row.yalidine_stopdesk_name, row.created_at, JSON.stringify(row.items), row.achat_fournisseur_done === true, row.depot_expedie_done === true, row.change_requested_by_admin === true, row.change_requested_reason || null, row.colis_expedie === true, JSON.stringify(row.variants_stock_decremented_at_confirm || []), row.confirmed_order_category || null]
     )
     return
   }
@@ -241,6 +244,45 @@ function getVariantStock(product, colorId, phoneId) {
   return Number(product.quantity ?? 0) || 0
 }
 
+/** Variante disponible chez le fournisseur (stock 0 mais commandable). */
+function isVariantAvailableFromSupplier(product, colorId, phoneId) {
+  const key = variantKey(colorId, phoneId)
+  return product.variantAvailableFromSupplier && product.variantAvailableFromSupplier[key] === true
+}
+
+/**
+ * Catégorie de la commande à la confirmation (figée) : 'bloquees' | 'achats' | 'depot'.
+ * À appeler AVANT dbDecrementStockForOrder (avec le stock actuel).
+ */
+export function getOrderCategoryAtConfirm(order, products) {
+  const items = order.items && Array.isArray(order.items) ? order.items : []
+  let hasBlocked = false
+  let hasAchats = false
+  let hasMainItem = false
+  for (const item of items) {
+    if (item.isUpsell || !item.selectedPhoneId) continue
+    hasMainItem = true
+    const product = products.find((p) => p.id === (item.antichoc && item.antichoc.id))
+    const colorId = item.selectedColorId || ''
+    const phoneId = item.selectedPhoneId || ''
+    if (!product) {
+      hasBlocked = true
+      break
+    }
+    const stock = getVariantStock(product, colorId, phoneId)
+    const available = isVariantAvailableFromSupplier(product, colorId, phoneId)
+    if (stock <= 0 && !available) {
+      hasBlocked = true
+      break
+    }
+    if (stock <= 0 && available) hasAchats = true
+  }
+  if (!hasMainItem) return 'depot'
+  if (hasBlocked) return 'bloquees'
+  if (hasAchats) return 'achats'
+  return 'depot'
+}
+
 /** Décrémente le stock uniquement pour les variantes avec stock > 0. Retourne les clés des variantes effectivement décrémentées (à enregistrer sur la commande). */
 export async function dbDecrementStockForOrder(order) {
   const items = order.items && Array.isArray(order.items) ? order.items : []
@@ -319,6 +361,19 @@ export async function dbSetOrderVariantsStockDecremented(orderId, keys) {
   if (o) o.variantsStockDecrementedAtConfirm = arr
 }
 
+export async function dbSetOrderConfirmedCategory(orderId, category) {
+  const val = category === 'depot' || category === 'achats' || category === 'bloquees' ? category : null
+  if (pool) {
+    await pool.query(
+      'UPDATE orders SET confirmed_order_category = $1 WHERE id = $2',
+      [val, orderId]
+    )
+    return
+  }
+  const o = memoryOrders.find((x) => x.id === orderId)
+  if (o) o.confirmedOrderCategory = val || undefined
+}
+
 export async function dbUpdateOrderYalidine(orderId, tracking, sentAt) {
   if (pool) {
     await pool.query(
@@ -378,6 +433,7 @@ function rowToOrder(r) {
     changeRequestedReason: r.change_requested_reason || undefined,
     colisExpedie: r.colis_expedie === true,
     variantsStockDecrementedAtConfirm: Array.isArray(r.variants_stock_decremented_at_confirm) ? r.variants_stock_decremented_at_confirm : [],
+    confirmedOrderCategory: r.confirmed_order_category === 'depot' || r.confirmed_order_category === 'achats' || r.confirmed_order_category === 'bloquees' ? r.confirmed_order_category : undefined,
   }
 }
 
@@ -405,6 +461,7 @@ function orderToRow(o) {
     change_requested_reason: o.changeRequestedReason || null,
     colis_expedie: o.colisExpedie === true,
     variants_stock_decremented_at_confirm: Array.isArray(o.variantsStockDecrementedAtConfirm) ? o.variantsStockDecrementedAtConfirm : [],
+    confirmed_order_category: o.confirmedOrderCategory === 'depot' || o.confirmedOrderCategory === 'achats' || o.confirmedOrderCategory === 'bloquees' ? o.confirmedOrderCategory : null,
   }
 }
 

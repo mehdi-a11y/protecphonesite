@@ -54,6 +54,8 @@ export interface Order {
   changeRequestedByAdmin?: boolean
   /** Raison du changement demandé (indiquée par l'admin pour le confirmateur) */
   changeRequestedReason?: string
+  /** Catégorie figée à la confirmation : dépôt (tout en stock), à acheter, ou bloquée */
+  confirmedOrderCategory?: 'depot' | 'achats' | 'bloquees'
 }
 
 export const ADMIN_PASSWORD = 'mehdi2026dz'
