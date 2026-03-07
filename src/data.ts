@@ -1,4 +1,6 @@
 // Modèles iPhone compatibles (pour filtrer les coques)
+import { apiGetProducts, apiSaveProducts } from './api'
+
 export const IPHONE_MODELS = [
   { id: 'iphone-11', name: 'iPhone 11', slug: 'iphone-11' },
   { id: 'iphone-11-pro', name: 'iPhone 11 Pro', slug: 'iphone-11-pro' },
@@ -206,7 +208,6 @@ let productsCache: Antichoc[] | null = null
 export async function loadProducts(): Promise<Antichoc[]> {
   if (productsCache != null) return productsCache.length ? productsCache : ANTICHOCS
   try {
-    const { apiGetProducts } = await import('./api')
     productsCache = await apiGetProducts()
     return productsCache.length ? productsCache : ANTICHOCS
   } catch {
@@ -220,7 +221,6 @@ export function getStoredProducts(): Antichoc[] | null {
 }
 
 export async function saveProducts(products: Antichoc[]): Promise<void> {
-  const { apiSaveProducts } = await import('./api')
   await apiSaveProducts(products)
   productsCache = products
 }

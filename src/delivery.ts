@@ -1,4 +1,6 @@
 // 58 wilayas d'Algérie (code + nom)
+import { apiGetDeliveryPrices, apiSaveDeliveryPrices } from './api'
+
 export const WILAYAS = [
   { code: '01', name: 'Adrar' },
   { code: '02', name: 'Chlef' },
@@ -136,7 +138,6 @@ let deliveryCache: DeliveryPrices | null = null
 export async function loadDeliveryPrices(): Promise<DeliveryPrices> {
   if (deliveryCache != null) return getDeliveryPrices()
   try {
-    const { apiGetDeliveryPrices } = await import('./api')
     deliveryCache = await apiGetDeliveryPrices()
   } catch {
     deliveryCache = {}
@@ -157,7 +158,6 @@ export function getDeliveryPrices(): DeliveryPrices {
 }
 
 export async function saveDeliveryPrices(prices: DeliveryPrices): Promise<void> {
-  const { apiSaveDeliveryPrices } = await import('./api')
   await apiSaveDeliveryPrices(prices)
   deliveryCache = prices
 }
