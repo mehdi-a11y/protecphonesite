@@ -31,6 +31,13 @@ export function App({ initialStep = 'landing' }: AppProps) {
     loadProducts().catch(() => {})
   }, [])
 
+  // Synchroniser l’étape avec l’URL (pour https://www.protecphone.shop/iphone)
+  useEffect(() => {
+    if (location.pathname === '/iphone' && step !== 'iphone') {
+      setStep('iphone')
+    }
+  }, [location.pathname])
+
   const goToIphone = () => {
     setStep('iphone')
     loadProducts().catch(() => {})
@@ -62,7 +69,12 @@ export function App({ initialStep = 'landing' }: AppProps) {
 
   return (
     <div className="min-h-screen bg-brand-dark">
-      {step === 'landing' && <LandingStep onNext={goToIphone} />}
+      {step === 'landing' && (
+        <LandingStep
+          onNext={goToIphone}
+          onGoToIphonePage={() => navigate('/iphone')}
+        />
+      )}
       {step === 'iphone' && (
         <IPhoneStep
           onBack={() => {
