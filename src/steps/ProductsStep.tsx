@@ -8,6 +8,15 @@ import type { CartItem } from '../types'
 
 const MAX_SWATCHES = 4 // nombre de pastilles visibles avant "+ N"
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const out = [...arr]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
 interface Props {
   phoneId: IPhoneModelId
   cart: CartItem[]
@@ -27,13 +36,13 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
     loadProducts()
       .then(() => {
         if (!cancelled) {
-          setProducts(getAntichocsForPhone(phoneId))
+          setProducts(shuffleArray(getAntichocsForPhone(phoneId)))
           setLoading(false)
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setProducts(getAntichocsForPhone(phoneId))
+          setProducts(shuffleArray(getAntichocsForPhone(phoneId)))
           setLoading(false)
         }
       })
