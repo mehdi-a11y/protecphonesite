@@ -40,6 +40,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route element={<SiteLayout />}>
           <Route path="/" element={<App />} />
+          <Route path="/iphone" element={<App initialStep="iphone" />} />
           <Route path="/admin" element={<Suspense fallback={<PageFallback />}><AdminPage /></Suspense>} />
           <Route path="/confirmateur" element={<Suspense fallback={<PageFallback />}><ConfirmPage /></Suspense>} />
           <Route path="/p/:slug" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />

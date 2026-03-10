@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const CATEGORIES = [
   {
     id: 'antichocs',
@@ -63,13 +65,12 @@ export function LandingStep({ onNext }: Props) {
               <p className="text-white/80 text-base sm:text-lg mb-8">
                 Découvrez nos antichocs iPhone à prix cassés. Choisissez votre modèle et commandez en paiement à la livraison (COD).
               </p>
-              <button
-                type="button"
-                onClick={onNext}
+              <Link
+                to="/iphone"
                 className="inline-flex items-center justify-center px-8 py-4 bg-white text-black font-semibold rounded-lg border-2 border-black hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
               >
                 Choisir votre iPhone
-              </button>
+              </Link>
             </div>
 
             {/* Bloc visuel côté droit (placeholder style produit) */}

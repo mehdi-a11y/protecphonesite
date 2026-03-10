@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { IPhoneModelId } from './data'
 import { loadDeliveryPrices } from './delivery'
 import { loadProducts } from './data'
@@ -12,8 +13,14 @@ import { ConfirmationStep } from './steps/ConfirmationStep'
 
 export type Step = 'landing' | 'iphone' | 'products' | 'checkout' | 'confirmation'
 
-export function App() {
-  const [step, setStep] = useState<Step>('landing')
+interface AppProps {
+  initialStep?: Step
+}
+
+export function App({ initialStep = 'landing' }: AppProps) {
+  const [step, setStep] = useState<Step>(initialStep)
+  const navigate = useNavigate()
+  const location = useLocation()
   const [selectedPhone, setSelectedPhone] = useState<IPhoneModelId | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [orderId, setOrderId] = useState<string>('')
@@ -58,7 +65,10 @@ export function App() {
       {step === 'landing' && <LandingStep onNext={goToIphone} />}
       {step === 'iphone' && (
         <IPhoneStep
-          onBack={() => setStep('landing')}
+          onBack={() => {
+            if (location.pathname === '/iphone') navigate('/')
+            else setStep('landing')
+          }}
           onSelect={goToProducts}
         />
       )}
