@@ -811,6 +811,15 @@ app.delete('/api/landing-pages/:slug', async (req, res) => {
 })
 
 // --- Communes par wilaya (source: leblad / données officielles Algérie, utilisées par Yalidine) ---
+// Fallback pour wilayas où leblad ne renvoie pas les baladyiats (ex. Biskra 07)
+const COMMUNES_FALLBACK = {
+  7: [
+    'Aïn Naga', 'Aïn Zaatout', 'Biskra', 'Bordj Ben Azzouz', 'Bouchagroune', 'Branis', 'Chetma',
+    'Djemorah', 'El Feidh', 'El Ghrous', 'El Hadjeb', 'El Haouch', 'El Kantara', 'El Mizaraa',
+    'El Outaya', 'Foughala', 'Khenguet Sidi Nadji', 'Lichana', 'Lioua', "M'Chouneche", "M'Lili",
+    'Mekhadma', 'Oumache', 'Ourlal', 'Sidi Okba', 'Tolga', 'Zeribet El Oued',
+  ],
+}
 app.get('/api/communes', async (req, res) => {
   try {
     const wilaya = (req.query.wilaya || req.query.wilaya_id || '').toString().trim()
@@ -818,9 +827,16 @@ app.get('/api/communes', async (req, res) => {
     const code = wilaya.length === 1 ? '0' + wilaya : wilaya
     const wilayaNum = parseInt(code, 10)
     if (Number.isNaN(wilayaNum) || wilayaNum < 1 || wilayaNum > 58) return res.json([])
-    const leblad = (await import('@dzcode-io/leblad')).default
-    const baladyiats = leblad.getBaladyiatsForWilaya(wilayaNum) || []
-    const names = baladyiats.map((b) => (b.name != null ? String(b.name).trim() : '')).filter(Boolean)
+    let names = COMMUNES_FALLBACK[wilayaNum] ? [...COMMUNES_FALLBACK[wilayaNum]] : []
+    if (names.length === 0) {
+      try {
+        const leblad = (await import('@dzcode-io/leblad')).default
+        const baladyiats = leblad.getBaladyiatsForWilaya(wilayaNum) || []
+        names = baladyiats.map((b) => (b.name != null ? String(b.name).trim() : '')).filter(Boolean)
+      } catch (lebladErr) {
+        console.warn('[API communes] leblad', lebladErr.message)
+      }
+    }
     res.json(names)
   } catch (e) {
     console.warn('[API communes]', e.message)
