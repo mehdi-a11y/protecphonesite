@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { SAMSUNG_ULTRA_MODELS } from '../data'
 
 const CATEGORIES = [
   {
@@ -37,6 +38,13 @@ const CATEGORIES = [
     available: false,
   },
 ] as const
+
+const SAMSUNG_CARD_PROPS = SAMSUNG_ULTRA_MODELS.map((m) => ({
+  id: m.id,
+  name: m.name,
+  description: 'Coques antichoc à prix cassés',
+  icon: '📱' as const,
+}))
 
 interface Props {
   onNext: () => void
@@ -132,6 +140,35 @@ export function LandingStep({ onNext, onGoToIphonePage }: Props) {
                   Bientôt disponible
                 </span>
               )}
+            </div>
+          ))}
+        </div>
+
+        {/* Samsung Ultra */}
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center mt-12">
+          Samsung Ultra
+        </h2>
+        <p className="text-brand-muted text-sm text-center mb-8 max-w-xl mx-auto">
+          Antichocs pour Samsung S21 Ultra à S26 Ultra.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {SAMSUNG_CARD_PROPS.map((model) => (
+            <div
+              key={model.id}
+              className="rounded-2xl border border-white/5 bg-brand-card/50 p-5 flex flex-col items-center text-center opacity-90"
+            >
+              <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
+                {model.icon}
+              </div>
+              <h3 className="font-semibold text-white text-sm sm:text-base mb-1">
+                {model.name}
+              </h3>
+              <p className="text-brand-muted text-xs mb-4 flex-1">
+                {model.description}
+              </p>
+              <span className="w-full py-2.5 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm">
+                Voir les offres
+              </span>
             </div>
           ))}
         </div>

@@ -18,7 +18,7 @@ if (dns.setDefaultResultOrder) {
 
 const CONFIRMATEUR_EMAILS_DEFAULT = ['protecphonedz@gmail.com']
 
-/** Noms des modèles iPhone (id → name) pour le libellé complet dans les emails. */
+/** Noms des modèles iPhone et Samsung (id → name) pour le libellé complet dans les emails. */
 const PHONE_NAMES = {
   'iphone-11': 'iPhone 11', 'iphone-11-pro': 'iPhone 11 Pro', 'iphone-11-pro-max': 'iPhone 11 Pro Max',
   'iphone-12': 'iPhone 12', 'iphone-12-pro': 'iPhone 12 Pro', 'iphone-12-pro-max': 'iPhone 12 Pro Max',
@@ -27,6 +27,8 @@ const PHONE_NAMES = {
   'iphone-15': 'iPhone 15', 'iphone-15-pro': 'iPhone 15 Pro', 'iphone-15-pro-max': 'iPhone 15 Pro Max',
   'iphone-16': 'iPhone 16', 'iphone-16-pro': 'iPhone 16 Pro', 'iphone-16-pro-max': 'iPhone 16 Pro Max',
   'iphone-17': 'iPhone 17', 'iphone-17-pro': 'iPhone 17 Pro', 'iphone-17-pro-max': 'iPhone 17 Pro Max',
+  's21-ultra': 'Samsung S21 Ultra', 's22-ultra': 'Samsung S22 Ultra', 's23-ultra': 'Samsung S23 Ultra',
+  's24-ultra': 'Samsung S24 Ultra', 's25-ultra': 'Samsung S25 Ultra', 's26-ultra': 'Samsung S26 Ultra',
 }
 /** Noms des couleurs (id → name) pour le libellé complet dans les emails. */
 const COLOR_NAMES = {

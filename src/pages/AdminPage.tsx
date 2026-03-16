@@ -15,7 +15,7 @@ import {
   type Order,
 } from '../types'
 import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
-import { IPHONE_MODELS, type IPhoneModelId } from '../data'
+import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, type IPhoneModelId, type SamsungModelId } from '../data'
 import type { Antichoc } from '../data'
 import {
   WILAYAS,
@@ -254,7 +254,25 @@ export function AdminPage() {
       quantity: 0,
       image: '🆕',
       photoUrl: '',
+      deviceType: 'iphone',
       compatibleWith: IPHONE_MODELS.map((m) => m.id as IPhoneModelId),
+    }
+    setProducts((prev) => [...prev, newProduct])
+  }
+
+  const handleAddProductSamsung = () => {
+    const newProduct: Antichoc = {
+      id: `samsung-${Date.now()}`,
+      name: 'Nouveau produit Samsung',
+      description: '',
+      price: 0,
+      wholesalePrice: 0,
+      quantity: 0,
+      image: '🆕',
+      photoUrl: '',
+      deviceType: 'samsung',
+      compatibleWith: [],
+      compatibleWithSamsung: SAMSUNG_ULTRA_MODELS.map((m) => m.id as SamsungModelId),
     }
     setProducts((prev) => [...prev, newProduct])
   }
@@ -319,6 +337,44 @@ export function AdminPage() {
       p.id === id ? { ...p, compatibleWith: values } : p,
     )
     setProducts(next)
+  }
+
+  const handleCollectionsChangeSamsung = (
+    id: string,
+    event: ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const values = Array.from(event.target.selectedOptions).map(
+      (option) => option.value as SamsungModelId,
+    )
+    const next = products.map((p) =>
+      p.id === id ? { ...p, compatibleWithSamsung: values } : p,
+    )
+    setProducts(next)
+  }
+
+  const handleProductDeviceTypeChange = (
+    id: string,
+    deviceType: 'iphone' | 'samsung',
+  ) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        if (deviceType === 'samsung') {
+          return {
+            ...p,
+            deviceType: 'samsung',
+            compatibleWith: [],
+            compatibleWithSamsung: SAMSUNG_ULTRA_MODELS.map((m) => m.id as SamsungModelId),
+          }
+        }
+        return {
+          ...p,
+          deviceType: 'iphone',
+          compatibleWith: IPHONE_MODELS.map((m) => m.id as IPhoneModelId),
+          compatibleWithSamsung: undefined,
+        }
+      }),
+    )
   }
 
   const handlePhotoFileChange = (
@@ -1126,7 +1182,7 @@ export function AdminPage() {
               const stock = getVariantStock(product, colorId, phoneId)
               if (stock > 0) continue
               if (!needToBuyVariantFromSupplier(product, colorId, phoneId)) continue
-              const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+              const phoneName = SAMSUNG_ULTRA_MODELS.find((m) => m.id === phoneId)?.name ?? IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
               linesToBuy.push({
                 productName: item.antichoc.name,
@@ -1229,7 +1285,7 @@ export function AdminPage() {
                 continue
               }
               if (!isVariantBlockedNoSupplier(product, colorId, phoneId)) continue
-              const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+              const phoneName = SAMSUNG_ULTRA_MODELS.find((m) => m.id === phoneId)?.name ?? IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
               blockedLines.push({
                 productName: item.antichoc.name,
@@ -1358,7 +1414,14 @@ export function AdminPage() {
                   onClick={handleAddProduct}
                   className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
                 >
-                  Ajouter un produit
+                  Ajouter un produit iPhone
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddProductSamsung}
+                  className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                >
+                  Ajouter un produit Samsung
                 </button>
                 <button
                   type="button"
@@ -1386,7 +1449,8 @@ export function AdminPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-brand-muted border-b border-white/10">
-                    <th className="pb-2 pr-4">Collections (iPhone)</th>
+                    <th className="pb-2 pr-4">Type</th>
+                    <th className="pb-2 pr-4">Compatibles</th>
                     <th className="pb-2 pr-4">Titre</th>
                     <th className="pb-2 pr-4">Prix détail (DA)</th>
                     <th className="pb-2 pr-4">Prix gros (DA)</th>
@@ -1399,19 +1463,44 @@ export function AdminPage() {
                 <tbody>
                   {products.map((p) => (
                     <tr key={p.id} className="border-b border-white/5 align-top">
-                      <td className="py-2 pr-4 text-white text-xs max-w-[220px]">
+                      <td className="py-2 pr-4 text-white text-xs">
                         <select
-                          multiple
-                          value={p.compatibleWith}
-                          onChange={(e) => handleCollectionsChange(p.id, e)}
-                          className="w-full bg-brand-card border border-white/10 rounded px-2 py-1 h-[70px] text-xs focus:border-brand-accent focus:outline-none"
+                          value={p.deviceType === 'samsung' ? 'samsung' : 'iphone'}
+                          onChange={(e) => handleProductDeviceTypeChange(p.id, e.target.value as 'iphone' | 'samsung')}
+                          className="w-full max-w-[120px] bg-brand-card border border-white/10 rounded px-2 py-1 text-xs focus:border-brand-accent focus:outline-none"
                         >
-                          {IPHONE_MODELS.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
+                          <option value="iphone">iPhone</option>
+                          <option value="samsung">Samsung</option>
                         </select>
+                      </td>
+                      <td className="py-2 pr-4 text-white text-xs max-w-[220px]">
+                        {p.deviceType === 'samsung' ? (
+                          <select
+                            multiple
+                            value={p.compatibleWithSamsung ?? SAMSUNG_ULTRA_MODELS.map((m) => m.id)}
+                            onChange={(e) => handleCollectionsChangeSamsung(p.id, e)}
+                            className="w-full bg-brand-card border border-white/10 rounded px-2 py-1 h-[70px] text-xs focus:border-brand-accent focus:outline-none"
+                          >
+                            {SAMSUNG_ULTRA_MODELS.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <select
+                            multiple
+                            value={p.compatibleWith}
+                            onChange={(e) => handleCollectionsChange(p.id, e)}
+                            className="w-full bg-brand-card border border-white/10 rounded px-2 py-1 h-[70px] text-xs focus:border-brand-accent focus:outline-none"
+                          >
+                            {IPHONE_MODELS.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="py-2 pr-4">
                         <input
@@ -1452,7 +1541,10 @@ export function AdminPage() {
                           const total = p.variantStocks && Object.keys(p.variantStocks).length > 0
                             ? Object.values(p.variantStocks).reduce((a, b) => a + b, 0)
                             : (p.quantity ?? 0)
-                          const variantCount = Object.keys(p.variantStocks || {}).length || (p.colorIds?.length ? p.colorIds.length * (p.compatibleWith?.length || 1) : 1)
+                          const modelCount = p.deviceType === 'samsung'
+                            ? (p.compatibleWithSamsung?.length ?? SAMSUNG_ULTRA_MODELS.length)
+                            : (p.compatibleWith?.length || IPHONE_MODELS.length)
+                          const variantCount = Object.keys(p.variantStocks || {}).length || (p.colorIds?.length ? p.colorIds.length * modelCount : 1)
                           return `${total} (${variantCount} variante${variantCount > 1 ? 's' : ''})`
                         })()}
                       </td>
@@ -1519,12 +1611,14 @@ export function AdminPage() {
                             type="button"
                             onClick={() => {
                               const colorIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
-                              const phoneIds = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+                              const modelIds = p.deviceType === 'samsung'
+                                ? (p.compatibleWithSamsung?.length ? p.compatibleWithSamsung : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[]))
+                                : (p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[]))
                               const draft: Record<string, number> = {}
                               const supplierDraft: Record<string, boolean> = {}
                               colorIds.forEach((cid) => {
-                                phoneIds.forEach((pid) => {
-                                  const key = variantKey(cid, pid)
+                                modelIds.forEach((mid) => {
+                                  const key = variantKey(cid, mid)
                                   draft[key] = p.variantStocks?.[key] ?? p.variantStocks?.[cid] ?? p.quantity ?? 0
                                   supplierDraft[key] = p.variantAvailableFromSupplier?.[key] === true
                                 })
@@ -1632,15 +1726,19 @@ export function AdminPage() {
               )
             })()}
 
-            {/* Modal Gérer le stock (par variante = couleur + iPhone) */}
+            {/* Modal Gérer le stock (par variante = couleur + modèle iPhone ou Samsung) */}
             {stockModalProductId && (() => {
               const p = products.find((x) => x.id === stockModalProductId)
               if (!p) return null
               const colorIds = (p.colorIds?.length ? p.colorIds : ['']) as string[]
-              const phoneIds = p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+              const modelIds = p.deviceType === 'samsung'
+                ? (p.compatibleWithSamsung?.length ? p.compatibleWithSamsung : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[]))
+                : (p.compatibleWith?.length ? p.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[]))
               const variantEntries = colorIds.flatMap((cid) =>
-                phoneIds.map((pid) => ({ key: variantKey(cid, pid), colorId: cid, phoneId: pid })),
+                modelIds.map((mid) => ({ key: variantKey(cid, mid), colorId: cid, modelId: mid })),
               )
+              const getModelName = (modelId: string) =>
+                SAMSUNG_ULTRA_MODELS.find((m) => m.id === modelId)?.name ?? IPHONE_MODELS.find((m) => m.id === modelId)?.name ?? modelId
               return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setStockModalProductId(null)}>
                   <div className="bg-brand-card border border-white/10 rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col p-6" onClick={(e) => e.stopPropagation()}>
@@ -1648,10 +1746,10 @@ export function AdminPage() {
                     <p className="text-brand-muted text-sm mb-2">{p.name}</p>
                     <p className="text-xs text-brand-muted mb-3">Stock ou « Disponible chez le fournisseur ». Si stock = 0 et pas disponible fournisseur, le client ne peut pas commander cette variante.</p>
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
-                      {variantEntries.map(({ key, colorId, phoneId }) => {
+                      {variantEntries.map(({ key, colorId, modelId }) => {
                         const colorName = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : '—'
-                        const phoneName = IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
-                        const label = colorId ? `${colorName} — ${phoneName}` : phoneName
+                        const modelName = getModelName(modelId)
+                        const label = colorId ? `${colorName} — ${modelName}` : modelName
                         return (
                           <div key={key} className="flex items-center justify-between gap-4 py-2 border-b border-white/5 flex-wrap">
                             <span className="text-white text-sm truncate min-w-0 flex-1">{label}</span>

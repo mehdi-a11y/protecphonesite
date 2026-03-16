@@ -78,6 +78,12 @@ async function runMigrations() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_available_at_supplier JSONB DEFAULT '{}'
     `).catch(() => {})
     await client.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS device_type TEXT DEFAULT 'iphone'
+    `).catch(() => {})
+    await client.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS compatible_with_samsung JSONB DEFAULT '[]'
+    `).catch(() => {})
+    await client.query(`
       CREATE TABLE IF NOT EXISTS delivery_prices (
         wilaya_code TEXT PRIMARY KEY,
         domicile INTEGER NOT NULL DEFAULT 0,
@@ -479,10 +485,10 @@ export async function dbSaveProducts(products) {
     for (const p of products) {
       const r = productToRow(p)
       await pool.query(
-        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, compatible_with)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb)
-         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, compatible_with=$13::jsonb`,
-        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), JSON.stringify(r.compatible_with)]
+        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, device_type, compatible_with, compatible_with_samsung)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13,$14::jsonb,$15::jsonb)
+         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, device_type=$13, compatible_with=$14::jsonb, compatible_with_samsung=$15::jsonb`,
+        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), r.device_type || 'iphone', JSON.stringify(r.compatible_with), JSON.stringify(r.compatible_with_samsung || [])]
       )
     }
     return
@@ -542,6 +548,8 @@ function rowToProduct(r) {
     ? r.variant_available_at_supplier
     : {}
   const vas = supplierMap && Object.keys(supplierMap).length > 0 ? supplierMap : undefined
+  const deviceType = r.device_type === 'samsung' ? 'samsung' : 'iphone'
+  const compatibleWithSamsung = Array.isArray(r.compatible_with_samsung) ? r.compatible_with_samsung : (r.compatible_with_samsung && r.compatible_with_samsung.data ? r.compatible_with_samsung.data : []) || []
   return {
     id: r.id,
     name: r.name,
@@ -555,7 +563,9 @@ function rowToProduct(r) {
     colorIds: colorIds.length ? colorIds : undefined,
     photoUrl: r.photo_url || (gallery[0] || ''),
     photoGallery: gallery.length ? gallery : undefined,
+    deviceType,
     compatibleWith: Array.isArray(r.compatible_with) ? r.compatible_with : (r.compatible_with && r.compatible_with.data ? r.compatible_with.data : []) || [],
+    compatibleWithSamsung: deviceType === 'samsung' && compatibleWithSamsung.length ? compatibleWithSamsung : undefined,
   }
 }
 
@@ -574,7 +584,9 @@ function productToRow(p) {
     photo_url: (gallery[0] ?? p.photoUrl ?? p.photo_url) || '',
     photo_gallery: gallery,
     color_ids: p.colorIds ?? [],
+    device_type: p.deviceType === 'samsung' ? 'samsung' : 'iphone',
     compatible_with: p.compatibleWith ?? p.compatible_with ?? [],
+    compatible_with_samsung: p.compatibleWithSamsung ?? p.compatible_with_samsung ?? [],
   }
 }
 

@@ -27,6 +27,17 @@ export const IPHONE_MODELS = [
 
 export type IPhoneModelId = (typeof IPHONE_MODELS)[number]['id'];
 
+export const SAMSUNG_ULTRA_MODELS = [
+  { id: 's21-ultra', name: 'Samsung S21 Ultra', slug: 's21-ultra' },
+  { id: 's22-ultra', name: 'Samsung S22 Ultra', slug: 's22-ultra' },
+  { id: 's23-ultra', name: 'Samsung S23 Ultra', slug: 's23-ultra' },
+  { id: 's24-ultra', name: 'Samsung S24 Ultra', slug: 's24-ultra' },
+  { id: 's25-ultra', name: 'Samsung S25 Ultra', slug: 's25-ultra' },
+  { id: 's26-ultra', name: 'Samsung S26 Ultra', slug: 's26-ultra' },
+] as const;
+
+export type SamsungModelId = (typeof SAMSUNG_ULTRA_MODELS)[number]['id'];
+
 // Couleurs / designs des antichocs (stock à liquider)
 export interface Antichoc {
   id: string;
@@ -35,7 +46,7 @@ export interface Antichoc {
   price: number; // prix détail
   wholesalePrice?: number; // prix gros
   quantity?: number; // stock global (fallback si pas de variantStocks)
-  /** Stock par variante (couleur + iPhone) : clé "colorId|phoneId" -> quantité */
+  /** Stock par variante (couleur + modèle) : clé "colorId|modelId" -> quantité */
   variantStocks?: Record<string, number>;
   /** Par variante : true = commandable même si stock 0 (disponible chez le fournisseur) */
   variantAvailableFromSupplier?: Record<string, boolean>;
@@ -43,7 +54,10 @@ export interface Antichoc {
   colorIds?: string[]; // couleurs sélectionnées (ids ANTICHOC_COLORS)
   photoUrl: string; // première photo (URL ou base64)
   photoGallery?: string[]; // plusieurs photos (la première = photoUrl si une seule)
-  compatibleWith: IPhoneModelId[]; // modèles d'iPhone compatibles
+  /** 'iphone' par défaut. Si 'samsung', utiliser compatibleWithSamsung. */
+  deviceType?: 'iphone' | 'samsung';
+  compatibleWith: IPhoneModelId[]; // modèles iPhone (si deviceType === 'iphone')
+  compatibleWithSamsung?: SamsungModelId[]; // modèles Samsung (si deviceType === 'samsung')
 }
 
 /** Normalise un objet produit (API ou cache) pour avoir la forme Antichoc attendue par l'UI. */
@@ -57,9 +71,13 @@ export function normalizeProduct(p: Partial<Antichoc> | null): Antichoc | null {
   const image = typeof p.image === 'string' ? p.image : String(p.image ?? '')
   const photoUrl = typeof p.photoUrl === 'string' ? p.photoUrl : String(p.photoUrl ?? '')
   const colorIds = Array.isArray(p.colorIds) ? p.colorIds.filter((x) => typeof x === 'string') : undefined
+  const deviceType = p.deviceType === 'samsung' ? 'samsung' : 'iphone'
   const compatibleWith = Array.isArray(p.compatibleWith)
     ? p.compatibleWith.filter((x) => typeof x === 'string') as IPhoneModelId[]
     : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+  const compatibleWithSamsung = Array.isArray(p.compatibleWithSamsung)
+    ? p.compatibleWithSamsung.filter((x) => typeof x === 'string') as SamsungModelId[]
+    : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[])
   const photoGallery = Array.isArray(p.photoGallery) ? p.photoGallery.filter((x) => typeof x === 'string') : undefined
   const variantStocks =
     p.variantStocks && typeof p.variantStocks === 'object' && !Array.isArray(p.variantStocks)
@@ -84,18 +102,20 @@ export function normalizeProduct(p: Partial<Antichoc> | null): Antichoc | null {
     colorIds: colorIds?.length ? colorIds : undefined,
     photoUrl,
     photoGallery: photoGallery?.length ? photoGallery : undefined,
+    deviceType,
     compatibleWith: compatibleWith.length ? compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[]),
+    compatibleWithSamsung: deviceType === 'samsung' && compatibleWithSamsung.length ? compatibleWithSamsung : undefined,
   }
 }
 
-/** Clé unique pour une variante (couleur + modèle iPhone). */
-export function variantKey(colorId: string, phoneId: IPhoneModelId): string {
-  return `${colorId || ''}|${phoneId}`
+/** Clé unique pour une variante (couleur + modèle iPhone ou Samsung). */
+export function variantKey(colorId: string, modelId: string): string {
+  return `${colorId || ''}|${modelId}`
 }
 
-/** Retourne le stock pour une variante (couleur + iPhone). */
-export function getVariantStock(antichoc: Antichoc, colorId: string, phoneId: IPhoneModelId): number {
-  const key = variantKey(colorId, phoneId)
+/** Retourne le stock pour une variante (couleur + modèle iPhone ou Samsung). */
+export function getVariantStock(antichoc: Antichoc, colorId: string, modelId: string): number {
+  const key = variantKey(colorId, modelId)
   if (antichoc.variantStocks && antichoc.variantStocks[key] !== undefined) {
     return Number(antichoc.variantStocks[key]) || 0
   }
@@ -106,10 +126,10 @@ export function getVariantStock(antichoc: Antichoc, colorId: string, phoneId: IP
 }
 
 /** La variante est commandable si stock > 0 OU disponible chez le fournisseur. */
-export function isVariantOrderable(antichoc: Antichoc, colorId: string, phoneId: IPhoneModelId): boolean {
-  const stock = getVariantStock(antichoc, colorId, phoneId)
+export function isVariantOrderable(antichoc: Antichoc, colorId: string, modelId: string): boolean {
+  const stock = getVariantStock(antichoc, colorId, modelId)
   if (stock > 0) return true
-  const key = variantKey(colorId, phoneId)
+  const key = variantKey(colorId, modelId)
   return antichoc.variantAvailableFromSupplier?.[key] === true
 }
 
@@ -121,8 +141,21 @@ export function hasOrderableVariantForPhone(antichoc: Antichoc, phoneId: IPhoneM
   return colorIds.some((cid) => isVariantOrderable(antichoc, cid, phoneId))
 }
 
+/** Au moins une variante du produit est commandable (pour un modèle Samsung donné). */
+export function hasOrderableVariantForSamsung(antichoc: Antichoc, modelId: SamsungModelId): boolean {
+  if (antichoc.deviceType !== 'samsung') return false
+  const colorIds = antichoc.colorIds?.length ? antichoc.colorIds : ['']
+  const modelIds = antichoc.compatibleWithSamsung?.length ? antichoc.compatibleWithSamsung : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[])
+  if (!modelIds.includes(modelId)) return false
+  return colorIds.some((cid) => isVariantOrderable(antichoc, cid, modelId))
+}
+
 /** Au moins une variante du produit est commandable (tous modèles confondus). */
 export function hasAnyOrderableVariant(antichoc: Antichoc): boolean {
+  if (antichoc.deviceType === 'samsung') {
+    const modelIds = antichoc.compatibleWithSamsung?.length ? antichoc.compatibleWithSamsung : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[])
+    return modelIds.some((mid) => hasOrderableVariantForSamsung(antichoc, mid))
+  }
   const phoneIds = antichoc.compatibleWith?.length ? antichoc.compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
   return phoneIds.some((pid) => hasOrderableVariantForPhone(antichoc, pid))
 }
@@ -131,11 +164,11 @@ export function hasAnyOrderableVariant(antichoc: Antichoc): boolean {
 export function needToBuyVariantFromSupplier(
   antichoc: Antichoc,
   colorId: string,
-  phoneId: IPhoneModelId,
+  modelId: string,
 ): boolean {
-  const stock = getVariantStock(antichoc, colorId, phoneId)
+  const stock = getVariantStock(antichoc, colorId, modelId)
   if (stock > 0) return false
-  const key = variantKey(colorId, phoneId)
+  const key = variantKey(colorId, modelId)
   return antichoc.variantAvailableFromSupplier?.[key] === true
 }
 
@@ -143,11 +176,11 @@ export function needToBuyVariantFromSupplier(
 export function isVariantBlockedNoSupplier(
   antichoc: Antichoc,
   colorId: string,
-  phoneId: IPhoneModelId,
+  modelId: string,
 ): boolean {
-  const stock = getVariantStock(antichoc, colorId, phoneId)
+  const stock = getVariantStock(antichoc, colorId, modelId)
   if (stock > 0) return false
-  const key = variantKey(colorId, phoneId)
+  const key = variantKey(colorId, modelId)
   return antichoc.variantAvailableFromSupplier?.[key] !== true
 }
 
@@ -178,7 +211,7 @@ export function formatOrderItemLabel(item: {
     ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
     : ''
   const phoneName = item.selectedPhoneId
-    ? IPHONE_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? item.selectedPhoneId
+    ? (SAMSUNG_ULTRA_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? IPHONE_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? item.selectedPhoneId)
     : ''
   const variant = [colorName, phoneName].filter(Boolean).join(' — ')
   const suffix = item.isUpsell ? ' (offre -50%)' : ''
@@ -232,8 +265,18 @@ function getCatalog(): Antichoc[] {
 export function getAntichocsForPhone(phoneId: IPhoneModelId): Antichoc[] {
   return getCatalog().filter(
     (a) =>
+      a.deviceType !== 'samsung' &&
       (a.compatibleWith && Array.isArray(a.compatibleWith) ? a.compatibleWith : []).includes(phoneId) &&
       hasOrderableVariantForPhone(a, phoneId),
+  )
+}
+
+export function getAntichocsForSamsung(modelId: SamsungModelId): Antichoc[] {
+  return getCatalog().filter(
+    (a) =>
+      a.deviceType === 'samsung' &&
+      (a.compatibleWithSamsung && a.compatibleWithSamsung.length ? a.compatibleWithSamsung : []).includes(modelId) &&
+      hasOrderableVariantForSamsung(a, modelId),
   )
 }
 
