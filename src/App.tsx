@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import type { IPhoneModelId } from './data'
+import type { SamsungModelId } from './data'
+import { SAMSUNG_ULTRA_MODELS } from './data'
 import { loadDeliveryPrices } from './delivery'
 import { loadProducts } from './data'
-import type { Antichoc } from './data'
 import type { CartItem } from './types'
 import { LandingStep } from './steps/LandingStep'
 import { IPhoneStep } from './steps/IPhoneStep'
+import { SamsungStep } from './steps/SamsungStep'
 import { ProductsStep } from './steps/ProductsStep'
 import { CheckoutStep } from './steps/CheckoutStep'
 import { ConfirmationStep } from './steps/ConfirmationStep'
 
-export type Step = 'landing' | 'iphone' | 'products' | 'checkout' | 'confirmation'
+export type Step = 'landing' | 'iphone' | 'samsung' | 'products' | 'checkout' | 'confirmation'
 
 interface AppProps {
   initialStep?: Step
@@ -21,7 +23,7 @@ export function App({ initialStep = 'landing' }: AppProps) {
   const [step, setStep] = useState<Step>(initialStep)
   const navigate = useNavigate()
   const location = useLocation()
-  const [selectedPhone, setSelectedPhone] = useState<IPhoneModelId | null>(null)
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [orderId, setOrderId] = useState<string>('')
   const [confirmationCode, setConfirmationCode] = useState<string>('')
@@ -33,9 +35,8 @@ export function App({ initialStep = 'landing' }: AppProps) {
 
   // Synchroniser l’étape avec l’URL (pour https://www.protecphone.shop/iphone)
   useEffect(() => {
-    if (location.pathname === '/iphone' && step !== 'iphone') {
-      setStep('iphone')
-    }
+    if (location.pathname === '/iphone' && step !== 'iphone') setStep('iphone')
+    if (location.pathname === '/samsung' && step !== 'samsung') setStep('samsung')
   }, [location.pathname])
 
   const goToIphone = () => {
@@ -43,8 +44,18 @@ export function App({ initialStep = 'landing' }: AppProps) {
     loadProducts().catch(() => {})
     loadDeliveryPrices().catch(() => {})
   }
+  const goToSamsung = () => {
+    setStep('samsung')
+    loadProducts().catch(() => {})
+    loadDeliveryPrices().catch(() => {})
+  }
   const goToProducts = (phoneId: IPhoneModelId) => {
-    setSelectedPhone(phoneId)
+    setSelectedModelId(phoneId)
+    setCart([])
+    setStep('products')
+  }
+  const goToProductsSamsung = (modelId: SamsungModelId) => {
+    setSelectedModelId(modelId)
     setCart([])
     setStep('products')
   }
@@ -61,11 +72,14 @@ export function App({ initialStep = 'landing' }: AppProps) {
   }
   const reset = () => {
     setStep('landing')
-    setSelectedPhone(null)
+    setSelectedModelId(null)
     setCart([])
     setOrderId('')
     setConfirmationCode('')
   }
+
+  const isSamsungModel = selectedModelId != null && SAMSUNG_ULTRA_MODELS.some((m) => m.id === selectedModelId)
+  const productsBackStep: Step = isSamsungModel ? 'samsung' : 'iphone'
 
   return (
     <div className="min-h-screen bg-brand-dark">
@@ -73,6 +87,7 @@ export function App({ initialStep = 'landing' }: AppProps) {
         <LandingStep
           onNext={goToIphone}
           onGoToIphonePage={() => navigate('/iphone')}
+          onGoToSamsungPage={() => navigate('/samsung')}
         />
       )}
       {step === 'iphone' && (
@@ -84,11 +99,20 @@ export function App({ initialStep = 'landing' }: AppProps) {
           onSelect={goToProducts}
         />
       )}
-      {step === 'products' && selectedPhone && (
+      {step === 'samsung' && (
+        <SamsungStep
+          onBack={() => {
+            if (location.pathname === '/samsung') navigate('/')
+            else setStep('landing')
+          }}
+          onSelect={goToProductsSamsung}
+        />
+      )}
+      {step === 'products' && selectedModelId && (
         <ProductsStep
-          phoneId={selectedPhone}
+          modelId={selectedModelId}
           cart={cart}
-          onBack={() => setStep('iphone')}
+          onBack={() => setStep(productsBackStep)}
           onAddToCart={addToCart}
           onCheckout={goToCheckout}
         />

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { loadProducts, getAntichocsForPhone } from '../data'
+import { loadProducts, getAntichocsForPhone, getAntichocsForSamsung, SAMSUNG_ULTRA_MODELS } from '../data'
 import { ANTICHOC_COLORS } from '../data'
-import type { IPhoneModelId } from '../data'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
 
@@ -17,18 +16,20 @@ function shuffleArray<T>(arr: T[]): T[] {
   return out
 }
 
+/** modelId = iPhone ou Samsung (ex: iphone-14, s24-ultra) */
 interface Props {
-  phoneId: IPhoneModelId
+  modelId: string
   cart: CartItem[]
   onBack: () => void
   onAddToCart: (item: CartItem) => void
   onCheckout: () => void
 }
 
-export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }: Props) {
+export function ProductsStep({ modelId, cart, onBack, onAddToCart, onCheckout }: Props) {
   const [products, setProducts] = useState<Antichoc[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedColorByProductId, setSelectedColorByProductId] = useState<Record<string, string>>({})
+  const isSamsung = SAMSUNG_ULTRA_MODELS.some((m) => m.id === modelId)
 
   useEffect(() => {
     let cancelled = false
@@ -36,18 +37,20 @@ export function ProductsStep({ phoneId, cart, onBack, onAddToCart, onCheckout }:
     loadProducts()
       .then(() => {
         if (!cancelled) {
-          setProducts(shuffleArray(getAntichocsForPhone(phoneId)))
+          const list = isSamsung ? getAntichocsForSamsung(modelId) : getAntichocsForPhone(modelId)
+          setProducts(shuffleArray(list))
           setLoading(false)
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setProducts(shuffleArray(getAntichocsForPhone(phoneId)))
+          const list = isSamsung ? getAntichocsForSamsung(modelId) : getAntichocsForPhone(modelId)
+          setProducts(shuffleArray(list))
           setLoading(false)
         }
       })
     return () => { cancelled = true }
-  }, [phoneId])
+  }, [modelId, isSamsung])
 
   const getColorOptions = (p: Antichoc) =>
     (p.colorIds?.length

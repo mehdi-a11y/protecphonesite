@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { SAMSUNG_ULTRA_MODELS } from '../data'
 
 const CATEGORIES = [
   {
@@ -8,6 +7,15 @@ const CATEGORIES = [
     description: 'Coques antichoc à prix cassés',
     icon: '📱',
     available: true,
+    type: 'iphone' as const,
+  },
+  {
+    id: 'antichocs-samsung',
+    name: 'Antichocs Samsung',
+    description: 'Coques antichoc à prix cassés',
+    icon: '📱',
+    available: true,
+    type: 'samsung' as const,
   },
   {
     id: 'smartwatch',
@@ -15,6 +23,7 @@ const CATEGORIES = [
     description: 'Montres connectées',
     icon: '⌚',
     available: false,
+    type: 'iphone' as const,
   },
   {
     id: 'chargeur',
@@ -22,6 +31,7 @@ const CATEGORIES = [
     description: 'Chargeurs et câbles',
     icon: '🔌',
     available: false,
+    type: 'iphone' as const,
   },
   {
     id: 'ecouteurs',
@@ -29,6 +39,7 @@ const CATEGORIES = [
     description: 'Écouteurs et casques',
     icon: '🎧',
     available: false,
+    type: 'iphone' as const,
   },
   {
     id: 'support',
@@ -36,22 +47,17 @@ const CATEGORIES = [
     description: 'Supports voiture & bureau',
     icon: '📲',
     available: false,
+    type: 'iphone' as const,
   },
 ] as const
-
-const SAMSUNG_CARD_PROPS = SAMSUNG_ULTRA_MODELS.map((m) => ({
-  id: m.id,
-  name: m.name,
-  description: 'Coques antichoc à prix cassés',
-  icon: '📱' as const,
-}))
 
 interface Props {
   onNext: () => void
   onGoToIphonePage?: () => void
+  onGoToSamsungPage?: () => void
 }
 
-export function LandingStep({ onNext, onGoToIphonePage }: Props) {
+export function LandingStep({ onNext, onGoToIphonePage, onGoToSamsungPage }: Props) {
   return (
     <div className="flex flex-col flex-1">
       {/* Hero — Liquidation de stock */}
@@ -109,68 +115,47 @@ export function LandingStep({ onNext, onGoToIphonePage }: Props) {
           Antichocs, smartwatch, chargeurs, écouteurs, supports… tout en liquidation.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {CATEGORIES.map((cat) => (
-            <div
-              key={cat.id}
-              role={cat.available ? 'button' : undefined}
-              tabIndex={cat.available ? 0 : undefined}
-              onClick={cat.available ? onNext : undefined}
-              onKeyDown={cat.available ? (e) => e.key === 'Enter' && onNext() : undefined}
-              className={`rounded-2xl border p-5 flex flex-col items-center text-center transition-all ${
-                cat.available
-                  ? 'bg-brand-card border-white/10 hover:border-brand-accent/50 cursor-pointer'
-                  : 'bg-brand-card/50 border-white/5 opacity-80'
-              }`}
-            >
-              <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
-                {cat.icon}
+          {CATEGORIES.map((cat) => {
+            const handleClick = cat.available
+              ? (cat.type === 'samsung' ? onGoToSamsungPage : onNext)
+              : undefined
+            const handleKeyDown = cat.available && handleClick
+              ? (e) => e.key === 'Enter' && handleClick()
+              : undefined
+            return (
+              <div
+                key={cat.id}
+                role={cat.available ? 'button' : undefined}
+                tabIndex={cat.available ? 0 : undefined}
+                onClick={handleClick}
+                onKeyDown={handleKeyDown}
+                className={`rounded-2xl border p-5 flex flex-col items-center text-center transition-all ${
+                  cat.available
+                    ? 'bg-brand-card border-white/10 hover:border-brand-accent/50 cursor-pointer'
+                    : 'bg-brand-card/50 border-white/5 opacity-80'
+                }`}
+              >
+                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
+                  {cat.icon}
+                </div>
+                <h3 className="font-semibold text-white text-sm sm:text-base mb-1">
+                  {cat.name}
+                </h3>
+                <p className="text-brand-muted text-xs mb-4 flex-1">
+                  {cat.description}
+                </p>
+                {cat.available ? (
+                  <span className="w-full py-2.5 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm hover:bg-brand-accentDim transition-colors inline-block">
+                    Voir les offres
+                  </span>
+                ) : (
+                  <span className="text-xs text-brand-muted py-2.5">
+                    Bientôt disponible
+                  </span>
+                )}
               </div>
-              <h3 className="font-semibold text-white text-sm sm:text-base mb-1">
-                {cat.name}
-              </h3>
-              <p className="text-brand-muted text-xs mb-4 flex-1">
-                {cat.description}
-              </p>
-              {cat.available ? (
-                <span className="w-full py-2.5 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm hover:bg-brand-accentDim transition-colors inline-block">
-                  Voir les offres
-                </span>
-              ) : (
-                <span className="text-xs text-brand-muted py-2.5">
-                  Bientôt disponible
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Samsung Ultra */}
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center mt-12">
-          Samsung Ultra
-        </h2>
-        <p className="text-brand-muted text-sm text-center mb-8 max-w-xl mx-auto">
-          Antichocs pour Samsung S21 Ultra à S26 Ultra.
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {SAMSUNG_CARD_PROPS.map((model) => (
-            <div
-              key={model.id}
-              className="rounded-2xl border border-white/5 bg-brand-card/50 p-5 flex flex-col items-center text-center opacity-90"
-            >
-              <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
-                {model.icon}
-              </div>
-              <h3 className="font-semibold text-white text-sm sm:text-base mb-1">
-                {model.name}
-              </h3>
-              <p className="text-brand-muted text-xs mb-4 flex-1">
-                {model.description}
-              </p>
-              <span className="w-full py-2.5 rounded-lg bg-brand-accent text-brand-dark font-medium text-sm">
-                Voir les offres
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
     </div>
