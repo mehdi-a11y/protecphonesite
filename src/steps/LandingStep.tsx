@@ -78,24 +78,42 @@ export function LandingStep({ onNext, onGoToIphonePage, onGoToSamsungPage }: Pro
                 Liquidation de stock
               </h1>
               <p className="text-white/80 text-base sm:text-lg mb-8">
-                Découvrez nos antichocs iPhone à prix cassés. Choisissez votre modèle et commandez en paiement à la livraison (COD).
+                Découvrez nos antichocs iPhone et Samsung à prix cassés. Choisissez votre modèle et commandez en paiement à la livraison (COD).
               </p>
-              {onGoToIphonePage ? (
-                <button
-                  type="button"
-                  onClick={onGoToIphonePage}
-                  className="inline-flex items-center justify-center px-8 py-4 bg-white text-black font-semibold rounded-lg border-2 border-black hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
-                >
-                  Choisir votre iPhone
-                </button>
-              ) : (
-                <Link
-                  to="/iphone"
-                  className="inline-flex items-center justify-center px-8 py-4 bg-white text-black font-semibold rounded-lg border-2 border-black hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
-                >
-                  Choisir votre iPhone
-                </Link>
-              )}
+              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+                {onGoToIphonePage ? (
+                  <button
+                    type="button"
+                    onClick={onGoToIphonePage}
+                    className="inline-flex items-center justify-center px-8 py-4 bg-white text-black font-semibold rounded-lg border-2 border-black hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
+                  >
+                    Choisir votre iPhone
+                  </button>
+                ) : (
+                  <Link
+                    to="/iphone"
+                    className="inline-flex items-center justify-center px-8 py-4 bg-white text-black font-semibold rounded-lg border-2 border-black hover:bg-neutral-100 active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
+                  >
+                    Choisir votre iPhone
+                  </Link>
+                )}
+                {onGoToSamsungPage ? (
+                  <button
+                    type="button"
+                    onClick={onGoToSamsungPage}
+                    className="inline-flex items-center justify-center px-8 py-4 bg-brand-accent text-brand-dark font-semibold rounded-lg border-2 border-brand-accent hover:bg-brand-accentDim active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
+                  >
+                    Choisir votre Samsung
+                  </button>
+                ) : (
+                  <Link
+                    to="/samsung"
+                    className="inline-flex items-center justify-center px-8 py-4 bg-brand-accent text-brand-dark font-semibold rounded-lg border-2 border-brand-accent hover:bg-brand-accentDim active:scale-[0.98] transition-all duration-200 uppercase tracking-wider text-sm"
+                  >
+                    Choisir votre Samsung
+                  </Link>
+                )}
+              </div>
             </div>
 
             {/* Bloc visuel côté droit (placeholder style produit) */}

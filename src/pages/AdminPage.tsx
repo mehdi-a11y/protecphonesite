@@ -139,6 +139,8 @@ export function AdminPage() {
   const [newLandingProductPhotoUrl, setNewLandingProductPhotoUrl] = useState('')
   const [newLandingProductPhotos, setNewLandingProductPhotos] = useState<string[]>([])
   const [newLandingProductIphones, setNewLandingProductIphones] = useState<IPhoneModelId[]>([])
+  const [newLandingProductSamsungs, setNewLandingProductSamsungs] = useState<SamsungModelId[]>([])
+  const [newLandingProductDeviceType, setNewLandingProductDeviceType] = useState<'iphone' | 'samsung'>('iphone')
   const [newLandingProductColorIds, setNewLandingProductColorIds] = useState<string[]>([])
   const [landingMessage, setLandingMessage] = useState<string | null>(null)
   const [collections, setCollections] = useState<Collection[]>([])
@@ -2296,7 +2298,7 @@ export function AdminPage() {
                     <option value="">Choisir un produit</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — {p.price} DA
+                        {p.name} — {p.price} DA {p.deviceType === 'samsung' ? '(Samsung)' : '(iPhone)'}
                       </option>
                     ))}
                   </select>
@@ -2330,25 +2332,73 @@ export function AdminPage() {
                       <p className="text-[10px] text-brand-muted mt-0.5">Ctrl+clic pour sélectionner plusieurs couleurs</p>
                     </div>
                     <div>
-                      <p className="text-xs text-brand-muted mb-1">Modèles iPhone compatibles (plusieurs possibles)</p>
-                      <select
-                        multiple
-                        value={newLandingProductIphones}
-                        onChange={(e) =>
-                          setNewLandingProductIphones(
-                            Array.from(e.target.selectedOptions).map((o) => o.value as IPhoneModelId),
-                          )
-                        }
-                        className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none text-sm h-24"
-                      >
-                        {IPHONE_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[10px] text-brand-muted mt-0.5">Ctrl+clic pour sélectionner plusieurs modèles</p>
+                      <p className="text-xs text-brand-muted mb-1">Type de produit</p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="newLandingDeviceType"
+                            checked={newLandingProductDeviceType === 'iphone'}
+                            onChange={() => setNewLandingProductDeviceType('iphone')}
+                            className="text-brand-accent focus:ring-brand-accent"
+                          />
+                          <span className="text-white text-sm">iPhone</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="newLandingDeviceType"
+                            checked={newLandingProductDeviceType === 'samsung'}
+                            onChange={() => setNewLandingProductDeviceType('samsung')}
+                            className="text-brand-accent focus:ring-brand-accent"
+                          />
+                          <span className="text-white text-sm">Samsung</span>
+                        </label>
+                      </div>
                     </div>
+                    {newLandingProductDeviceType === 'iphone' ? (
+                      <div>
+                        <p className="text-xs text-brand-muted mb-1">Modèles iPhone compatibles (plusieurs possibles)</p>
+                        <select
+                          multiple
+                          value={newLandingProductIphones}
+                          onChange={(e) =>
+                            setNewLandingProductIphones(
+                              Array.from(e.target.selectedOptions).map((o) => o.value as IPhoneModelId),
+                            )
+                          }
+                          className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none text-sm h-24"
+                        >
+                          {IPHONE_MODELS.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-brand-muted mt-0.5">Ctrl+clic pour sélectionner plusieurs modèles</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-brand-muted mb-1">Modèles Samsung compatibles (plusieurs possibles)</p>
+                        <select
+                          multiple
+                          value={newLandingProductSamsungs}
+                          onChange={(e) =>
+                            setNewLandingProductSamsungs(
+                              Array.from(e.target.selectedOptions).map((o) => o.value as SamsungModelId),
+                            )
+                          }
+                          className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none text-sm h-24"
+                        >
+                          {SAMSUNG_ULTRA_MODELS.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-brand-muted mt-0.5">Ctrl+clic pour sélectionner plusieurs modèles</p>
+                      </div>
+                    )}
                     <input
                       type="number"
                       min={0}
@@ -2501,12 +2551,21 @@ export function AdminPage() {
                     ]
                     const variantStocks: Record<string, number> = {}
                     const landingColorIds = newLandingProductColorIds.length > 0 ? newLandingProductColorIds : ['']
-                    const landingPhoneIds = newLandingProductIphones.length > 0 ? newLandingProductIphones : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
-                    landingColorIds.forEach((cid) => {
-                      landingPhoneIds.forEach((pid) => {
-                        variantStocks[variantKey(cid, pid)] = quantity
+                    if (newLandingProductDeviceType === 'samsung') {
+                      const landingSamsungIds = newLandingProductSamsungs.length > 0 ? newLandingProductSamsungs : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[])
+                      landingColorIds.forEach((cid) => {
+                        landingSamsungIds.forEach((mid) => {
+                          variantStocks[variantKey(cid, mid)] = quantity
+                        })
                       })
-                    })
+                    } else {
+                      const landingPhoneIds = newLandingProductIphones.length > 0 ? newLandingProductIphones : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+                      landingColorIds.forEach((cid) => {
+                        landingPhoneIds.forEach((pid) => {
+                          variantStocks[variantKey(cid, pid)] = quantity
+                        })
+                      })
+                    }
                     const newProduct: Antichoc = {
                       id: antichocId,
                       name: newLandingProductName.trim(),
@@ -2519,10 +2578,21 @@ export function AdminPage() {
                       colorIds: newLandingProductColorIds.length > 0 ? newLandingProductColorIds : undefined,
                       photoUrl: allPhotos[0] ?? '',
                       photoGallery: allPhotos.length > 0 ? allPhotos : undefined,
-                      compatibleWith:
-                        newLandingProductIphones.length > 0
-                          ? newLandingProductIphones
-                          : IPHONE_MODELS.map((m) => m.id as IPhoneModelId),
+                      ...(newLandingProductDeviceType === 'samsung'
+                        ? {
+                            deviceType: 'samsung' as const,
+                            compatibleWith: [],
+                            compatibleWithSamsung:
+                              newLandingProductSamsungs.length > 0
+                                ? newLandingProductSamsungs
+                                : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[]),
+                          }
+                        : {
+                            compatibleWith:
+                              newLandingProductIphones.length > 0
+                                ? newLandingProductIphones
+                                : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[]),
+                          }),
                     }
                     setLandingMessage(null)
                     try {
@@ -2557,6 +2627,8 @@ export function AdminPage() {
                     setNewLandingProductPhotoUrl('')
                     setNewLandingProductPhotos([])
                     setNewLandingProductIphones([])
+                    setNewLandingProductSamsungs([])
+                    setNewLandingProductDeviceType('iphone')
                     setNewLandingProductColorIds([])
                     setLandingMessage('Landing créée.')
                     apiGetLandingPages().then(setLandingPages)
