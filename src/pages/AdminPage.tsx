@@ -160,6 +160,7 @@ export function AdminPage() {
   const [requestChangeOrderId, setRequestChangeOrderId] = useState<string | null>(null)
   const [changeReasonOrderId, setChangeReasonOrderId] = useState<string | null>(null)
   const [changeReasonInput, setChangeReasonInput] = useState('')
+  const [productsSearchQuery, setProductsSearchQuery] = useState('')
 
   useEffect(() => {
     if (auth) {
@@ -1406,10 +1407,36 @@ export function AdminPage() {
 
         {tab === 'produits' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <p className="text-brand-muted text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <input
+                  type="search"
+                  value={productsSearchQuery}
+                  onChange={(e) => setProductsSearchQuery(e.target.value)}
+                  placeholder="Rechercher un produit (nom, description…)"
+                  className="max-w-xs w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none text-sm"
+                  aria-label="Rechercher un produit"
+                />
+                {productsSearchQuery && (
+                  <span className="text-brand-muted text-sm whitespace-nowrap">
+                    {products.filter((p) => {
+                      const q = productsSearchQuery.trim().toLowerCase()
+                      if (!q) return true
+                      return (
+                        p.name.toLowerCase().includes(q) ||
+                        (p.description || '').toLowerCase().includes(q) ||
+                        p.id.toLowerCase().includes(q)
+                      )
+                    }).length}
+                    /{products.length} produit{products.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <p className="text-brand-muted text-sm shrink-0">
                 Modifiez, ajoutez ou supprimez un produit, puis enregistrez.
               </p>
+            </div>
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -1463,7 +1490,17 @@ export function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((p) => (
+                  {(productsSearchQuery.trim()
+                    ? products.filter((p) => {
+                        const q = productsSearchQuery.trim().toLowerCase()
+                        return (
+                          p.name.toLowerCase().includes(q) ||
+                          (p.description || '').toLowerCase().includes(q) ||
+                          p.id.toLowerCase().includes(q)
+                        )
+                      })
+                    : products
+                  ).map((p) => (
                     <tr key={p.id} className="border-b border-white/5 align-top">
                       <td className="py-2 pr-4 text-white text-xs">
                         <select
