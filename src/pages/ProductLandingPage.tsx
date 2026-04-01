@@ -4,7 +4,6 @@ import { loadProducts, getAntichocById } from '../data'
 import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
-import type { IPhoneModelId } from '../data'
 import type { CartItem } from '../types'
 import { apiGetLandingBySlug } from '../api'
 import { ProductDetailView } from '../components/ProductDetailView'
@@ -66,7 +65,7 @@ export function ProductLandingPage() {
   }, [slug])
 
   const [cart, setCart] = useState<CartItem[]>([])
-  const goToCheckout = (selectedPhoneId: IPhoneModelId, selectedColorId: string, addUpsellScreenProtector: boolean) => {
+  const goToCheckout = (selectedPhoneId: string, selectedColorId: string, addUpsellScreenProtector: boolean) => {
     const p = antichoc!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
     if (addUpsellScreenProtector) items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })

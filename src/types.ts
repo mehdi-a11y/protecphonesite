@@ -1,11 +1,10 @@
 import type { Antichoc } from './data'
-import type { IPhoneModelId } from './data'
 
 export interface CartItem {
   antichoc: Antichoc
   isUpsell?: boolean
-  /** Modèle iPhone choisi par le client (obligatoire pour commander) */
-  selectedPhoneId?: IPhoneModelId
+  /** Modèle choisi par le client (iPhone ou Samsung) */
+  selectedPhoneId?: string
   /** Couleur choisie par le client (obligatoire pour commander) */
   selectedColorId?: string
 }

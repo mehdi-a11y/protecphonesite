@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
-import type { IPhoneModelId } from '../data'
-import { IPHONE_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone } from '../data'
+import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone, hasOrderableVariantForSamsung } from '../data'
 import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
 import { trackTikTokViewContent } from '../tiktokPixel'
@@ -9,8 +8,8 @@ import { trackTikTokViewContent } from '../tiktokPixel'
 interface Props {
   product: Antichoc
   title?: string | null
-  /** (selectedPhoneId, selectedColorId, addUpsellScreenProtector) */
-  onCommander: (selectedPhoneId: IPhoneModelId, selectedColorId: string, addUpsellScreenProtector: boolean) => void
+  /** (selectedModelId, selectedColorId, addUpsellScreenProtector) */
+  onCommander: (selectedModelId: string, selectedColorId: string, addUpsellScreenProtector: boolean) => void
   backLink?: React.ReactNode
 }
 
@@ -19,8 +18,12 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const [addScreenProtector, setAddScreenProtector] = useState(false)
   const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
 
-  const phoneOptions = useMemo(() => {
-    const all = (product.compatibleWith?.length ? product.compatibleWith : IPHONE_MODELS.map((m) => m.id)) as IPhoneModelId[]
+  const modelOptions = useMemo(() => {
+    if (product.deviceType === 'samsung') {
+      const all = product.compatibleWithSamsung?.length ? product.compatibleWithSamsung : SAMSUNG_ULTRA_MODELS.map((m) => m.id)
+      return all.filter((id) => hasOrderableVariantForSamsung(product, id))
+    }
+    const all = product.compatibleWith?.length ? product.compatibleWith : IPHONE_MODELS.map((m) => m.id)
     return all.filter((id) => hasOrderableVariantForPhone(product, id))
   }, [product])
   const colorOptions = useMemo(() => {
@@ -30,7 +33,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
       .filter((c): c is NonNullable<typeof c> => c != null)
   }, [product.colorIds])
 
-  const [selectedPhoneId, setSelectedPhoneId] = useState<IPhoneModelId | ''>('')
+  const [selectedPhoneId, setSelectedPhoneId] = useState<string>('')
   const [selectedColorId, setSelectedColorId] = useState<string>('')
 
   const orderableColorIdsForSelectedPhone = useMemo(() => {
@@ -47,15 +50,15 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   }, [product?.id ?? ''])
 
   useEffect(() => {
-    if (phoneOptions.length === 1 && !selectedPhoneId) {
-      const first = phoneOptions[0]
+    if (modelOptions.length === 1 && !selectedPhoneId) {
+      const first = modelOptions[0]
       if (first) setSelectedPhoneId(first)
     }
     if (colorOptions.length === 1 && !selectedColorId) {
       const first = colorOptions[0]
       if (first?.id) setSelectedColorId(first.id)
     }
-  }, [phoneOptions, colorOptions, selectedPhoneId, selectedColorId])
+  }, [modelOptions, colorOptions, selectedPhoneId, selectedColorId])
   useEffect(() => {
     if (selectedPhoneId && colorOptions.length > 0 && selectedColorId && !orderableColorIdsForSelectedPhone.has(selectedColorId)) {
       const first = colorOptions.find((c) => orderableColorIdsForSelectedPhone.has(c.id))
@@ -167,7 +170,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
               </p>
             )}
 
-            {phoneOptions.length === 0 ? (
+            {modelOptions.length === 0 ? (
               <div className="mb-6 p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm">
                 Ce produit est actuellement indisponible (stock épuisé et non disponible chez le fournisseur).
               </div>
@@ -178,13 +181,15 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 </label>
                 <select
                   value={selectedPhoneId}
-                  onChange={(e) => setSelectedPhoneId(e.target.value as IPhoneModelId)}
+                  onChange={(e) => setSelectedPhoneId(e.target.value)}
                   required
                   className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
                 >
                   <option value="">Choisir un modèle</option>
-                  {phoneOptions.map((id) => {
-                    const model = IPHONE_MODELS.find((m) => m.id === id)
+                  {modelOptions.map((id) => {
+                    const model =
+                      SAMSUNG_ULTRA_MODELS.find((m) => m.id === id) ??
+                      IPHONE_MODELS.find((m) => m.id === id)
                     return (
                       <option key={id} value={id}>
                         {model?.name ?? id}

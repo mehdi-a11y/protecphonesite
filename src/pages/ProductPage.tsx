@@ -1,7 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
-import type { IPhoneModelId } from '../data'
 import type { CartItem } from '../types'
 import { trackAddToCart } from '../facebookPixel'
 import { trackTikTokAddToCart } from '../tiktokPixel'
@@ -61,7 +60,7 @@ export function ProductPage({ id }: ProductPageProps) {
   }, [id])
 
   const [cart, setCart] = useState<CartItem[]>([])
-  const goToCheckout = async (selectedPhoneId: IPhoneModelId, selectedColorId: string, addUpsellScreenProtector: boolean) => {
+  const goToCheckout = async (selectedPhoneId: string, selectedColorId: string, addUpsellScreenProtector: boolean) => {
     const p = product!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
     if (addUpsellScreenProtector) {
