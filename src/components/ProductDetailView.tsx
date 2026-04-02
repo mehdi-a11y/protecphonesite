@@ -22,6 +22,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [addScreenProtector, setAddScreenProtector] = useState(false)
   const [addSmartFold, setAddSmartFold] = useState(false)
+  const [smartFoldModalOpen, setSmartFoldModalOpen] = useState(false)
   const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
   const smartFoldUpsell = useMemo(() => getSmartFoldUpsell(), [])
 
@@ -55,6 +56,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     setSelectedImageIndex(0)
     setAddScreenProtector(false)
     setAddSmartFold(false)
+    setSmartFoldModalOpen(false)
   }, [product?.id ?? ''])
 
   useEffect(() => {
@@ -306,6 +308,13 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                         className="w-full h-full object-cover"
                         loading="lazy"
                         decoding="async"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setSmartFoldModalOpen(true)
+                        }}
+                        role="button"
+                        tabIndex={0}
                       />
                     ) : (
                       <span className="text-2xl">{smartFoldUpsell.image}</span>
@@ -336,6 +345,36 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 </p>
               </div>
             </section>
+
+            {smartFoldModalOpen && smartFoldUpsell.photoUrl && (
+              <div
+                className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+                onClick={() => setSmartFoldModalOpen(false)}
+                role="dialog"
+                aria-modal="true"
+              >
+                <div
+                  className="relative max-w-3xl w-full"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSmartFoldModalOpen(false)}
+                    className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 border border-white/10"
+                    aria-label="Fermer"
+                  >
+                    ×
+                  </button>
+                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-brand-dark">
+                    <img
+                      src={smartFoldUpsell.photoUrl}
+                      alt={smartFoldUpsell.name}
+                      className="w-full h-auto max-h-[75vh] object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedPhoneId && !selectedVariantOrderable && (colorOptions.length === 0 || selectedColorId) && (
               <p className="mb-3 text-amber-400 text-sm">
