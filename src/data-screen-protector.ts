@@ -16,3 +16,24 @@ export function getScreenProtectorUpsell(): Antichoc {
     compatibleWith: [...allIphoneIds],
   }
 }
+
+/**
+ * Produit upsell : portefeuille magnétique Spigen Smart Fold (MagSafe).
+ * Actuellement ajouté en upsell “toujours disponible” (comme l’upsell écran) côté UI.
+ */
+export function getSmartFoldUpsell(): Antichoc {
+  const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id)
+  return {
+    id: 'upsell-spigen-smart-fold',
+    name: 'Portefeuille magnétique Spigen Smart Fold',
+    description: 'Compatible MagSafe. Avec support intégré.',
+    // TODO: si tu as un prix différent, dis-moi et je l’ajuste.
+    price: 2500,
+    wholesalePrice: 0,
+    quantity: 0,
+    // On affiche la photo fournie (au lieu d'une icône texte).
+    image: '',
+    photoUrl: '/smart-fold-upsell.png',
+    compatibleWith: [...allIphoneIds],
+  }
+}

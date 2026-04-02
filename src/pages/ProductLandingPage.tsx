@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { loadProducts, getAntichocById } from '../data'
-import { getScreenProtectorUpsell } from '../data-screen-protector'
+import { getScreenProtectorUpsell, getSmartFoldUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
@@ -65,10 +65,16 @@ export function ProductLandingPage() {
   }, [slug])
 
   const [cart, setCart] = useState<CartItem[]>([])
-  const goToCheckout = (selectedPhoneId: string, selectedColorId: string, addUpsellScreenProtector: boolean) => {
+  const goToCheckout = (
+    selectedPhoneId: string,
+    selectedColorId: string,
+    addUpsellScreenProtector: boolean,
+    addUpsellSmartFold: boolean,
+  ) => {
     const p = antichoc!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
     if (addUpsellScreenProtector) items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
+    if (addUpsellSmartFold) items.push({ antichoc: getSmartFoldUpsell(), isUpsell: true })
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')
     trackTikTokAddToCart(p.name, [p.id], p.price, 'DZD')

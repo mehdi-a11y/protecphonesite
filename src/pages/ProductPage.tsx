@@ -60,12 +60,21 @@ export function ProductPage({ id }: ProductPageProps) {
   }, [id])
 
   const [cart, setCart] = useState<CartItem[]>([])
-  const goToCheckout = async (selectedPhoneId: string, selectedColorId: string, addUpsellScreenProtector: boolean) => {
+  const goToCheckout = async (
+    selectedPhoneId: string,
+    selectedColorId: string,
+    addUpsellScreenProtector: boolean,
+    addUpsellSmartFold: boolean,
+  ) => {
     const p = product!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
     if (addUpsellScreenProtector) {
       const { getScreenProtectorUpsell } = await import('../data-screen-protector')
       items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
+    }
+    if (addUpsellSmartFold) {
+      const { getSmartFoldUpsell } = await import('../data-screen-protector')
+      items.push({ antichoc: getSmartFoldUpsell(), isUpsell: true })
     }
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')

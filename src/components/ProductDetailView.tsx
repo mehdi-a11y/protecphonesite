@@ -1,22 +1,29 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone, hasOrderableVariantForSamsung } from '../data'
-import { getScreenProtectorUpsell } from '../data-screen-protector'
+import { getScreenProtectorUpsell, getSmartFoldUpsell } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
 import { trackTikTokViewContent } from '../tiktokPixel'
 
 interface Props {
   product: Antichoc
   title?: string | null
-  /** (selectedModelId, selectedColorId, addUpsellScreenProtector) */
-  onCommander: (selectedModelId: string, selectedColorId: string, addUpsellScreenProtector: boolean) => void
+  /** (selectedModelId, selectedColorId, addUpsellScreenProtector, addUpsellSmartFold) */
+  onCommander: (
+    selectedModelId: string,
+    selectedColorId: string,
+    addUpsellScreenProtector: boolean,
+    addUpsellSmartFold: boolean,
+  ) => void
   backLink?: React.ReactNode
 }
 
 export function ProductDetailView({ product, title, onCommander, backLink }: Props) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [addScreenProtector, setAddScreenProtector] = useState(false)
+  const [addSmartFold, setAddSmartFold] = useState(false)
   const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
+  const smartFoldUpsell = useMemo(() => getSmartFoldUpsell(), [])
 
   const modelOptions = useMemo(() => {
     if (product.deviceType === 'samsung') {
@@ -47,6 +54,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     setSelectedColorId('')
     setSelectedImageIndex(0)
     setAddScreenProtector(false)
+    setAddSmartFold(false)
   }, [product?.id ?? ''])
 
   useEffect(() => {
@@ -90,7 +98,12 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const handleCommander = () => {
     if (!selectedPhoneId) return
     if (colorOptions.length > 0 && !selectedColorId) return
-    onCommander(selectedPhoneId, colorOptions.length >= 1 ? selectedColorId : '', addScreenProtector)
+    onCommander(
+      selectedPhoneId,
+      colorOptions.length >= 1 ? selectedColorId : '',
+      addScreenProtector,
+      addSmartFold,
+    )
   }
 
   return (
@@ -264,6 +277,57 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                     type="checkbox"
                     checked={addScreenProtector}
                     onChange={(e) => setAddScreenProtector(e.target.checked)}
+                    className="mt-2 w-5 h-5 rounded border-white/30 text-brand-accent focus:ring-brand-accent"
+                  />
+                </label>
+                <p className="text-xs text-brand-muted mt-2">
+                  Cochez pour ajouter à votre commande.
+                </p>
+              </div>
+            </section>
+
+            {/* Upsell : Portefeuille magnétique (Spigen Smart Fold) */}
+            <section className="mb-6">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+                  Ajoutez votre portefeuille
+                </h2>
+                <span className="px-2 py-0.5 rounded bg-brand-accent/20 text-brand-accent text-xs font-medium">
+                  Compatible MagSafe
+                </span>
+              </div>
+              <div className="rounded-xl border border-brand-accent/30 bg-brand-card/30 p-4">
+                <label className="flex gap-4 cursor-pointer group">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-brand-card border border-white/10 overflow-hidden flex items-center justify-center">
+                    {smartFoldUpsell.photoUrl ? (
+                      <img
+                        src={smartFoldUpsell.photoUrl}
+                        alt={smartFoldUpsell.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <span className="text-2xl">{smartFoldUpsell.image}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white group-hover:text-brand-accent transition-colors">
+                      {smartFoldUpsell.name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-brand-accent font-semibold">
+                        {smartFoldUpsell.price} DA
+                      </span>
+                    </div>
+                    <p className="text-xs text-brand-muted mt-1">
+                      Support intégré et portefeuille magnétique.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={addSmartFold}
+                    onChange={(e) => setAddSmartFold(e.target.checked)}
                     className="mt-2 w-5 h-5 rounded border-white/30 text-brand-accent focus:ring-brand-accent"
                   />
                 </label>
