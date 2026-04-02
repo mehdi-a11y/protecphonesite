@@ -53,3 +53,19 @@ export function getNanoPopUpsell(): Antichoc {
     compatibleWith: [...allIphoneIds],
   }
 }
+
+/** Produit upsell : Card Holder MagSafe Spigen (AFA03854). */
+export function getCardHolderMagSafeUpsell(): Antichoc {
+  const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id)
+  return {
+    id: 'upsell-spigen-card-holder-magsafe-afa03854',
+    name: 'Card Holder MagSafe Spigen AFA03854',
+    description: 'Porte-cartes magnétique. Compatible MagSafe.',
+    price: 1800,
+    wholesalePrice: 0,
+    quantity: 0,
+    image: '',
+    photoUrl: '/card-holder-magsafe-upsell.png',
+    compatibleWith: [...allIphoneIds],
+  }
+}

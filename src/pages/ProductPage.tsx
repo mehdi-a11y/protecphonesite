@@ -66,6 +66,7 @@ export function ProductPage({ id }: ProductPageProps) {
     addUpsellScreenProtector: boolean,
     addUpsellSmartFold: boolean,
     addUpsellNanoPop: boolean,
+    addUpsellCardHolder: boolean,
   ) => {
     const p = product!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
@@ -80,6 +81,10 @@ export function ProductPage({ id }: ProductPageProps) {
     if (addUpsellNanoPop) {
       const { getNanoPopUpsell } = await import('../data-screen-protector')
       items.push({ antichoc: getNanoPopUpsell(), isUpsell: true })
+    }
+    if (addUpsellCardHolder) {
+      const { getCardHolderMagSafeUpsell } = await import('../data-screen-protector')
+      items.push({ antichoc: getCardHolderMagSafeUpsell(), isUpsell: true })
     }
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')

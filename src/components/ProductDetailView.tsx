@@ -1,20 +1,21 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone, hasOrderableVariantForSamsung } from '../data'
-import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell } from '../data-screen-protector'
+import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
 import { trackTikTokViewContent } from '../tiktokPixel'
 
 interface Props {
   product: Antichoc
   title?: string | null
-  /** (selectedModelId, selectedColorId, addUpsellScreenProtector, addUpsellSmartFold, addUpsellNanoPop) */
+  /** (selectedModelId, selectedColorId, addUpsellScreenProtector, addUpsellSmartFold, addUpsellNanoPop, addUpsellCardHolder) */
   onCommander: (
     selectedModelId: string,
     selectedColorId: string,
     addUpsellScreenProtector: boolean,
     addUpsellSmartFold: boolean,
     addUpsellNanoPop: boolean,
+    addUpsellCardHolder: boolean,
   ) => void
   backLink?: React.ReactNode
 }
@@ -26,10 +27,13 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const [smartFoldModalOpen, setSmartFoldModalOpen] = useState(false)
   const [addNanoPop, setAddNanoPop] = useState(false)
   const [nanoPopModalOpen, setNanoPopModalOpen] = useState(false)
+  const [addCardHolder, setAddCardHolder] = useState(false)
+  const [cardHolderModalOpen, setCardHolderModalOpen] = useState(false)
   const [commanderHint, setCommanderHint] = useState<string>('')
   const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
   const smartFoldUpsell = useMemo(() => getSmartFoldUpsell(), [])
   const nanoPopUpsell = useMemo(() => getNanoPopUpsell(), [])
+  const cardHolderUpsell = useMemo(() => getCardHolderMagSafeUpsell(), [])
 
   const modelOptions = useMemo(() => {
     if (product.deviceType === 'samsung') {
@@ -64,6 +68,8 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     setSmartFoldModalOpen(false)
     setAddNanoPop(false)
     setNanoPopModalOpen(false)
+    setAddCardHolder(false)
+    setCardHolderModalOpen(false)
     setCommanderHint('')
   }, [product?.id ?? ''])
 
@@ -114,6 +120,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
       addScreenProtector,
       addSmartFold,
       addNanoPop,
+      addCardHolder,
     )
   }
 
@@ -480,6 +487,91 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                     <img
                       src={nanoPopUpsell.photoUrl}
                       alt={nanoPopUpsell.name}
+                      className="w-full h-auto max-h-[75vh] object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Upsell : Card Holder MagSafe (Spigen AFA03854) */}
+            <section className="mb-6">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+                  Ajoutez votre porte-cartes
+                </h2>
+                <span className="px-2 py-0.5 rounded bg-brand-accent/20 text-brand-accent text-xs font-medium">
+                  AFA03854
+                </span>
+              </div>
+              <div className="rounded-xl border border-brand-accent/30 bg-brand-card/30 p-4">
+                <label className="flex gap-4 cursor-pointer group">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-brand-card border border-white/10 overflow-hidden flex items-center justify-center">
+                    {cardHolderUpsell.photoUrl ? (
+                      <img
+                        src={cardHolderUpsell.photoUrl}
+                        alt={cardHolderUpsell.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setCardHolderModalOpen(true)
+                        }}
+                        role="button"
+                        tabIndex={0}
+                      />
+                    ) : (
+                      <span className="text-2xl">{cardHolderUpsell.image}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white group-hover:text-brand-accent transition-colors">
+                      {cardHolderUpsell.name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-brand-accent font-semibold">
+                        {cardHolderUpsell.price} DA
+                      </span>
+                    </div>
+                    <p className="text-xs text-brand-muted mt-1">
+                      Porte-cartes magnétique compact.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={addCardHolder}
+                    onChange={(e) => setAddCardHolder(e.target.checked)}
+                    className="mt-2 w-5 h-5 rounded border-white/30 text-brand-accent focus:ring-brand-accent"
+                  />
+                </label>
+              </div>
+            </section>
+
+            {cardHolderModalOpen && cardHolderUpsell.photoUrl && (
+              <div
+                className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+                onClick={() => setCardHolderModalOpen(false)}
+                role="dialog"
+                aria-modal="true"
+              >
+                <div
+                  className="relative max-w-3xl w-full"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setCardHolderModalOpen(false)}
+                    className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 border border-white/10"
+                    aria-label="Fermer"
+                  >
+                    ×
+                  </button>
+                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-brand-dark">
+                    <img
+                      src={cardHolderUpsell.photoUrl}
+                      alt={cardHolderUpsell.name}
                       className="w-full h-auto max-h-[75vh] object-contain"
                     />
                   </div>

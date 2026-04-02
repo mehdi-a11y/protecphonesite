@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { loadProducts, getAntichocById } from '../data'
-import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell } from '../data-screen-protector'
+import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
@@ -71,12 +71,14 @@ export function ProductLandingPage() {
     addUpsellScreenProtector: boolean,
     addUpsellSmartFold: boolean,
     addUpsellNanoPop: boolean,
+    addUpsellCardHolder: boolean,
   ) => {
     const p = antichoc!
     const items: CartItem[] = [{ antichoc: p, selectedPhoneId, selectedColorId }]
     if (addUpsellScreenProtector) items.push({ antichoc: getScreenProtectorUpsell(), isUpsell: true })
     if (addUpsellSmartFold) items.push({ antichoc: getSmartFoldUpsell(), isUpsell: true })
     if (addUpsellNanoPop) items.push({ antichoc: getNanoPopUpsell(), isUpsell: true })
+    if (addUpsellCardHolder) items.push({ antichoc: getCardHolderMagSafeUpsell(), isUpsell: true })
     setCart(items)
     trackAddToCart(p.name, [p.id], p.price, 'DZD')
     trackTikTokAddToCart(p.name, [p.id], p.price, 'DZD')

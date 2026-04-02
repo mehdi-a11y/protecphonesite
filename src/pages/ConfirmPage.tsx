@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
 import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, type Antichoc, type IPhoneModelId } from '../data'
-import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell } from '../data-screen-protector'
+import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { apiGetProducts } from '../api'
 
 const INCLASSABLE_PRODUCT_ID = 'upsell-protecteur-ecran-incassable'
 const SMARTFOLD_PRODUCT_ID = 'upsell-spigen-smart-fold'
 const NANOPOP_PRODUCT_ID = 'upsell-spigen-nano-pop'
+const CARDHOLDER_PRODUCT_ID = 'upsell-spigen-card-holder-magsafe-afa03854'
 
 type FilterStatus =
   | 'all'
@@ -282,10 +283,29 @@ export function ConfirmPage() {
     }
   }
 
+  const hasCardHolder = editItems.some((i) => i.antichoc?.id === CARDHOLDER_PRODUCT_ID)
+  const toggleCardHolder = (checked: boolean) => {
+    if (checked) {
+      if (hasCardHolder) return
+      const cardHolder = getCardHolderMagSafeUpsell()
+      const newItem: CartItem = { antichoc: cardHolder, isUpsell: true }
+      setEditForm((f) => {
+        const next = [...(f.items ?? []), newItem]
+        return { ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }
+      })
+    } else {
+      setEditForm((f) => {
+        const next = (f.items ?? []).filter((i) => i.antichoc?.id !== CARDHOLDER_PRODUCT_ID)
+        return { ...f, items: next, total: next.reduce((s, i) => s + (i.antichoc?.price ?? 0), 0) + (f.deliveryPrice ?? 0) }
+      })
+    }
+  }
+
   const productsForSelect = [
     ...(hasIncassable ? [getScreenProtectorUpsell()] : []),
     ...(hasSmartFold ? [getSmartFoldUpsell()] : []),
     ...(hasNanoPop ? [getNanoPopUpsell()] : []),
+    ...(hasCardHolder ? [getCardHolderMagSafeUpsell()] : []),
     ...products,
   ]
 
@@ -714,7 +734,8 @@ export function ConfirmPage() {
                                 isUpsell:
                                   p.id === INCLASSABLE_PRODUCT_ID ||
                                   p.id === SMARTFOLD_PRODUCT_ID ||
-                                  p.id === NANOPOP_PRODUCT_ID,
+                                  p.id === NANOPOP_PRODUCT_ID ||
+                                  p.id === CARDHOLDER_PRODUCT_ID,
                               })
                             }
                           }}
@@ -758,6 +779,10 @@ export function ConfirmPage() {
                   <label className="flex items-center gap-2 mt-2 text-sm text-white">
                     <input type="checkbox" checked={hasNanoPop} onChange={(e) => toggleNanoPop(e.target.checked)} className="rounded border-white/30 bg-brand-dark text-brand-accent" />
                     Nano Pop (Spigen)
+                  </label>
+                  <label className="flex items-center gap-2 mt-2 text-sm text-white">
+                    <input type="checkbox" checked={hasCardHolder} onChange={(e) => toggleCardHolder(e.target.checked)} className="rounded border-white/30 bg-brand-dark text-brand-accent" />
+                    Card Holder (AFA03854)
                   </label>
                   <button type="button" onClick={addEditItem} disabled={products.length === 0} className="mt-2 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20 disabled:opacity-50">
                     + Ajouter une ligne
