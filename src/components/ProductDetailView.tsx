@@ -23,6 +23,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
   const [addScreenProtector, setAddScreenProtector] = useState(false)
   const [addSmartFold, setAddSmartFold] = useState(false)
   const [smartFoldModalOpen, setSmartFoldModalOpen] = useState(false)
+  const [commanderHint, setCommanderHint] = useState<string>('')
   const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
   const smartFoldUpsell = useMemo(() => getSmartFoldUpsell(), [])
 
@@ -57,6 +58,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     setAddScreenProtector(false)
     setAddSmartFold(false)
     setSmartFoldModalOpen(false)
+    setCommanderHint('')
   }, [product?.id ?? ''])
 
   useEffect(() => {
@@ -108,6 +110,23 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     )
   }
 
+  const handleCommanderClick = () => {
+    if (!selectedPhoneId) {
+      setCommanderHint('Il faut choisir un modèle.')
+      return
+    }
+    if (colorOptions.length > 0 && !selectedColorId) {
+      setCommanderHint('Il faut choisir une couleur.')
+      return
+    }
+    if (!canCommander) {
+      setCommanderHint('Cette variante n’est pas disponible.')
+      return
+    }
+    setCommanderHint('')
+    handleCommander()
+  }
+
   return (
     <div className="min-h-screen bg-brand-dark">
       {backLink && (
@@ -116,7 +135,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
         </header>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
+      <main className="max-w-6xl mx-auto px-4 py-6 sm:py-10 pb-28 sm:pb-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Colonne gauche : galerie */}
           <div className="space-y-3">
@@ -381,19 +400,10 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 Cette variante n&apos;est pas disponible à la commande (stock épuisé et non disponible chez le fournisseur).
               </p>
             )}
-            {canCommander ? (
-              <button
-                type="button"
-                onClick={handleCommander}
-                className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 transition-all duration-200 border-2 border-black"
-              >
-                Commander maintenant
-              </button>
-            ) : (
-              <p className="text-brand-muted text-sm">
-                Choisissez votre modèle{colorOptions.length > 0 ? ' et votre couleur' : ''} pour commander.
-              </p>
-            )}
+            {/* Le bouton principal est dans la barre fixe en bas */}
+            <p className="text-brand-muted text-sm">
+              Choisissez votre modèle{colorOptions.length > 0 ? ' et votre couleur' : ''} puis validez avec le bouton ci-dessous.
+            </p>
 
             <div className="mt-6 flex flex-col gap-2 text-sm text-brand-muted">
               <p className="flex items-center gap-2">
@@ -419,6 +429,36 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
           </section>
         )}
       </main>
+
+      {/* Barre fixe "Commander maintenant" (toujours visible) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-brand-dark/95 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-brand-muted truncate">
+              {title ?? product.name}
+            </p>
+            <p className="text-sm font-semibold text-white">
+              {product.price.toLocaleString('fr-FR')} DA
+            </p>
+            {commanderHint && (
+              <p className="text-xs text-amber-300 mt-1">
+                {commanderHint}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleCommanderClick}
+            className={`px-5 py-3 rounded-xl font-semibold border-2 transition-all duration-200 ${
+              canCommander
+                ? 'bg-white text-black border-black hover:bg-neutral-200'
+                : 'bg-white/70 text-black/70 border-black/40 hover:bg-white/80'
+            }`}
+          >
+            Commander maintenant
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
