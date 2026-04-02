@@ -37,3 +37,19 @@ export function getSmartFoldUpsell(): Antichoc {
     compatibleWith: [...allIphoneIds],
   }
 }
+
+/** Produit upsell : Nano Pop Silicone phone holder (Spigen). */
+export function getNanoPopUpsell(): Antichoc {
+  const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id)
+  return {
+    id: 'upsell-spigen-nano-pop',
+    name: 'Nano Pop silicone phone holder Spigen',
+    description: 'Support anneau en silicone. Compatible MagSafe.',
+    price: 1800,
+    wholesalePrice: 0,
+    quantity: 0,
+    image: '',
+    photoUrl: '/nano-pop-upsell.png',
+    compatibleWith: [...allIphoneIds],
+  }
+}
