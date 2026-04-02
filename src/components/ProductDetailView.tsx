@@ -381,14 +381,19 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 Cette variante n&apos;est pas disponible à la commande (stock épuisé et non disponible chez le fournisseur).
               </p>
             )}
-            <button
-              type="button"
-              onClick={handleCommander}
-              disabled={!canCommander}
-              className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 transition-all duration-200 border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-            >
-              Commander maintenant
-            </button>
+            {canCommander ? (
+              <button
+                type="button"
+                onClick={handleCommander}
+                className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 transition-all duration-200 border-2 border-black"
+              >
+                Commander maintenant
+              </button>
+            ) : (
+              <p className="text-brand-muted text-sm">
+                Choisissez votre modèle{colorOptions.length > 0 ? ' et votre couleur' : ''} pour commander.
+              </p>
+            )}
 
             <div className="mt-6 flex flex-col gap-2 text-sm text-brand-muted">
               <p className="flex items-center gap-2">
