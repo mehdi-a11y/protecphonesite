@@ -314,9 +314,14 @@ export function AdminPage() {
 
   const handleSaveProducts = async () => {
     setProductsSaveStatus('saving')
-    setProductsSaveMessage(null)
+    setProductsSaveMessage('Enregistrement des produits en cours…')
     try {
-      await saveProducts(products)
+      // Envoie chaque produit séparément pour éviter les erreurs 413 (payload trop volumineux).
+      for (const product of products) {
+        await apiAddProduct(product)
+      }
+      await loadProducts()
+      setProducts(getAllAntichocs())
       setProductsSaveStatus('ok')
       setProductsSaveMessage('Produits enregistrés.')
       setTimeout(() => {

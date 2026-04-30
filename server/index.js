@@ -83,6 +83,60 @@ const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
 const API_TOKEN = process.env.YALIDINE_API_TOKEN || ''
 
+let sharpInstancePromise = null
+function getSharp() {
+  if (!sharpInstancePromise) {
+    sharpInstancePromise = import('sharp').then((m) => m.default)
+  }
+  return sharpInstancePromise
+}
+
+/** Compresse une image data URL en webp pour alléger la base et accélérer le site. */
+async function optimizeImageDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return dataUrl
+  try {
+    const comma = dataUrl.indexOf(',')
+    if (comma < 0) return dataUrl
+    const base64 = dataUrl.slice(comma + 1)
+    if (!base64) return dataUrl
+    const input = Buffer.from(base64, 'base64')
+    const sharp = await getSharp()
+    const output = await sharp(input)
+      .rotate()
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 74, effort: 4 })
+      .toBuffer()
+    return `data:image/webp;base64,${output.toString('base64')}`
+  } catch (_) {
+    return dataUrl
+  }
+}
+
+async function optimizeProductImages(product) {
+  if (!product || typeof product !== 'object') return product
+  const next = { ...product }
+  if (typeof next.photoUrl === 'string' && next.photoUrl.startsWith('data:image/')) {
+    next.photoUrl = await optimizeImageDataUrl(next.photoUrl)
+  }
+  if (Array.isArray(next.photoGallery) && next.photoGallery.length > 0) {
+    const optimizedGallery = []
+    for (const url of next.photoGallery) {
+      optimizedGallery.push(await optimizeImageDataUrl(url))
+    }
+    next.photoGallery = optimizedGallery
+    if ((!next.photoUrl || typeof next.photoUrl !== 'string') && optimizedGallery[0]) {
+      next.photoUrl = optimizedGallery[0]
+    }
+  }
+  return next
+}
+
+async function optimizeProductsImages(products) {
+  const out = []
+  for (const p of products) out.push(await optimizeProductImages(p))
+  return out
+}
+
 // Nom de wilaya (français) → code pour appeler l'API Yalidine (centers par wilaya_id)
 const WILAYA_NAME_TO_CODE = {
   Adrar: '01', Chlef: '02', Laghouat: '03', 'Oum El Bouaghi': '04', Batna: '05', 'Béjaïa': '06',
@@ -697,7 +751,8 @@ app.put('/api/products', async (req, res) => {
   try {
     const products = Array.isArray(req.body) ? req.body : [req.body]
     if (!products.length) return res.status(400).json({ error: 'products requis' })
-    await dbSaveProducts(products)
+    const optimizedProducts = await optimizeProductsImages(products)
+    await dbSaveProducts(optimizedProducts)
     res.json(await dbGetProducts())
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -707,7 +762,7 @@ app.put('/api/products', async (req, res) => {
 // Ajoute un seul produit (évite d'envoyer toute la liste = Payload Too Large)
 app.post('/api/products/add', async (req, res) => {
   try {
-    const product = req.body
+    const product = await optimizeProductImages(req.body)
     if (!product || !product.id) return res.status(400).json({ error: 'product avec id requis' })
     const current = await dbGetProducts()
     const existing = current.find((p) => p.id === product.id)
