@@ -266,7 +266,7 @@ export function CollectionPage() {
                   className="rounded-2xl bg-brand-card border border-white/10 overflow-hidden flex flex-col"
                 >
                   <Link
-                    to={`/p/${landingSlug}`}
+                    to={selectedModelId ? `/p/${landingSlug}?model=${encodeURIComponent(selectedModelId)}` : `/p/${landingSlug}`}
                     className="block aspect-[4/5] bg-brand-dark overflow-hidden"
                   >
                     {photo ? (
@@ -299,7 +299,7 @@ export function CollectionPage() {
                       </button>
                     </div>
 
-                    <Link to={`/p/${landingSlug}`} className="group">
+                    <Link to={selectedModelId ? `/p/${landingSlug}?model=${encodeURIComponent(selectedModelId)}` : `/p/${landingSlug}`} className="group">
                       <h3 className="font-semibold text-white text-sm leading-tight mb-2 line-clamp-2 group-hover:text-brand-accent transition-colors">
                         {p.name}
                       </h3>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { loadProducts, getAntichocById } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
@@ -16,6 +16,7 @@ type Step = 'landing' | 'checkout' | 'confirmation'
 
 export function ProductLandingPage() {
   const { slug } = useParams<{ slug: string }>()
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState<Step>('landing')
   const [antichoc, setAntichoc] = useState<Antichoc | null>(null)
   const [title, setTitle] = useState<string | null>(null)
@@ -141,6 +142,8 @@ export function ProductLandingPage() {
     <ProductDetailView
       product={antichoc}
       title={title ?? undefined}
+      initialSelectedModelId={searchParams.get('model')}
+      lockModelSelection={Boolean(searchParams.get('model'))}
       onCommander={goToCheckout}
       backLink={
         <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">

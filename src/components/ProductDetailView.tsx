@@ -1,13 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Antichoc } from '../data'
 import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, ANTICHOC_COLORS, isVariantOrderable, hasOrderableVariantForPhone, hasOrderableVariantForSamsung } from '../data'
-import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
+import { getScreenProtectorUpsell } from '../data-screen-protector'
 import { trackViewContent } from '../facebookPixel'
 import { trackTikTokViewContent } from '../tiktokPixel'
 
 interface Props {
   product: Antichoc
   title?: string | null
+  initialSelectedModelId?: string | null
+  lockModelSelection?: boolean
   /** (selectedModelId, selectedColorId, addUpsellScreenProtector, addUpsellSmartFold, addUpsellNanoPop, addUpsellCardHolder) */
   onCommander: (
     selectedModelId: string,
@@ -20,20 +22,18 @@ interface Props {
   backLink?: React.ReactNode
 }
 
-export function ProductDetailView({ product, title, onCommander, backLink }: Props) {
+export function ProductDetailView({
+  product,
+  title,
+  initialSelectedModelId,
+  lockModelSelection = false,
+  onCommander,
+  backLink,
+}: Props) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [addScreenProtector, setAddScreenProtector] = useState(false)
-  const [addSmartFold, setAddSmartFold] = useState(false)
-  const [smartFoldModalOpen, setSmartFoldModalOpen] = useState(false)
-  const [addNanoPop, setAddNanoPop] = useState(false)
-  const [nanoPopModalOpen, setNanoPopModalOpen] = useState(false)
-  const [addCardHolder, setAddCardHolder] = useState(false)
-  const [cardHolderModalOpen, setCardHolderModalOpen] = useState(false)
   const [commanderHint, setCommanderHint] = useState<string>('')
   const screenProtectorUpsell = useMemo(() => getScreenProtectorUpsell(), [])
-  const smartFoldUpsell = useMemo(() => getSmartFoldUpsell(), [])
-  const nanoPopUpsell = useMemo(() => getNanoPopUpsell(), [])
-  const cardHolderUpsell = useMemo(() => getCardHolderMagSafeUpsell(), [])
 
   const modelOptions = useMemo(() => {
     if (product.deviceType === 'samsung') {
@@ -64,12 +64,6 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
     setSelectedColorId('')
     setSelectedImageIndex(0)
     setAddScreenProtector(false)
-    setAddSmartFold(false)
-    setSmartFoldModalOpen(false)
-    setAddNanoPop(false)
-    setNanoPopModalOpen(false)
-    setAddCardHolder(false)
-    setCardHolderModalOpen(false)
     setCommanderHint('')
   }, [product?.id ?? ''])
 
@@ -83,6 +77,12 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
       if (first?.id) setSelectedColorId(first.id)
     }
   }, [modelOptions, colorOptions, selectedPhoneId, selectedColorId])
+  useEffect(() => {
+    if (!initialSelectedModelId) return
+    if (!modelOptions.includes(initialSelectedModelId)) return
+    if (selectedPhoneId === initialSelectedModelId) return
+    setSelectedPhoneId(initialSelectedModelId)
+  }, [initialSelectedModelId, modelOptions, selectedPhoneId])
   useEffect(() => {
     if (selectedPhoneId && colorOptions.length > 0 && selectedColorId && !orderableColorIdsForSelectedPhone.has(selectedColorId)) {
       const first = colorOptions.find((c) => orderableColorIdsForSelectedPhone.has(c.id))
@@ -118,9 +118,9 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
       selectedPhoneId,
       colorOptions.length >= 1 ? selectedColorId : '',
       addScreenProtector,
-      addSmartFold,
-      addNanoPop,
-      addCardHolder,
+      false,
+      false,
+      false,
     )
   }
 
@@ -230,6 +230,7 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 <select
                   value={selectedPhoneId}
                   onChange={(e) => setSelectedPhoneId(e.target.value)}
+                  disabled={lockModelSelection}
                   required
                   className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
                 >
@@ -320,264 +321,6 @@ export function ProductDetailView({ product, title, onCommander, backLink }: Pro
                 </p>
               </div>
             </section>
-
-            {/* Upsell : Portefeuille magnétique (Spigen Smart Fold) */}
-            <section className="mb-6">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
-                  Ajoutez votre portefeuille
-                </h2>
-                <span className="px-2 py-0.5 rounded bg-brand-accent/20 text-brand-accent text-xs font-medium">
-                  Compatible MagSafe
-                </span>
-              </div>
-              <div className="rounded-xl border border-brand-accent/30 bg-brand-card/30 p-4">
-                <label className="flex gap-4 cursor-pointer group">
-                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-brand-card border border-white/10 overflow-hidden flex items-center justify-center">
-                    {smartFoldUpsell.photoUrl ? (
-                      <img
-                        src={smartFoldUpsell.photoUrl}
-                        alt={smartFoldUpsell.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setSmartFoldModalOpen(true)
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      />
-                    ) : (
-                      <span className="text-2xl">{smartFoldUpsell.image}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white group-hover:text-brand-accent transition-colors">
-                      {smartFoldUpsell.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-brand-accent font-semibold">
-                        {smartFoldUpsell.price} DA
-                      </span>
-                    </div>
-                    <p className="text-xs text-brand-muted mt-1">
-                      Support intégré et portefeuille magnétique.
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={addSmartFold}
-                    onChange={(e) => setAddSmartFold(e.target.checked)}
-                    className="mt-2 w-5 h-5 rounded border-white/30 text-brand-accent focus:ring-brand-accent"
-                  />
-                </label>
-                <p className="text-xs text-brand-muted mt-2">
-                  Cochez pour ajouter à votre commande.
-                </p>
-              </div>
-            </section>
-
-            {smartFoldModalOpen && smartFoldUpsell.photoUrl && (
-              <div
-                className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-                onClick={() => setSmartFoldModalOpen(false)}
-                role="dialog"
-                aria-modal="true"
-              >
-                <div
-                  className="relative max-w-3xl w-full"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSmartFoldModalOpen(false)}
-                    className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 border border-white/10"
-                    aria-label="Fermer"
-                  >
-                    ×
-                  </button>
-                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-brand-dark">
-                    <img
-                      src={smartFoldUpsell.photoUrl}
-                      alt={smartFoldUpsell.name}
-                      className="w-full h-auto max-h-[75vh] object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Upsell : Nano Pop (Spigen) */}
-            <section className="mb-6">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
-                  Ajoutez votre support anneau
-                </h2>
-                <span className="px-2 py-0.5 rounded bg-brand-accent/20 text-brand-accent text-xs font-medium">
-                  Nano Pop
-                </span>
-              </div>
-              <div className="rounded-xl border border-brand-accent/30 bg-brand-card/30 p-4">
-                <label className="flex gap-4 cursor-pointer group">
-                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-brand-card border border-white/10 overflow-hidden flex items-center justify-center">
-                    {nanoPopUpsell.photoUrl ? (
-                      <img
-                        src={nanoPopUpsell.photoUrl}
-                        alt={nanoPopUpsell.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setNanoPopModalOpen(true)
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      />
-                    ) : (
-                      <span className="text-2xl">{nanoPopUpsell.image}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white group-hover:text-brand-accent transition-colors">
-                      {nanoPopUpsell.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-brand-accent font-semibold">
-                        {nanoPopUpsell.price} DA
-                      </span>
-                    </div>
-                    <p className="text-xs text-brand-muted mt-1">
-                      Support en silicone, prise en main facile.
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={addNanoPop}
-                    onChange={(e) => setAddNanoPop(e.target.checked)}
-                    className="mt-2 w-5 h-5 rounded border-white/30 text-brand-accent focus:ring-brand-accent"
-                  />
-                </label>
-              </div>
-            </section>
-
-            {nanoPopModalOpen && nanoPopUpsell.photoUrl && (
-              <div
-                className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-                onClick={() => setNanoPopModalOpen(false)}
-                role="dialog"
-                aria-modal="true"
-              >
-                <div
-                  className="relative max-w-3xl w-full"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setNanoPopModalOpen(false)}
-                    className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 border border-white/10"
-                    aria-label="Fermer"
-                  >
-                    ×
-                  </button>
-                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-brand-dark">
-                    <img
-                      src={nanoPopUpsell.photoUrl}
-                      alt={nanoPopUpsell.name}
-                      className="w-full h-auto max-h-[75vh] object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Upsell : Card Holder MagSafe (Spigen AFA03854) */}
-            <section className="mb-6">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
-                  Ajoutez votre porte-cartes
-                </h2>
-                <span className="px-2 py-0.5 rounded bg-brand-accent/20 text-brand-accent text-xs font-medium">
-                  AFA03854
-                </span>
-              </div>
-              <div className="rounded-xl border border-brand-accent/30 bg-brand-card/30 p-4">
-                <label className="flex gap-4 cursor-pointer group">
-                  <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-brand-card border border-white/10 overflow-hidden flex items-center justify-center">
-                    {cardHolderUpsell.photoUrl ? (
-                      <img
-                        src={cardHolderUpsell.photoUrl}
-                        alt={cardHolderUpsell.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setCardHolderModalOpen(true)
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      />
-                    ) : (
-                      <span className="text-2xl">{cardHolderUpsell.image}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white group-hover:text-brand-accent transition-colors">
-                      {cardHolderUpsell.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-brand-accent font-semibold">
-                        {cardHolderUpsell.price} DA
-                      </span>
-                    </div>
-                    <p className="text-xs text-brand-muted mt-1">
-                      Porte-cartes magnétique compact.
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={addCardHolder}
-                    onChange={(e) => setAddCardHolder(e.target.checked)}
-                    className="mt-2 w-5 h-5 rounded border-white/30 text-brand-accent focus:ring-brand-accent"
-                  />
-                </label>
-              </div>
-            </section>
-
-            {cardHolderModalOpen && cardHolderUpsell.photoUrl && (
-              <div
-                className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-                onClick={() => setCardHolderModalOpen(false)}
-                role="dialog"
-                aria-modal="true"
-              >
-                <div
-                  className="relative max-w-3xl w-full"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setCardHolderModalOpen(false)}
-                    className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 border border-white/10"
-                    aria-label="Fermer"
-                  >
-                    ×
-                  </button>
-                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-brand-dark">
-                    <img
-                      src={cardHolderUpsell.photoUrl}
-                      alt={cardHolderUpsell.name}
-                      className="w-full h-auto max-h-[75vh] object-contain"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {selectedPhoneId && !selectedVariantOrderable && (colorOptions.length === 0 || selectedColorId) && (
               <p className="mb-3 text-amber-400 text-sm">
