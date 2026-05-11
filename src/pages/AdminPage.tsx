@@ -317,11 +317,13 @@ export function AdminPage() {
     setProductsSaveMessage('Enregistrement des produits en cours…')
     try {
       // Envoie chaque produit séparément pour éviter les erreurs 413 (payload trop volumineux).
+      let latestProducts: Antichoc[] | null = null
       for (const product of products) {
-        await apiAddProduct(product)
+        latestProducts = await apiAddProduct(product)
       }
-      await loadProducts()
-      setProducts(getAllAntichocs())
+      if (latestProducts) {
+        setProducts(latestProducts)
+      }
       setProductsSaveStatus('ok')
       setProductsSaveMessage('Produits enregistrés.')
       setTimeout(() => {
