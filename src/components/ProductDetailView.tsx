@@ -80,7 +80,7 @@ export function ProductDetailView({
   useEffect(() => {
     if (!initialSelectedModelId) return
     if (!modelOptions.includes(initialSelectedModelId)) return
-    if (selectedPhoneId === initialSelectedModelId) return
+    if (selectedPhoneId) return
     setSelectedPhoneId(initialSelectedModelId)
   }, [initialSelectedModelId, modelOptions, selectedPhoneId])
   useEffect(() => {
