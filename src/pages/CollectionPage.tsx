@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { apiGetCollectionBySlug, apiGetLandingBySlug } from '../api'
-import { loadProducts, getAntichocById } from '../data'
-import type { Antichoc } from '../data'
+import {
+  loadProducts,
+  getAntichocById,
+  IPHONE_MODELS,
+  SAMSUNG_ULTRA_MODELS,
+  hasOrderableVariantForPhone,
+  hasOrderableVariantForSamsung,
+} from '../data'
+import type { Antichoc, IPhoneModelId, SamsungModelId } from '../data'
 
 interface CollectionProduct {
   landingSlug: string
@@ -15,6 +22,8 @@ export function CollectionPage() {
   const [items, setItems] = useState<CollectionProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedDeviceType, setSelectedDeviceType] = useState<'iphone' | 'samsung' | null>(null)
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!slug) {
@@ -66,6 +75,63 @@ export function CollectionPage() {
     }
   }, [slug])
 
+  const availableIphoneIds = useMemo(() => {
+    const ids = new Set<IPhoneModelId>()
+    for (const { product } of items) {
+      if (product.deviceType === 'samsung') continue
+      const compatible = product.compatibleWith?.length
+        ? product.compatibleWith
+        : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
+      for (const phoneId of compatible) {
+        if (hasOrderableVariantForPhone(product, phoneId)) ids.add(phoneId)
+      }
+    }
+    return IPHONE_MODELS.filter((m) => ids.has(m.id))
+  }, [items])
+
+  const availableSamsungIds = useMemo(() => {
+    const ids = new Set<SamsungModelId>()
+    for (const { product } of items) {
+      if (product.deviceType !== 'samsung') continue
+      const compatible = product.compatibleWithSamsung?.length
+        ? product.compatibleWithSamsung
+        : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[])
+      for (const modelId of compatible) {
+        if (hasOrderableVariantForSamsung(product, modelId)) ids.add(modelId)
+      }
+    }
+    return SAMSUNG_ULTRA_MODELS.filter((m) => ids.has(m.id))
+  }, [items])
+
+  useEffect(() => {
+    if (selectedDeviceType && selectedModelId) return
+    if (availableIphoneIds.length > 0 && availableSamsungIds.length === 0) {
+      setSelectedDeviceType('iphone')
+      return
+    }
+    if (availableSamsungIds.length > 0 && availableIphoneIds.length === 0) {
+      setSelectedDeviceType('samsung')
+      return
+    }
+  }, [availableIphoneIds, availableSamsungIds, selectedDeviceType, selectedModelId])
+
+  const filteredItems = useMemo(() => {
+    if (!selectedDeviceType || !selectedModelId) return []
+    return items.filter(({ product }) => {
+      if (selectedDeviceType === 'iphone') {
+        if (product.deviceType === 'samsung') return false
+        return hasOrderableVariantForPhone(product, selectedModelId as IPhoneModelId)
+      }
+      if (product.deviceType !== 'samsung') return false
+      return hasOrderableVariantForSamsung(product, selectedModelId as SamsungModelId)
+    })
+  }, [items, selectedDeviceType, selectedModelId])
+
+  const chosenModelName =
+    IPHONE_MODELS.find((m) => m.id === selectedModelId)?.name ??
+    SAMSUNG_ULTRA_MODELS.find((m) => m.id === selectedModelId)?.name ??
+    null
+
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center">
@@ -94,18 +160,105 @@ export function CollectionPage() {
         >
           ← Retour à l&apos;accueil
         </Link>
-        <h1 className="text-2xl font-bold text-white mb-1">
-          Choisissez votre antichoc
-        </h1>
+        <h1 className="text-2xl font-bold text-white mb-1">{name}</h1>
         <p className="text-brand-muted text-sm mb-8">
-          {items.length} modèles disponibles pour votre iPhone.
+          Mini version : le client choisit d&apos;abord son modèle, puis voit uniquement les antichocs disponibles.
         </p>
 
         {items.length === 0 ? (
           <p className="text-brand-muted">Aucun produit dans cette collection.</p>
+        ) : !selectedDeviceType ? (
+          <div className="max-w-2xl">
+            <h2 className="text-xl font-semibold text-white mb-2">Quel appareil utilisez-vous ?</h2>
+            <p className="text-brand-muted text-sm mb-4">Choisissez la gamme pour continuer.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {availableIphoneIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDeviceType('iphone')
+                    setSelectedModelId(null)
+                  }}
+                  className="p-4 rounded-xl bg-brand-card border border-white/10 text-left hover:border-brand-accent/50 hover:bg-white/5 transition-all duration-200"
+                >
+                  <p className="font-medium text-white">iPhone</p>
+                  <p className="text-xs text-brand-muted mt-1">{availableIphoneIds.length} modèle(s) disponible(s)</p>
+                </button>
+              )}
+              {availableSamsungIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDeviceType('samsung')
+                    setSelectedModelId(null)
+                  }}
+                  className="p-4 rounded-xl bg-brand-card border border-white/10 text-left hover:border-brand-accent/50 hover:bg-white/5 transition-all duration-200"
+                >
+                  <p className="font-medium text-white">Samsung</p>
+                  <p className="text-xs text-brand-muted mt-1">{availableSamsungIds.length} modèle(s) disponible(s)</p>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : !selectedModelId ? (
+          <div className="max-w-3xl">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-white">
+                  {selectedDeviceType === 'iphone' ? 'Quel est votre iPhone ?' : 'Quel est votre Samsung ?'}
+                </h2>
+                <p className="text-brand-muted text-sm">
+                  Sélectionnez votre modèle pour voir les produits disponibles.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDeviceType(null)
+                  setSelectedModelId(null)
+                }}
+                className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+              >
+                Changer d&apos;appareil
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(selectedDeviceType === 'iphone' ? availableIphoneIds : availableSamsungIds).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setSelectedModelId(m.id)}
+                  className="p-4 rounded-xl bg-brand-card border border-white/10 text-left hover:border-brand-accent/50 hover:bg-white/5 transition-all duration-200 flex items-center justify-between group"
+                >
+                  <span className="font-medium text-white">{m.name}</span>
+                  <span className="text-brand-muted group-hover:text-brand-accent transition-colors">→</span>
+                </button>
+              ))}
+            </div>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {items.map(({ landingSlug, product: p }) => {
+          <>
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              <button
+                type="button"
+                onClick={() => setSelectedModelId(null)}
+                className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+              >
+                Changer de modèle
+              </button>
+              <span className="text-brand-muted text-sm">
+                Modèle sélectionné :
+                <strong className="text-white ml-1">{chosenModelName ?? selectedModelId}</strong>
+              </span>
+              <span className="text-brand-muted text-sm">
+                • {filteredItems.length} produit{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            {filteredItems.length === 0 ? (
+              <p className="text-brand-muted">Aucun produit disponible pour ce modèle dans cette collection.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredItems.map(({ landingSlug, product: p }) => {
               const photo = p.photoGallery?.[0] ?? p.photoUrl
               return (
                 <article
@@ -167,8 +320,10 @@ export function CollectionPage() {
                   </div>
                 </article>
               )
-            })}
-          </div>
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

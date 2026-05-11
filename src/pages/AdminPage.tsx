@@ -2830,7 +2830,7 @@ export function AdminPage() {
         {tab === 'collections' && (
           <div className="space-y-6">
             <p className="text-brand-muted text-sm">
-              Les collections regroupent une ou plusieurs landing pages. URL publique : <strong className="text-white">/c/slug</strong> (ex. /c/coques-iphone).
+              Les collections regroupent une ou plusieurs landing pages. URL publique : <strong className="text-white">/c/slug</strong> (mini version avec choix du modèle avant les produits).
             </p>
             <div className="rounded-xl bg-brand-card border border-white/10 p-4 max-w-lg space-y-4">
               <h3 className="font-semibold text-white">
@@ -2995,6 +2995,22 @@ export function AdminPage() {
                         >
                           Ouvrir
                         </Link>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const publicUrl = `${window.location.origin}/c/${c.slug}`
+                            try {
+                              await navigator.clipboard.writeText(publicUrl)
+                              setCollectionMessage(`Lien copié : ${publicUrl}`)
+                              setTimeout(() => setCollectionMessage(null), 2000)
+                            } catch {
+                              setCollectionMessage('Copie impossible. Lien : ' + publicUrl)
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
+                        >
+                          Copier lien
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
