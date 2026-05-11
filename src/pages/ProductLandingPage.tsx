@@ -143,7 +143,6 @@ export function ProductLandingPage() {
       product={antichoc}
       title={title ?? undefined}
       initialSelectedModelId={searchParams.get('model')}
-      lockModelSelection={Boolean(searchParams.get('model'))}
       onCommander={goToCheckout}
       backLink={
         <Link to="/" className="text-brand-muted hover:text-white text-sm flex items-center gap-1">
