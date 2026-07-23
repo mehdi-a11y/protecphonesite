@@ -955,10 +955,10 @@ app.delete('/api/collections/:slug', async (req, res) => {
   }
 })
 
-// En production : servir le frontend (Vite build) et le SPA
-const isProduction = process.env.NODE_ENV === 'production'
+// Servir le frontend (Vite build) et le SPA quand dist/ existe (VPS / production)
 const distPath = join(root, 'dist')
-if (isProduction && existsSync(distPath)) {
+const serveFrontend = process.env.NODE_ENV !== 'development' && existsSync(distPath)
+if (serveFrontend) {
   app.use(express.static(distPath))
   app.get('*', (req, res) => {
     res.sendFile(join(distPath, 'index.html'))
@@ -969,7 +969,7 @@ const PORT = Number(process.env.PORT) || 3001
 ;(async () => {
   await initDb()
   app.listen(PORT, () => {
-    console.log(isProduction ? `Serveur démarré sur le port ${PORT}` : `Proxy Yalidine démarré sur http://localhost:${PORT}`)
+    console.log(serveFrontend ? `Serveur démarré sur le port ${PORT} (front + API)` : `Proxy Yalidine démarré sur http://localhost:${PORT}`)
     if (!API_ID || !API_TOKEN) {
       console.warn('Attention : YALIDINE_API_ID ou YALIDINE_API_TOKEN manquant. Définissez-les (variables d\'environnement ou .env).')
     }

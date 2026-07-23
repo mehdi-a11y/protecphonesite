@@ -2,7 +2,87 @@
 
 Une fois hébergée, vous aurez une **URL fixe** pour le webhook Yalidine (plus besoin de ngrok) et vous pourrez tester en conditions réelles.
 
-## Option recommandée : Render (gratuit)
+## Hébergement Contabo (VPS) — production actuelle
+
+Si le site tourne sur un **VPS Contabo** (ex. `www.protecphone.shop`), les variables `VITE_*` doivent être dans le fichier **`.env` sur le serveur**, puis le front doit être **rebuild**.
+
+### 1. Se connecter au serveur
+
+```bash
+ssh root@144.91.90.99
+# ou : ssh votre_utilisateur@144.91.90.99
+cd /var/www/protecphone
+```
+
+(Remplacez le chemin par celui où le projet est installé sur le VPS.)
+
+### 2. Ajouter les pixels TikTok dans `.env`
+
+Éditez le `.env` **sur le serveur** (pas seulement en local) :
+
+```bash
+nano .env
+```
+
+Ajoutez ou complétez ces lignes :
+
+```env
+VITE_FB_PIXEL_ID=votre_id_facebook
+VITE_TIKTOK_PIXEL_ID=votre_premier_id_tiktok
+VITE_TIKTOK_PIXEL_ID_2=votre_second_id_tiktok
+```
+
+Enregistrez (`Ctrl+O`, Entrée, `Ctrl+X` avec nano).
+
+**Important** : les variables `VITE_*` sont lues **au moment du build** (`npm run build`). Les modifier sans rebuild ne met pas à jour le site.
+
+### 3. Rebuild et redémarrage
+
+```bash
+npm install
+npm run build
+```
+
+Puis redémarrez l’application Node selon votre setup :
+
+```bash
+# Si vous utilisez PM2 :
+pm2 restart protecphone
+# ou : pm2 restart all
+
+# Si vous utilisez systemd :
+sudo systemctl restart protecphone
+
+# Sinon, arrêtez l’ancien processus et relancez :
+node server/index.js
+```
+
+### 4. Variables d’environnement sur Contabo (récap)
+
+| Key | Où la mettre | Quand elle est prise en compte |
+|-----|--------------|--------------------------------|
+| `DATABASE_URL` | `.env` sur le VPS | Au démarrage du serveur Node |
+| `YALIDINE_API_ID` / `YALIDINE_API_TOKEN` | `.env` sur le VPS | Au démarrage du serveur Node |
+| `VITE_FB_PIXEL_ID` | `.env` sur le VPS | **Au build** (`npm run build`) |
+| `VITE_TIKTOK_PIXEL_ID` | `.env` sur le VPS | **Au build** |
+| `VITE_TIKTOK_PIXEL_ID_2` | `.env` sur le VPS | **Au build** (second pixel) |
+| `TWILIO_*` | `.env` sur le VPS | Au démarrage du serveur Node |
+
+### 5. Vérifier que les pixels TikTok sont actifs
+
+1. Ouvrez **https://www.protecphone.shop** dans Chrome.
+2. **F12** → onglet **Network** → filtre `tiktok` ou `analytics.tiktok.com`.
+3. Rechargez la page : vous devez voir des requêtes vers TikTok Analytics.
+4. Ou installez l’extension **TikTok Pixel Helper** et vérifiez que les **deux** pixels apparaissent.
+
+### 6. Webhooks en production (Contabo)
+
+- **Yalidine** : `https://www.protecphone.shop/api/yalidine/webhook`
+- **WhatsApp (Twilio)** : `https://www.protecphone.shop/api/whatsapp/webhook`
+
+---
+
+## Option : Render (gratuit)
 
 [Render](https://render.com) permet d’héberger gratuitement une app Node.js (front + API sur la même URL).
 
@@ -63,6 +143,8 @@ Dans l’onglet **Environment** du service :
 | `YALIDINE_API_ID`    | votre API ID Yalidine    |
 | `YALIDINE_API_TOKEN` | votre API Token Yalidine |
 | `VITE_FB_PIXEL_ID`   | (optionnel) ID du Pixel Facebook / Meta pour Facebook Ads. À définir **avant** le build pour que le pixel soit actif. |
+| `VITE_TIKTOK_PIXEL_ID` | (optionnel) ID du Pixel TikTok pour TikTok Ads. À définir **avant** le build. |
+| `VITE_TIKTOK_PIXEL_ID_2` | (optionnel) Second pixel TikTok — les événements sont envoyés aux deux pixels. |
 | `TWILIO_ACCOUNT_SID` | (optionnel) Compte Twilio — envoi WhatsApp de confirmation de commande au client. |
 | `TWILIO_AUTH_TOKEN` | (optionnel) Token d’authentification Twilio. |
 | `TWILIO_WHATSAPP_FROM` | (optionnel) Numéro WhatsApp expéditeur, ex. `whatsapp:+14155238886` (sandbox) ou `whatsapp:+213XXXXXXXXX`. |
