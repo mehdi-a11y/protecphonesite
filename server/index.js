@@ -152,22 +152,36 @@ const WILAYA_NAME_TO_CODE = {
   Touggourt: '55', Djanet: '56', 'In Salah': '57', 'In Guezzam': '58',
 }
 
+/** Liste des noms de communes valides pour une wilaya (1-58), utilisée pour valider to_commune_name. */
+async function getCommuneNamesForWilaya(wilayaNum) {
+  let names = COMMUNES_FALLBACK[wilayaNum] ? [...COMMUNES_FALLBACK[wilayaNum]] : []
+  if (names.length === 0) {
+    try {
+      const leblad = (await import('@dzcode-io/leblad')).default
+      const baladyiats = leblad.getBaladyiatsForWilaya(wilayaNum) || []
+      names = baladyiats.map((b) => (b.name != null ? String(b.name).trim() : '')).filter(Boolean)
+    } catch (_) {}
+  }
+  return names
+}
+
 /** Retourne un nom de commune valide pour la wilaya (pour to_commune_name Yalidine). */
 async function getDefaultCommuneForWilaya(wilayaName) {
   const code = WILAYA_NAME_TO_CODE[wilayaName] || null
   if (!code) return wilayaName || 'Alger'
   const wilayaNum = parseInt(code, 10)
   if (Number.isNaN(wilayaNum) || wilayaNum < 1 || wilayaNum > 58) return wilayaName || 'Alger'
-  try {
-    const leblad = (await import('@dzcode-io/leblad')).default
-    const baladyiats = leblad.getBaladyiatsForWilaya(wilayaNum) || []
-    if (baladyiats.length > 0) {
-      const first = baladyiats[0]
-      const name = first?.name != null ? String(first.name).trim() : ''
-      if (name) return name
-    }
-  } catch (_) {}
-  return wilayaName || 'Alger'
+  const names = await getCommuneNamesForWilaya(wilayaNum)
+  return names[0] || wilayaName || 'Alger'
+}
+
+/** Vérifie qu'un nom de commune fait bien partie des communes connues pour la wilaya. */
+async function isValidCommuneForWilaya(communeName, wilayaNum) {
+  if (!communeName) return false
+  const names = await getCommuneNamesForWilaya(wilayaNum)
+  if (names.length === 0) return true // liste indisponible : ne pas bloquer
+  const normalized = communeName.trim().toLowerCase()
+  return names.some((n) => n.trim().toLowerCase() === normalized)
 }
 
 async function fetchYalidineCentersForWilaya(wilayaCode) {
@@ -242,7 +256,6 @@ app.post('/api/yalidine/parcels', async (req, res) => {
     }
     const wilayaName = (out.to_wilaya_name || '').toString().trim()
     let communeName = (out.to_commune_name || '').toString().trim()
-    const looksLikeAddress = communeName.length > 50 || communeName.includes(',')
     // Pour livraison bureau : utiliser la commune du bureau (API ou liste statique) pour éviter l'erreur stopdesk_id / to_commune_name
     if (out.is_stopdesk === true && out.stopdesk_id != null) {
       const bureauCommune = getCommuneByStopdeskId(out.stopdesk_id)
@@ -251,7 +264,10 @@ app.post('/api/yalidine/parcels', async (req, res) => {
         communeName = bureauCommune
       }
     }
-    if (!communeName || communeName === wilayaName || looksLikeAddress) {
+    const wilayaCode = WILAYA_NAME_TO_CODE[wilayaName] || null
+    const wilayaNum = wilayaCode ? parseInt(wilayaCode, 10) : null
+    const communeValid = wilayaNum ? await isValidCommuneForWilaya(communeName, wilayaNum) : false
+    if (!communeName || communeName === wilayaName || !communeValid) {
       out.to_commune_name = await getDefaultCommuneForWilaya(wilayaName)
     }
     normalizedParcels.push(out)

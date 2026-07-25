@@ -93,6 +93,28 @@ export interface YalidineCreateResult {
   message?: string
 }
 
+/** Met en forme un message d'erreur Yalidine qui peut être une chaîne ou un objet (ex. erreurs de validation par champ). */
+function formatYalidineErrorMessage(value: unknown): string {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'object') {
+    try {
+      const parts = Object.entries(value as Record<string, unknown>).map(([k, v]) =>
+        Array.isArray(v) ? `${k}: ${v.join(', ')}` : `${k}: ${String(v)}`,
+      )
+      if (parts.length > 0) return parts.join(' — ')
+    } catch {
+      /* ignore */
+    }
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
+
 /**
  * Crée un colis sur Yalidine pour une commande via le proxy backend.
  * Les identifiants API sont gérés côté serveur (.env : YALIDINE_API_ID, YALIDINE_API_TOKEN).
@@ -116,7 +138,7 @@ export async function createParcelOnYalidine(
       const msg =
         (res.status === 400 && data?.message) ? data.message
           : data?.error ?? data?.message ?? data?.detail ?? (typeof data === 'string' ? data : `Erreur ${res.status}`)
-      return { success: false, error: String(msg) }
+      return { success: false, error: formatYalidineErrorMessage(msg) || `Erreur ${res.status}` }
     }
 
     // Réponse possible : { "order_id": { "success": true, "tracking": "YAL-..." } }
@@ -131,7 +153,7 @@ export async function createParcelOnYalidine(
 
     return {
       success: false,
-      error: result?.message ?? 'Réponse Yalidine sans numéro de suivi',
+      error: formatYalidineErrorMessage(result?.message) || 'Réponse Yalidine sans numéro de suivi',
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
