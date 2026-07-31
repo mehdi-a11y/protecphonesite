@@ -28,6 +28,7 @@ Ajoutez ou complétez ces lignes :
 
 ```env
 VITE_FB_PIXEL_ID=votre_id_facebook
+VITE_FB_PIXEL_ID_2=votre_second_id_facebook
 VITE_TIKTOK_PIXEL_ID=votre_premier_id_tiktok
 VITE_TIKTOK_PIXEL_ID_2=votre_second_id_tiktok
 ```
@@ -64,6 +65,7 @@ node server/index.js
 | `DATABASE_URL` | `.env` sur le VPS | Au démarrage du serveur Node |
 | `YALIDINE_API_ID` / `YALIDINE_API_TOKEN` | `.env` sur le VPS | Au démarrage du serveur Node |
 | `VITE_FB_PIXEL_ID` | `.env` sur le VPS | **Au build** (`npm run build`) |
+| `VITE_FB_PIXEL_ID_2` | `.env` sur le VPS | **Au build** (second pixel Facebook) |
 | `VITE_TIKTOK_PIXEL_ID` | `.env` sur le VPS | **Au build** |
 | `VITE_TIKTOK_PIXEL_ID_2` | `.env` sur le VPS | **Au build** (second pixel) |
 | `TWILIO_*` | `.env` sur le VPS | Au démarrage du serveur Node |

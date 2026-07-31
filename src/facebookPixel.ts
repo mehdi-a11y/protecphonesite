@@ -1,6 +1,8 @@
 /**
  * Facebook / Meta Pixel — connexion avec Facebook Ads.
- * Définir VITE_FB_PIXEL_ID dans .env (ou variables d'environnement en build) pour activer le pixel.
+ * Définir VITE_FB_PIXEL_ID (et optionnellement VITE_FB_PIXEL_ID_2) dans .env
+ * (ou variables d'environnement en build) pour activer le(s) pixel(s).
+ * Les événements sont envoyés à tous les pixels initialisés.
  * Doc : https://developers.facebook.com/docs/meta-pixel
  */
 
@@ -11,32 +13,46 @@ declare global {
   }
 }
 
-const PIXEL_ID = import.meta.env.VITE_FB_PIXEL_ID as string | undefined
+function parsePixelIds(raw: string | undefined): string[] {
+  if (!raw) return []
+  return raw.split(',').map((id) => id.trim()).filter(Boolean)
+}
+
+function getPixelIds(): string[] {
+  const ids = [
+    ...parsePixelIds(import.meta.env.VITE_FB_PIXEL_ID as string | undefined),
+    ...parsePixelIds(import.meta.env.VITE_FB_PIXEL_ID_2 as string | undefined),
+  ]
+  return [...new Set(ids)]
+}
+
+const PIXEL_IDS = getPixelIds()
 
 let loaded = false
 
 function loadPixel(): void {
-  if (loaded || !PIXEL_ID || typeof document === 'undefined') return
+  if (loaded || PIXEL_IDS.length === 0 || typeof document === 'undefined') return
   loaded = true
 
-  const snippet = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/fr_FR/fbevents.js');fbq('init','${PIXEL_ID}');fbq('track','PageView');`
+  const initCalls = PIXEL_IDS.map((id) => `fbq('init','${id}');`).join('')
+  const snippet = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/fr_FR/fbevents.js');${initCalls}fbq('track','PageView');`
   const script = document.createElement('script')
   script.textContent = snippet
   document.head.appendChild(script)
 }
 
-/** Initialise le pixel au chargement de l'app (à appeler une fois, ex. dans main.tsx). */
+/** Initialise le(s) pixel(s) au chargement de l'app (à appeler une fois, ex. dans main.tsx). */
 export function initFacebookPixel(): void {
-  if (!PIXEL_ID) return
+  if (PIXEL_IDS.length === 0) return
   loadPixel()
 }
 
-/** Envoie un événement au pixel (no-op si le pixel n'est pas configuré). */
+/** Envoie un événement à tous les pixels initialisés (no-op si aucun pixel configuré). */
 export function trackFacebookEvent(
   eventName: string,
   params?: Record<string, unknown>,
 ): void {
-  if (!PIXEL_ID || !window.fbq) return
+  if (PIXEL_IDS.length === 0 || !window.fbq) return
   if (params && Object.keys(params).length > 0) {
     window.fbq('track', eventName, params)
   } else {
@@ -88,5 +104,5 @@ export function trackPurchase(value: number, currency = 'DZD', orderId?: string,
 }
 
 export function isPixelEnabled(): boolean {
-  return Boolean(PIXEL_ID)
+  return PIXEL_IDS.length > 0
 }
