@@ -35,6 +35,7 @@ import {
   dbFindOrderByYalidineTracking,
   dbGetProducts,
   dbSaveProducts,
+  dbSaveProduct,
   dbDeleteProduct,
   dbGetDeliveryPrices,
   dbSaveDeliveryPrices,
@@ -775,17 +776,12 @@ app.put('/api/products', async (req, res) => {
   }
 })
 
-// Ajoute un seul produit (évite d'envoyer toute la liste = Payload Too Large)
+// Ajoute ou met à jour un seul produit (upsert direct : évite de réécrire tout le catalogue à chaque sauvegarde)
 app.post('/api/products/add', async (req, res) => {
   try {
     const product = await optimizeProductImages(req.body)
     if (!product || !product.id) return res.status(400).json({ error: 'product avec id requis' })
-    const current = await dbGetProducts()
-    const existing = current.find((p) => p.id === product.id)
-    const next = existing
-      ? current.map((p) => (p.id === product.id ? product : p))
-      : [...current, product]
-    await dbSaveProducts(next)
+    await dbSaveProduct(product)
     res.json(await dbGetProducts())
   } catch (e) {
     res.status(500).json({ error: e.message })

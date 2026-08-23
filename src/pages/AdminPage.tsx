@@ -1,7 +1,6 @@
-import { useState, useEffect, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  getOrders,
   confirmOrder,
   setOrderStatus,
   setOrderAchatDone,
@@ -31,6 +30,7 @@ import {
   syncOrdersWithYalidine,
 } from '../yalidine'
 import {
+  apiGetOrders,
   apiGetLandingPages,
   apiCreateLanding,
   apiUpdateLanding,
@@ -113,6 +113,8 @@ export function AdminPage() {
   const [ordersSearchQuery, setOrdersSearchQuery] = useState('')
   const [ordersStatusFilter, setOrdersStatusFilter] = useState<string>('')
   const [products, setProducts] = useState<Antichoc[]>([])
+  /** Dernier état des produits connu du serveur : sert à ne renvoyer en sauvegarde que les produits réellement modifiés. */
+  const savedProductsRef = useRef<Record<string, Antichoc>>({})
   const [deliveryPrices, setDeliveryPrices] = useState<DeliveryPrices>({})
   const [yalidineApiId, setYalidineApiId] = useState('')
   const [yalidineApiToken, setYalidineApiToken] = useState('')
@@ -162,10 +164,27 @@ export function AdminPage() {
   const [changeReasonInput, setChangeReasonInput] = useState('')
   const [productsSearchQuery, setProductsSearchQuery] = useState('')
 
+  /** Met à jour la liste des produits ET le repère de référence (sert à ne renvoyer que les produits modifiés à la sauvegarde). */
+  const syncProductsFromServer = (list: Antichoc[]) => {
+    const map: Record<string, Antichoc> = {}
+    for (const p of list) map[p.id] = p
+    savedProductsRef.current = map
+    setProducts(list)
+  }
+
+  /** Rafraîchit les commandes sans effacer l'affichage existant si la requête échoue (évite que les statistiques disparaissent). */
+  const refreshOrders = async () => {
+    try {
+      setOrders(await apiGetOrders())
+    } catch {
+      // on garde les commandes déjà affichées
+    }
+  }
+
   useEffect(() => {
     if (auth) {
-      getOrders().then(setOrders)
-      loadProducts().then(() => setProducts(getAllAntichocs()))
+      refreshOrders()
+      loadProducts().then(() => syncProductsFromServer(getAllAntichocs()))
       loadDeliveryPrices().then(() => setDeliveryPrices(getDeliveryPrices()))
       const creds = getYalidineCredentials()
       if (creds) {
@@ -173,7 +192,7 @@ export function AdminPage() {
         setYalidineApiToken(creds.apiToken)
       }
       syncOrdersWithYalidine().then((r) => {
-        if (r.success && r.updated > 0) getOrders().then(setOrders)
+        if (r.success && r.updated > 0) refreshOrders()
       })
       apiGetLandingPages().then(setLandingPages)
       apiGetCollections().then(setCollections)
@@ -185,7 +204,7 @@ export function AdminPage() {
     setYalidineSyncMessage(null)
     const result = await syncOrdersWithYalidine()
     setYalidineSyncing(false)
-    getOrders().then(setOrders)
+    refreshOrders()
     if (result.success) {
       setYalidineSyncMessage(result.updated > 0 ? `${result.updated} commande(s) mise(s) à jour.` : 'Aucun changement.')
     } else {
@@ -199,8 +218,8 @@ export function AdminPage() {
     if (password === ADMIN_PASSWORD) {
       setAdminAuthenticated(true)
       setAuth(true)
-      getOrders().then(setOrders)
-      loadProducts().then(() => setProducts(getAllAntichocs()))
+      refreshOrders()
+      loadProducts().then(() => syncProductsFromServer(getAllAntichocs()))
     } else {
       setError('Mot de passe incorrect')
     }
@@ -214,23 +233,23 @@ export function AdminPage() {
 
   const handleConfirm = async (orderId: string) => {
     await confirmOrder(orderId)
-    getOrders().then(setOrders)
+    refreshOrders()
   }
 
   const handleSetOrderStatus = async (orderId: string, status: Order['status']) => {
     await setOrderStatus(orderId, status)
-    getOrders().then(setOrders)
+    refreshOrders()
   }
 
   const handleColisExpedieChange = async (orderId: string, colisExpedie: boolean) => {
     await updateOrder(orderId, { colisExpedie })
-    getOrders().then(setOrders)
+    refreshOrders()
   }
 
   const handleDeleteOrder = async (orderId: string) => {
     if (!confirm('Supprimer définitivement cette commande ?')) return
     await deleteOrder(orderId)
-    getOrders().then(setOrders)
+    refreshOrders()
   }
 
   const handleDeleteProduct = async (id: string) => {
@@ -239,7 +258,7 @@ export function AdminPage() {
       const { apiDeleteProduct } = await import('../api')
       await apiDeleteProduct(id)
       await loadProducts()
-      setProducts(getAllAntichocs())
+      syncProductsFromServer(getAllAntichocs())
       apiGetLandingPages().then(setLandingPages)
       apiGetCollections().then(setCollections)
     } catch (e) {
@@ -313,16 +332,30 @@ export function AdminPage() {
   }
 
   const handleSaveProducts = async () => {
+    // Ne renvoie que les produits réellement modifiés depuis le dernier chargement/enregistrement
+    // (sinon chaque sauvegarde réécrit tout le catalogue, ce qui est très lent et peut échouer).
+    const changed = products.filter((p) => {
+      const baseline = savedProductsRef.current[p.id]
+      return !baseline || JSON.stringify(baseline) !== JSON.stringify(p)
+    })
+    if (changed.length === 0) {
+      setProductsSaveStatus('ok')
+      setProductsSaveMessage('Aucune modification à enregistrer.')
+      setTimeout(() => {
+        setProductsSaveStatus('idle')
+        setProductsSaveMessage(null)
+      }, 3000)
+      return
+    }
     setProductsSaveStatus('saving')
     setProductsSaveMessage('Enregistrement des produits en cours…')
     try {
-      // Envoie chaque produit séparément pour éviter les erreurs 413 (payload trop volumineux).
       let latestProducts: Antichoc[] | null = null
-      for (const product of products) {
+      for (const product of changed) {
         latestProducts = await apiAddProduct(product)
       }
       if (latestProducts) {
-        setProducts(latestProducts)
+        syncProductsFromServer(latestProducts)
       }
       setProductsSaveStatus('ok')
       setProductsSaveMessage('Produits enregistrés.')
@@ -419,7 +452,7 @@ export function AdminPage() {
   const resetToDefaultProducts = () => {
     if (confirm('Réinitialiser tous les produits aux valeurs par défaut ?')) {
       saveProducts(ANTICHOCS)
-      setProducts(ANTICHOCS)
+      syncProductsFromServer(ANTICHOCS)
     }
   }
 
@@ -461,7 +494,7 @@ export function AdminPage() {
     setYalidineSendingId(null)
     if (result.success) {
       await updateOrderYalidine(order.id, { tracking: result.tracking, sentAt: new Date().toISOString() })
-      getOrders().then(setOrders)
+      refreshOrders()
       setYalidineMessage({ orderId: order.id, type: 'success', text: `Suivi : ${result.tracking}` })
     } else {
       setYalidineMessage({ orderId: order.id, type: 'error', text: result.error })
@@ -1204,7 +1237,7 @@ export function AdminPage() {
           const ordersAFaire = ordersWithBuyList.filter(({ order }) => !order.achatFournisseurDone)
           const ordersTermine = ordersWithBuyList.filter(({ order }) => order.achatFournisseurDone)
           const handleToggleAchatDone = (orderId: string, done: boolean) => {
-            setOrderAchatDone(orderId, done).then(() => getOrders().then(setOrders)).catch(() => {})
+            setOrderAchatDone(orderId, done).then(() => refreshOrders()).catch(() => {})
           }
           const handleOpenChangeReason = (orderId: string) => {
             setChangeReasonOrderId(orderId)
@@ -1358,7 +1391,7 @@ export function AdminPage() {
           const ordersAFaire = ordersDepot.filter((o) => !o.depotExpedieDone)
           const ordersTermine = ordersDepot.filter((o) => o.depotExpedieDone)
           const handleToggleDepotDone = (orderId: string, done: boolean) => {
-            setOrderDepotDone(orderId, done).then(() => getOrders().then(setOrders)).catch(() => {})
+            setOrderDepotDone(orderId, done).then(() => refreshOrders()).catch(() => {})
           }
           const renderDepotCard = (order: Order, done: boolean) => (
             <li key={order.id} className={done ? 'rounded-xl p-4 border bg-brand-card/50 border-white/10' : 'rounded-xl p-4 border bg-brand-card border-emerald-500/20'}>
@@ -2641,7 +2674,7 @@ export function AdminPage() {
                     setLandingMessage(null)
                     try {
                       const updated = await apiAddProduct(newProduct)
-                      setProducts(updated.length ? updated : getAllAntichocs())
+                      syncProductsFromServer(updated.length ? updated : getAllAntichocs())
                       loadProducts().catch(() => {})
                     } catch (e) {
                       setLandingMessage('Erreur produit : ' + (e instanceof Error ? e.message : String(e)))
@@ -3084,7 +3117,7 @@ export function AdminPage() {
                   if (!reason) return
                   setRequestChangeOrderId(changeReasonOrderId)
                   apiRequestOrderChange(changeReasonOrderId, reason)
-                    .then(() => getOrders().then(setOrders))
+                    .then(() => refreshOrders())
                     .finally(() => {
                       setRequestChangeOrderId(null)
                       setChangeReasonOrderId(null)

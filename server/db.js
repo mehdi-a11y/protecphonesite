@@ -295,7 +295,7 @@ export async function dbDecrementStockForOrder(order) {
   const decrementedKeys = []
   if (items.length === 0) return { decrementedKeys }
   const products = await dbGetProducts()
-  let changed = false
+  const changedProducts = new Map()
   for (const item of items) {
     const antichoc = item.antichoc
     if (!antichoc || !antichoc.id) continue
@@ -318,9 +318,9 @@ export async function dbDecrementStockForOrder(order) {
       product.quantity = Number(product.quantity ?? 0) - 1
     }
     decrementedKeys.push(decrementedKey(product.id, colorId, phoneId))
-    changed = true
+    changedProducts.set(product.id, product)
   }
-  if (changed) await dbSaveProducts(products)
+  for (const p of changedProducts.values()) await dbSaveProduct(p)
   return { decrementedKeys }
 }
 
@@ -329,7 +329,7 @@ export async function dbIncrementStockForOrder(order) {
   const keys = order.variantsStockDecrementedAtConfirm
   if (!Array.isArray(keys) || keys.length === 0) return
   const products = await dbGetProducts()
-  let changed = false
+  const changedProducts = new Map()
   for (const key of keys) {
     const parts = key.split('|')
     if (parts.length < 3) continue
@@ -348,9 +348,9 @@ export async function dbIncrementStockForOrder(order) {
     } else {
       product.quantity = Number(product.quantity ?? 0) + 1
     }
-    changed = true
+    changedProducts.set(product.id, product)
   }
-  if (changed) await dbSaveProducts(products)
+  for (const p of changedProducts.values()) await dbSaveProduct(p)
   await dbSetOrderVariantsStockDecremented(order.id, [])
 }
 
@@ -480,17 +480,25 @@ export async function dbGetProducts() {
   return Array.from(memoryProducts.values())
 }
 
+/** Enregistre un seul produit (upsert). À préférer à dbSaveProducts quand un seul produit a changé. */
+export async function dbSaveProduct(product) {
+  if (pool) {
+    const r = productToRow(product)
+    await pool.query(
+      `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, device_type, compatible_with, compatible_with_samsung)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13,$14::jsonb,$15::jsonb)
+       ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, device_type=$13, compatible_with=$14::jsonb, compatible_with_samsung=$15::jsonb`,
+      [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), r.device_type || 'iphone', JSON.stringify(r.compatible_with), JSON.stringify(r.compatible_with_samsung || [])]
+    )
+    return
+  }
+  memoryProducts.set(product.id, product)
+}
+
+/** Remplace tout le catalogue (upsert de chaque produit). Coûteux si le catalogue est grand : préférer dbSaveProduct pour une mise à jour unitaire. */
 export async function dbSaveProducts(products) {
   if (pool) {
-    for (const p of products) {
-      const r = productToRow(p)
-      await pool.query(
-        `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, device_type, compatible_with, compatible_with_samsung)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13,$14::jsonb,$15::jsonb)
-         ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, device_type=$13, compatible_with=$14::jsonb, compatible_with_samsung=$15::jsonb`,
-        [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), r.device_type || 'iphone', JSON.stringify(r.compatible_with), JSON.stringify(r.compatible_with_samsung || [])]
-      )
-    }
+    for (const p of products) await dbSaveProduct(p)
     return
   }
   memoryProducts.clear()
