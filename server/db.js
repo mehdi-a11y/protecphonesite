@@ -480,6 +480,105 @@ export async function dbGetProducts() {
   return Array.from(memoryProducts.values())
 }
 
+// Colonnes légères : tout sauf les images base64 (photo_url / photo_gallery / image),
+// remplacées par des URLs vers /api/products/:id/photo (mises en cache par le navigateur).
+const LIGHT_PRODUCT_COLUMNS = `id, name, description, price, wholesale_price, quantity,
+  variant_stocks, variant_available_at_supplier, color_ids, device_type,
+  compatible_with, compatible_with_samsung,
+  CASE WHEN image LIKE 'data:%' THEN '' ELSE image END AS image,
+  (photo_url IS NOT NULL AND photo_url <> '') AS has_photo,
+  CASE WHEN jsonb_typeof(photo_gallery) = 'array' THEN jsonb_array_length(photo_gallery) ELSE 0 END AS gallery_count`
+
+/** Champs image "légers" : URLs vers /api/products/:id/photo au lieu des data URLs base64. */
+function lightImageFields(id, hasPhoto, galleryCount) {
+  const base = `/api/products/${encodeURIComponent(id)}/photo`
+  const gallery = galleryCount > 0
+    ? Array.from({ length: galleryCount }, (_, i) => `${base}?i=${i}`)
+    : (hasPhoto ? [base] : [])
+  return {
+    photoUrl: (hasPhoto || galleryCount > 0) ? base : '',
+    photoGallery: gallery.length ? gallery : undefined,
+  }
+}
+
+const isDataUrl = (s) => typeof s === 'string' && s.startsWith('data:')
+
+function rowToLightProduct(r) {
+  const full = rowToProduct({ ...r, photo_url: '', photo_gallery: [] })
+  return {
+    ...full,
+    image: isDataUrl(r.image) ? '' : (r.image || ''),
+    ...lightImageFields(r.id, r.has_photo === true, Number(r.gallery_count) || 0),
+  }
+}
+
+/** Version allégée d'un produit déjà en mémoire (dev sans PostgreSQL). */
+function fullProductToLight(p) {
+  const gallery = Array.isArray(p.photoGallery) ? p.photoGallery : []
+  return {
+    ...p,
+    image: isDataUrl(p.image) ? '' : (p.image || ''),
+    ...lightImageFields(p.id, Boolean(p.photoUrl), gallery.length),
+  }
+}
+
+/** Liste des produits SANS les images base64 (pour l'affichage public : ~350 Ko au lieu de ~26 Mo). */
+export async function dbGetProductsLight() {
+  if (pool) {
+    const { rows } = await pool.query(`SELECT ${LIGHT_PRODUCT_COLUMNS} FROM products ORDER BY id`)
+    return rows.map(rowToLightProduct)
+  }
+  return Array.from(memoryProducts.values()).map(fullProductToLight)
+}
+
+/** Un seul produit, version allégée (pages produit / landing : évite de charger tout le catalogue). */
+export async function dbGetProductLight(id) {
+  if (pool) {
+    const { rows } = await pool.query(`SELECT ${LIGHT_PRODUCT_COLUMNS} FROM products WHERE id = $1`, [id])
+    return rows.length ? rowToLightProduct(rows[0]) : null
+  }
+  const p = memoryProducts.get(id)
+  return p ? fullProductToLight(p) : null
+}
+
+/** Un seul produit complet (avec images base64). */
+export async function dbGetProductById(id) {
+  if (pool) {
+    const { rows } = await pool.query('SELECT * FROM products WHERE id = $1', [id])
+    return rows.length ? rowToProduct(rows[0]) : null
+  }
+  return memoryProducts.get(id) || null
+}
+
+/** Renvoie la source d'une image d'un produit (data URL ou URL externe). which : {i} = galerie, {src:'image'} = champ image, sinon photo principale. */
+export async function dbGetProductImageSource(id, which) {
+  let photoUrl = ''
+  let gallery = []
+  let image = ''
+  if (pool) {
+    const { rows } = await pool.query('SELECT image, photo_url, photo_gallery FROM products WHERE id = $1', [id])
+    if (!rows.length) return null
+    photoUrl = rows[0].photo_url || ''
+    gallery = jsonArrayValue(rows[0].photo_gallery)
+    image = rows[0].image || ''
+  } else {
+    const p = memoryProducts.get(id)
+    if (!p) return null
+    photoUrl = p.photoUrl || ''
+    gallery = Array.isArray(p.photoGallery) ? p.photoGallery : []
+    image = p.image || ''
+  }
+  if (which && which.src === 'image') return image || null
+  if (which && Number.isInteger(which.i)) return gallery[which.i] || null
+  return photoUrl || gallery[0] || null
+}
+
+function jsonArrayValue(v) {
+  if (Array.isArray(v)) return v
+  if (v && Array.isArray(v.data)) return v.data
+  return []
+}
+
 /** Enregistre un seul produit (upsert). À préférer à dbSaveProducts quand un seul produit a changé. */
 export async function dbSaveProduct(product) {
   if (pool) {

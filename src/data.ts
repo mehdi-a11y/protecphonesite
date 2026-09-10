@@ -1,5 +1,5 @@
 // Modèles iPhone compatibles (pour filtrer les coques)
-import { apiGetProducts, apiSaveProducts } from './api'
+import { apiGetProducts, apiGetProduct, apiSaveProducts } from './api'
 
 export const IPHONE_MODELS = [
   { id: 'iphone-11', name: 'iPhone 11', slug: 'iphone-11' },
@@ -286,4 +286,18 @@ export function getAllAntichocs(): Antichoc[] {
 
 export function getAntichocById(id: string): Antichoc | null {
   return getCatalog().find((a) => a.id === id) ?? null
+}
+
+/**
+ * Récupère un seul produit sans télécharger tout le catalogue.
+ * Utilise le cache s'il est déjà chargé, sinon appelle l'API produit unique,
+ * et retombe sur le chargement complet en dernier recours.
+ */
+export async function fetchProductById(id: string): Promise<Antichoc | null> {
+  const cached = productsCache?.find((a) => a.id === id)
+  if (cached) return cached
+  const single = await apiGetProduct(id).catch(() => null)
+  if (single) return single
+  await loadProducts()
+  return getAntichocById(id)
 }

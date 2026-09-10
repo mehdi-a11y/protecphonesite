@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { loadProducts, getAntichocById } from '../data'
+import { fetchProductById } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
@@ -34,15 +34,14 @@ export function ProductLandingPage() {
     let cancelled = false
     async function load() {
       try {
-        await Promise.all([loadProducts(), loadDeliveryPrices()])
-        const landing = await apiGetLandingBySlug(slug)
+        const [, landing] = await Promise.all([loadDeliveryPrices(), apiGetLandingBySlug(slug)])
         if (cancelled) return
         if (!landing) {
           setError('Landing page introuvable')
           setLoading(false)
           return
         }
-        const product = getAntichocById(landing.antichocId)
+        const product = await fetchProductById(landing.antichocId)
         if (cancelled) return
         if (!product) {
           setError('Produit introuvable')

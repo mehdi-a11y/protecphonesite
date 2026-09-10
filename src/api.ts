@@ -123,6 +123,15 @@ export async function apiGetProducts(): Promise<Antichoc[]> {
   return list || []
 }
 
+/** Un seul produit (léger, images servies séparément). null si introuvable. */
+export async function apiGetProduct(id: string): Promise<Antichoc | null> {
+  try {
+    return await fetchJson<Antichoc>(`/api/products/${encodeURIComponent(id)}`)
+  } catch {
+    return null
+  }
+}
+
 export async function apiSaveProducts(products: Antichoc[]): Promise<void> {
   await fetchJson('/api/products', {
     method: 'PUT',

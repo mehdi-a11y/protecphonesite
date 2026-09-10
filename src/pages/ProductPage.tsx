@@ -39,10 +39,8 @@ export function ProductPage({ id }: ProductPageProps) {
     let cancelled = false
     async function load() {
       try {
-        const { loadProducts, getAntichocById, normalizeProduct } = await import('../data')
-        await Promise.all([loadProducts(), loadDeliveryPrices()])
-        if (cancelled) return
-        const p = getAntichocById(id)
+        const { fetchProductById, normalizeProduct } = await import('../data')
+        const [p] = await Promise.all([fetchProductById(id), loadDeliveryPrices()])
         if (cancelled) return
         const normalized = normalizeProduct(p ?? undefined)
         setProduct(normalized)

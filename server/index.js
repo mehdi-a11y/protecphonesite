@@ -34,6 +34,10 @@ import {
   dbDeleteOrder,
   dbFindOrderByYalidineTracking,
   dbGetProducts,
+  dbGetProductsLight,
+  dbGetProductLight,
+  dbGetProductById,
+  dbGetProductImageSource,
   dbSaveProducts,
   dbSaveProduct,
   dbDeleteProduct,
@@ -136,6 +140,44 @@ async function optimizeProductsImages(products) {
   const out = []
   for (const p of products) out.push(await optimizeProductImages(p))
   return out
+}
+
+// URL renvoyée par la liste allégée pour une image (ex: /api/products/xxx/photo?i=0)
+const isProxyImageUrl = (s) => typeof s === 'string' && /\/api\/products\/[^/]+\/photo(\?|$)/.test(s)
+const proxyImageIndex = (s) => {
+  const m = /[?&]i=(\d+)/.exec(s || '')
+  return m ? parseInt(m[1], 10) : null
+}
+
+/**
+ * Un client qui a chargé la liste allégée renvoie des URLs /api/products/:id/photo au lieu
+ * des images base64. On restaure alors les images déjà stockées en base pour ne pas les écraser.
+ * Les nouvelles images (data URLs) et les vraies URLs externes sont conservées telles quelles.
+ */
+async function resolveIncomingProductImages(product) {
+  if (!product || typeof product !== 'object' || !product.id) return product
+  const galleryHasProxy = Array.isArray(product.photoGallery) && product.photoGallery.some(isProxyImageUrl)
+  if (!isProxyImageUrl(product.photoUrl) && !isProxyImageUrl(product.image) && !galleryHasProxy) return product
+
+  const existing = await dbGetProductById(product.id)
+  const existingGallery = existing
+    ? (Array.isArray(existing.photoGallery) && existing.photoGallery.length
+        ? existing.photoGallery
+        : (existing.photoUrl ? [existing.photoUrl] : []))
+    : []
+  const next = { ...product }
+  if (isProxyImageUrl(next.photoUrl)) next.photoUrl = existing?.photoUrl || existingGallery[0] || ''
+  if (isProxyImageUrl(next.image)) next.image = existing?.image || ''
+  if (Array.isArray(next.photoGallery)) {
+    next.photoGallery = next.photoGallery
+      .map((s) => {
+        if (!isProxyImageUrl(s)) return s
+        const idx = proxyImageIndex(s)
+        return (idx != null && existingGallery[idx] != null) ? existingGallery[idx] : (existing?.photoUrl || existingGallery[0] || '')
+      })
+      .filter(Boolean)
+  }
+  return next
 }
 
 // Nom de wilaya (français) → code pour appeler l'API Yalidine (centers par wilaya_id)
@@ -754,13 +796,53 @@ app.delete('/api/orders/:id', async (req, res) => {
   }
 })
 
-app.get('/api/products', async (_req, res) => {
+// Liste des produits SANS les images base64 (~350 Ko au lieu de ~26 Mo). ?full=1 renvoie tout (debug).
+app.get('/api/products', async (req, res) => {
   try {
-    res.set('Cache-Control', 'public, max-age=30')
-    const products = await dbGetProducts()
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+    const products = req.query.full ? await dbGetProducts() : await dbGetProductsLight()
     res.json(products)
   } catch (e) {
     res.status(500).json({ error: e.message })
+  }
+})
+
+// Un seul produit (version allégée) : évite de charger tout le catalogue sur les pages produit / landing.
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+    const product = req.query.full ? await dbGetProductById(req.params.id) : await dbGetProductLight(req.params.id)
+    if (!product) return res.status(404).json({ error: 'Produit introuvable' })
+    res.json(product)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Image d'un produit : ?i=N = photo N de la galerie, ?src=image = champ image, sinon photo principale.
+// Mise en cache "immutable" par le navigateur (les images d'un produit ne changent pas sans nouvel upload).
+app.get('/api/products/:id/photo', async (req, res) => {
+  try {
+    const which = req.query.src === 'image'
+      ? { src: 'image' }
+      : (req.query.i != null ? { i: parseInt(String(req.query.i), 10) } : undefined)
+    const source = await dbGetProductImageSource(req.params.id, which)
+    if (!source) return res.status(404).end()
+    if (!source.startsWith('data:')) {
+      // URL externe : on redirige (le navigateur la mettra en cache selon ses propres en-têtes)
+      return res.redirect(302, source)
+    }
+    const match = /^data:([^;,]+)(;base64)?,([\s\S]*)$/.exec(source)
+    if (!match) return res.status(404).end()
+    const contentType = match[1] || 'image/webp'
+    const buffer = match[2]
+      ? Buffer.from(match[3], 'base64')
+      : Buffer.from(decodeURIComponent(match[3]), 'utf8')
+    res.set('Content-Type', contentType)
+    res.set('Cache-Control', 'public, max-age=31536000, immutable')
+    res.send(buffer)
+  } catch (e) {
+    res.status(500).end()
   }
 })
 
@@ -768,9 +850,11 @@ app.put('/api/products', async (req, res) => {
   try {
     const products = Array.isArray(req.body) ? req.body : [req.body]
     if (!products.length) return res.status(400).json({ error: 'products requis' })
-    const optimizedProducts = await optimizeProductsImages(products)
+    const resolved = []
+    for (const p of products) resolved.push(await resolveIncomingProductImages(p))
+    const optimizedProducts = await optimizeProductsImages(resolved)
     await dbSaveProducts(optimizedProducts)
-    res.json(await dbGetProducts())
+    res.json(await dbGetProductsLight())
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -779,10 +863,11 @@ app.put('/api/products', async (req, res) => {
 // Ajoute ou met à jour un seul produit (upsert direct : évite de réécrire tout le catalogue à chaque sauvegarde)
 app.post('/api/products/add', async (req, res) => {
   try {
-    const product = await optimizeProductImages(req.body)
-    if (!product || !product.id) return res.status(400).json({ error: 'product avec id requis' })
+    if (!req.body || !req.body.id) return res.status(400).json({ error: 'product avec id requis' })
+    const resolved = await resolveIncomingProductImages(req.body)
+    const product = await optimizeProductImages(resolved)
     await dbSaveProduct(product)
-    res.json(await dbGetProducts())
+    res.json(await dbGetProductsLight())
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -971,8 +1056,19 @@ app.delete('/api/collections/:slug', async (req, res) => {
 const distPath = join(root, 'dist')
 const serveFrontend = process.env.NODE_ENV !== 'development' && existsSync(distPath)
 if (serveFrontend) {
-  app.use(express.static(distPath))
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      const p = filePath.replace(/\\/g, '/')
+      // Les assets Vite ont un hash dans leur nom : cache long et immuable.
+      if (/\/assets\/.+\.[a-f0-9]{6,}\./i.test(p) || /\/assets\//.test(p)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      } else if (p.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache')
+      }
+    },
+  }))
   app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache')
     res.sendFile(join(distPath, 'index.html'))
   })
 }
