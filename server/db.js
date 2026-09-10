@@ -134,6 +134,20 @@ async function runMigrations() {
     await client.query(`
       ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'none'
     `).catch(() => {})
+    // Nettoyage unique : retirer les images base64 copiées dans items[].antichoc des commandes
+    // (elles n'y servent à rien et alourdissent /api/orders de dizaines de Mo). No-op ensuite.
+    await client.query(`
+      UPDATE orders SET items = COALESCE((
+        SELECT jsonb_agg(
+          CASE WHEN jsonb_typeof(item->'antichoc') = 'object'
+            THEN jsonb_set(item, '{antichoc}', (item->'antichoc') - 'photoUrl' - 'photoGallery' - 'image')
+            ELSE item
+          END
+        )
+        FROM jsonb_array_elements(items) AS item
+      ), '[]'::jsonb)
+      WHERE items::text LIKE '%data:image%'
+    `).catch((e) => { console.warn('Nettoyage images commandes ignoré:', e.message) })
   } finally {
     client.release()
   }

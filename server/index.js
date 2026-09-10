@@ -561,6 +561,24 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
 })
 
 // --- API base de données partagée ---
+
+// Les articles d'une commande embarquent une copie du produit (item.antichoc) avec ses images
+// base64 : sur des centaines de commandes ça fait des dizaines de Mo inutiles. On ne garde que
+// les champs utiles à l'affichage / au traitement (nom, prix, id, compatibilité, variantes).
+function slimOrderItemAntichoc(a) {
+  if (!a || typeof a !== 'object') return a
+  const image = typeof a.image === 'string' && a.image.startsWith('data:') ? '' : a.image
+  return { ...a, image, photoUrl: '', photoGallery: undefined }
+}
+function slimOrderItems(items) {
+  if (!Array.isArray(items)) return []
+  return items.map((it) =>
+    it && typeof it === 'object' && it.antichoc
+      ? { ...it, antichoc: slimOrderItemAntichoc(it.antichoc) }
+      : it,
+  )
+}
+
 function orderToApi(o) {
   return {
     id: o.id,
@@ -570,7 +588,7 @@ function orderToApi(o) {
     wilaya: o.wilaya,
     deliveryType: o.deliveryType,
     deliveryPrice: o.deliveryPrice,
-    items: o.items,
+    items: slimOrderItems(o.items),
     total: o.total,
     status: o.status,
     createdAt: o.createdAt,
@@ -597,7 +615,8 @@ function apiToOrder(a) {
     wilaya: a.wilaya,
     deliveryType: a.deliveryType,
     deliveryPrice: a.deliveryPrice,
-    items: a.items || [],
+    // On ne stocke pas les images base64 dans les commandes (elles vivent dans la table products)
+    items: slimOrderItems(a.items || []),
     total: a.total,
     status: a.status,
     createdAt: a.createdAt,
