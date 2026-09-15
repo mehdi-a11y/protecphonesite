@@ -1,6 +1,8 @@
 /**
  * TikTok Pixel — suivi des conversions pour TikTok Ads.
- * Définir VITE_TIKTOK_PIXEL_ID (et optionnellement VITE_TIKTOK_PIXEL_ID_2) dans .env.
+ * Définir VITE_TIKTOK_PIXEL_ID dans .env, et pour des pixels supplémentaires :
+ * VITE_TIKTOK_PIXEL_ID_2, VITE_TIKTOK_PIXEL_ID_3, VITE_TIKTOK_PIXEL_ID_4... (jusqu'à _10).
+ * Les événements sont envoyés à tous les pixels définis.
  * Doc : https://ads.tiktok.com/help/article/tiktok-pixel
  */
 
@@ -14,16 +16,20 @@ declare global {
   }
 }
 
+/** Nombre max de pixels numérotés supportés (VITE_TIKTOK_PIXEL_ID_2 à _MAX_EXTRA_PIXELS). */
+const MAX_EXTRA_PIXELS = 10
+
 function parsePixelIds(raw: string | undefined): string[] {
   if (!raw) return []
   return raw.split(',').map((id) => id.trim()).filter(Boolean)
 }
 
 function getPixelIds(): string[] {
-  const ids = [
-    ...parsePixelIds(import.meta.env.VITE_TIKTOK_PIXEL_ID as string | undefined),
-    ...parsePixelIds(import.meta.env.VITE_TIKTOK_PIXEL_ID_2 as string | undefined),
-  ]
+  const env = import.meta.env as Record<string, string | undefined>
+  const ids = parsePixelIds(env.VITE_TIKTOK_PIXEL_ID)
+  for (let i = 2; i <= MAX_EXTRA_PIXELS; i++) {
+    ids.push(...parsePixelIds(env[`VITE_TIKTOK_PIXEL_ID_${i}`]))
+  }
   return [...new Set(ids)]
 }
 

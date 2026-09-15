@@ -31,6 +31,7 @@ VITE_FB_PIXEL_ID=votre_id_facebook
 VITE_FB_PIXEL_ID_2=votre_second_id_facebook
 VITE_TIKTOK_PIXEL_ID=votre_premier_id_tiktok
 VITE_TIKTOK_PIXEL_ID_2=votre_second_id_tiktok
+# VITE_TIKTOK_PIXEL_ID_3=votre_troisieme_id_tiktok   (autant que besoin, jusqu'à _10)
 ```
 
 Enregistrez (`Ctrl+O`, Entrée, `Ctrl+X` avec nano).
@@ -67,7 +68,7 @@ node server/index.js
 | `VITE_FB_PIXEL_ID` | `.env` sur le VPS | **Au build** (`npm run build`) |
 | `VITE_FB_PIXEL_ID_2` | `.env` sur le VPS | **Au build** (second pixel Facebook) |
 | `VITE_TIKTOK_PIXEL_ID` | `.env` sur le VPS | **Au build** |
-| `VITE_TIKTOK_PIXEL_ID_2` | `.env` sur le VPS | **Au build** (second pixel) |
+| `VITE_TIKTOK_PIXEL_ID_2`, `_3`, ... `_10` | `.env` sur le VPS | **Au build** (pixels supplémentaires) |
 | `TWILIO_*` | `.env` sur le VPS | Au démarrage du serveur Node |
 
 ### 5. Vérifier que les pixels TikTok sont actifs
@@ -75,7 +76,7 @@ node server/index.js
 1. Ouvrez **https://www.protecphone.shop** dans Chrome.
 2. **F12** → onglet **Network** → filtre `tiktok` ou `analytics.tiktok.com`.
 3. Rechargez la page : vous devez voir des requêtes vers TikTok Analytics.
-4. Ou installez l’extension **TikTok Pixel Helper** et vérifiez que les **deux** pixels apparaissent.
+4. Ou installez l’extension **TikTok Pixel Helper** et vérifiez que **tous** les pixels définis apparaissent.
 
 ### 6. Webhooks en production (Contabo)
 
