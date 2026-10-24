@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
 import { loginHandler, requireAdmin, requireStaff } from './auth.js'
+import { notifyTeam } from './notify.js'
 import {
   initDb,
   dbGetOrders,
@@ -504,9 +505,15 @@ app.post('/api/yalidine/webhook', async (req, res) => {
       try {
         const order = await dbFindOrderByYalidineTracking(tracking)
         if (!order) continue
-        if (/livr[eé]|delivered/.test(status)) await dbSetOrderStatus(order.id, 'livre')
-        else if (/retour|return/.test(status)) await dbSetOrderStatus(order.id, 'retourne')
-        else if (/annul|cancel|refus/.test(status)) await dbSetOrderStatus(order.id, 'cancelled')
+        let next = null
+        if (/livr[eé]|delivered/.test(status)) next = 'livre'
+        else if (/retour|return/.test(status)) next = 'retourne'
+        else if (/annul|cancel|refus/.test(status)) next = 'cancelled'
+        if (next) {
+          const previous = order.status
+          await dbSetOrderStatus(order.id, next)
+          if (previous !== next) notifyOrder(next, order, 'Yalidine')
+        }
       } catch (e) {
         console.warn('[Yalidine webhook]', e.message)
       }
@@ -568,6 +575,7 @@ app.post('/api/n8n/order-reply', requireN8nKey, async (req, res) => {
     }
     const status = action === 'confirm' ? 'confirmed' : 'callback'
     console.log('[n8n] Commande', order.id, '→', status, '(réponse WhatsApp du client)')
+    notifyOrder(status, order, 'le client (WhatsApp)')
     res.json({ ok: true, changed: true, status })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -584,6 +592,11 @@ function formatPhoneModel(id) {
   return m[1].toLowerCase() === 's' ? `Galaxy S${rest}` : `iPhone ${rest}`
 }
 const WILAYA_CODE_TO_NAME = Object.fromEntries(Object.entries(WILAYA_NAME_TO_CODE).map(([name, code]) => [code, name]))
+
+/** Notification équipe (ntfy, voir server/notify.js) pour un événement de commande. */
+function notifyOrder(event, order, source) {
+  notifyTeam(event, order, { wilayaName: WILAYA_CODE_TO_NAME[order.wilaya] || order.wilaya, source })
+}
 
 async function notifyN8nNewOrder(order) {
   const url = (process.env.N8N_NEW_ORDER_WEBHOOK_URL || '').trim()
@@ -656,6 +669,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       await confirmOrderWithStock(order)
       await dbSetOrderStatus(order.id, 'confirmed')
       console.log('[WhatsApp webhook] Commande', order.id, 'confirmée par le client (réponse liste)')
+      notifyOrder('confirmed', order, 'le client (WhatsApp)')
     }
 
     res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>')
@@ -791,6 +805,7 @@ app.post('/api/orders', async (req, res) => {
     }
     await dbSaveOrder(order)
     notifyN8nNewOrder(order).catch((err) => console.error('[n8n] Notification commande', order.id, 'échouée:', err.message))
+    notifyOrder('new', order)
     sendOrderConfirmationWhatsApp(order).then((result) => {
       if (!result.ok) console.error('[WhatsApp]', result.error)
     }).catch((err) => console.error('[WhatsApp]', err))
@@ -839,6 +854,7 @@ app.patch('/api/orders/:id/status', requireStaff, async (req, res) => {
     if (!status) return res.status(400).json({ error: 'status requis' })
     const orders = await dbGetOrders()
     const order = orders.find((o) => o.id === id)
+    const previous = order?.status
     if (order) {
       if (status === 'confirmed' && order.status !== 'confirmed') {
         await confirmOrderWithStock(order)
@@ -847,6 +863,11 @@ app.patch('/api/orders/:id/status', requireStaff, async (req, res) => {
       }
     }
     await dbSetOrderStatus(id, status)
+    if (order && previous !== status) {
+      const by = req.auth?.role === 'admin' ? "l'admin" : 'le confirmateur'
+      if (status === 'confirmed' || status === 'cancelled') notifyOrder(status, order, by)
+      else if (status === 'livre' || status === 'retourne') notifyOrder(status, order)
+    }
     res.status(200).json({ ok: true })
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -858,7 +879,12 @@ app.patch('/api/orders/:id/yalidine', requireStaff, async (req, res) => {
     const { id } = req.params
     const { tracking, sentAt } = req.body
     if (!tracking || !sentAt) return res.status(400).json({ error: 'tracking et sentAt requis' })
+    const order = await dbFindOrderById(id)
+    const firstSend = order && !order.yalidineTracking
     await dbUpdateOrderYalidine(id, tracking, sentAt)
+    if (firstSend) {
+      notifyOrder('expedie', { ...order, yalidineTracking: tracking }, req.auth?.role === 'admin' ? "l'admin" : 'le confirmateur')
+    }
     res.status(200).json({ ok: true })
   } catch (e) {
     res.status(500).json({ error: e.message })
