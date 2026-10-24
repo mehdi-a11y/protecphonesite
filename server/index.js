@@ -517,12 +517,17 @@ app.post('/api/yalidine/webhook', async (req, res) => {
   }
 })
 
-// --- Contact client d'un colis (pour n8n : l'API Yalidine masque le téléphone) ---
-// Protégé par l'en-tête X-Api-Key = N8N_LOOKUP_KEY. Sans cette variable, la route est désactivée.
-app.get('/api/n8n/parcel-contact', async (req, res) => {
+// --- Intégration n8n ---
+// Routes protégées par l'en-tête X-Api-Key = N8N_LOOKUP_KEY. Sans cette variable, elles sont désactivées.
+function requireN8nKey(req, res, next) {
   const key = (process.env.N8N_LOOKUP_KEY || '').trim()
   if (!key) return res.status(503).json({ error: 'N8N_LOOKUP_KEY non configurée' })
   if ((req.get('x-api-key') || '').trim() !== key) return res.status(401).json({ error: 'Non autorisé' })
+  next()
+}
+
+// Contact client d'un colis (l'API Yalidine masque le téléphone)
+app.get('/api/n8n/parcel-contact', requireN8nKey, async (req, res) => {
   const tracking = String(req.query.tracking || '').trim()
   const orderId = String(req.query.order_id || '').trim()
   if (!tracking && !orderId) return res.status(400).json({ error: 'tracking ou order_id requis' })
@@ -541,8 +546,83 @@ app.get('/api/n8n/parcel-contact', async (req, res) => {
   }
 })
 
+// Réponse du client au WhatsApp de confirmation : { order_id, action: 'confirm' | 'callback' }.
+// N'agit que sur une commande encore en attente (jamais sur une commande déjà confirmée, expédiée ou annulée).
+app.post('/api/n8n/order-reply', requireN8nKey, async (req, res) => {
+  const orderId = String(req.body?.order_id || '').trim()
+  const action = String(req.body?.action || '').trim()
+  if (!orderId || !['confirm', 'callback'].includes(action)) {
+    return res.status(400).json({ error: 'order_id et action (confirm | callback) requis' })
+  }
+  try {
+    const order = await dbFindOrderById(orderId)
+    if (!order) return res.status(404).json({ error: 'Commande introuvable' })
+    if (!PENDING_STATUSES.includes(order.status)) {
+      return res.json({ ok: true, changed: false, status: order.status })
+    }
+    if (action === 'confirm') {
+      await confirmOrderWithStock(order)
+      await dbSetOrderStatus(order.id, 'confirmed')
+    } else {
+      await dbSetOrderStatus(order.id, 'callback')
+    }
+    const status = action === 'confirm' ? 'confirmed' : 'callback'
+    console.log('[n8n] Commande', order.id, '→', status, '(réponse WhatsApp du client)')
+    res.json({ ok: true, changed: true, status })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Prévient n8n d'une nouvelle commande pour qu'il envoie le WhatsApp de confirmation au client.
+// Activé si N8N_NEW_ORDER_WEBHOOK_URL et N8N_LOOKUP_KEY sont définies.
+// 'iphone-13-pro-max' → 'iPhone 13 Pro Max', 's24-ultra' → 'Galaxy S24 Ultra'
+function formatPhoneModel(id) {
+  const m = String(id || '').match(/^(iphone|s)-?(.+)$/i)
+  if (!m) return id ? String(id) : ''
+  const rest = m[2].split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  return m[1].toLowerCase() === 's' ? `Galaxy S${rest}` : `iPhone ${rest}`
+}
+const WILAYA_CODE_TO_NAME = Object.fromEntries(Object.entries(WILAYA_NAME_TO_CODE).map(([name, code]) => [code, name]))
+
+async function notifyN8nNewOrder(order) {
+  const url = (process.env.N8N_NEW_ORDER_WEBHOOK_URL || '').trim()
+  const key = (process.env.N8N_LOOKUP_KEY || '').trim()
+  if (!url || !key) return
+  const items = (order.items || []).map((it) => {
+    const name = it?.antichoc?.name || 'Article'
+    const model = formatPhoneModel(it?.selectedPhoneId)
+    return model ? `${name} (${model})` : name
+  })
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
+    body: JSON.stringify({
+      order_id: order.id,
+      confirmation_code: order.confirmationCode || '',
+      customer_name: order.customerName || '',
+      phone: (normalizePhoneToE164(order.phone) || '').replace(/\D/g, ''),
+      wilaya: WILAYA_CODE_TO_NAME[order.wilaya] || order.wilaya || '',
+      delivery_type: order.deliveryType || '',
+      total: order.total ?? null,
+      items,
+    }),
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!res.ok) throw new Error(`n8n a répondu ${res.status}`)
+}
+
 // --- Webhook WhatsApp (réponse du client : confirmation de commande) ---
 const PENDING_STATUSES = ['none', 'tentative1', 'tentative2', 'tentative3', 'callback']
+
+/** Passage en « confirmée » : fige la catégorie (dépôt / achats / bloquées) et décrémente le stock. */
+async function confirmOrderWithStock(order) {
+  const products = await dbGetProducts()
+  const category = getOrderCategoryAtConfirm(order, products)
+  const { decrementedKeys } = await dbDecrementStockForOrder(order)
+  await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
+  await dbSetOrderConfirmedCategory(order.id, category)
+}
 const CONFIRM_LIST_IDS = ['received', 'ok', 'confirm', 'confirmed', 'تم الاستلام']
 
 app.post('/api/whatsapp/webhook', async (req, res) => {
@@ -573,11 +653,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
 
     if (order) {
-      const products = await dbGetProducts()
-      const category = getOrderCategoryAtConfirm(order, products)
-      const { decrementedKeys } = await dbDecrementStockForOrder(order)
-      await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
-      await dbSetOrderConfirmedCategory(order.id, category)
+      await confirmOrderWithStock(order)
       await dbSetOrderStatus(order.id, 'confirmed')
       console.log('[WhatsApp webhook] Commande', order.id, 'confirmée par le client (réponse liste)')
     }
@@ -714,6 +790,7 @@ app.post('/api/orders', async (req, res) => {
       return res.status(400).json({ error: 'id et confirmationCode requis' })
     }
     await dbSaveOrder(order)
+    notifyN8nNewOrder(order).catch((err) => console.error('[n8n] Notification commande', order.id, 'échouée:', err.message))
     sendOrderConfirmationWhatsApp(order).then((result) => {
       if (!result.ok) console.error('[WhatsApp]', result.error)
     }).catch((err) => console.error('[WhatsApp]', err))
@@ -764,11 +841,7 @@ app.patch('/api/orders/:id/status', requireStaff, async (req, res) => {
     const order = orders.find((o) => o.id === id)
     if (order) {
       if (status === 'confirmed' && order.status !== 'confirmed') {
-        const products = await dbGetProducts()
-        const category = getOrderCategoryAtConfirm(order, products)
-        const { decrementedKeys } = await dbDecrementStockForOrder(order)
-        await dbSetOrderVariantsStockDecremented(order.id, decrementedKeys)
-        await dbSetOrderConfirmedCategory(order.id, category)
+        await confirmOrderWithStock(order)
       } else if (order.status === 'confirmed' && status !== 'confirmed') {
         await dbIncrementStockForOrder(order)
       }
