@@ -8,6 +8,7 @@ import type { Order } from './types'
 import { getOrders, setOrderStatus } from './types'
 import { getWilayaName } from './delivery'
 import { formatOrderItemLabel } from './data'
+import { authFetch } from './api'
 
 const YALIDINE_CREDENTIALS_KEY = 'protecphone_yalidine_credentials'
 
@@ -126,7 +127,7 @@ export async function createParcelOnYalidine(
   const payload = [orderToParcelPayload(order)]
 
   try {
-    const res = await fetch('/api/yalidine/parcels', {
+    const res = await authFetch('/api/yalidine/parcels', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -175,7 +176,7 @@ export async function getParcelStatuses(
   if (trackings.length === 0) return { success: true, statuses: {} }
   try {
     const q = trackings.map((t) => encodeURIComponent(t.trim())).join(',')
-    const res = await fetch(`/api/yalidine/parcels/status?tracking=${q}`)
+    const res = await authFetch(`/api/yalidine/parcels/status?tracking=${q}`)
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       const msg = data?.error ?? data?.message ?? `Erreur ${res.status}`

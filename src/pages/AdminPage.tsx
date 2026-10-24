@@ -9,8 +9,8 @@ import {
   updateOrderYalidine,
   deleteOrder,
   isAdminAuthenticated,
-  setAdminAuthenticated,
-  ADMIN_PASSWORD,
+  loginAdmin,
+  logoutAdmin,
   type Order,
 } from '../types'
 import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
@@ -41,6 +41,7 @@ import {
   apiUpdateCollection,
   apiDeleteCollection,
   apiRequestOrderChange,
+  AUTH_EXPIRED_EVENT,
   type LandingPage,
   type Collection,
 } from '../api'
@@ -215,18 +216,27 @@ export function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (password === ADMIN_PASSWORD) {
-      setAdminAuthenticated(true)
-      setAuth(true)
-      refreshOrders()
-      loadProducts().then(() => syncProductsFromServer(getAllAntichocs()))
-    } else {
-      setError('Mot de passe incorrect')
+    try {
+      await loginAdmin(password)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Mot de passe incorrect')
+      return
     }
+    setAuth(true)
+    setPassword('')
+    refreshOrders()
+    loadProducts().then(() => syncProductsFromServer(getAllAntichocs()))
   }
 
+  // Jeton expiré ou refusé par le serveur : retour à l'écran de connexion
+  useEffect(() => {
+    const onExpired = () => setAuth(false)
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired)
+  }, [])
+
   const handleLogout = () => {
-    setAdminAuthenticated(false)
+    logoutAdmin()
     setAuth(false)
     setPassword('')
   }

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, CONFIRMATEUR_PASSWORD, isConfirmateurAuthenticated, setConfirmateurAuthenticated, type Order, type CartItem } from '../types'
+import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, isConfirmateurAuthenticated, loginConfirmateur, logoutConfirmateur, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
 import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, type Antichoc, type IPhoneModelId } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
-import { apiGetProducts } from '../api'
+import { apiGetProducts, AUTH_EXPIRED_EVENT } from '../api'
 
 const INCLASSABLE_PRODUCT_ID = 'upsell-protecteur-ecran-incassable'
 const SMARTFOLD_PRODUCT_ID = 'upsell-spigen-smart-fold'
@@ -71,22 +71,48 @@ export function ConfirmPage() {
   const [editForm, setEditForm] = useState<Partial<Order> & { items?: CartItem[] }>({})
   const [products, setProducts] = useState<Antichoc[]>([])
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginError('')
-    if (password === CONFIRMATEUR_PASSWORD) {
-      setConfirmateurAuthenticated(true)
-      setAuth(true)
-      setPassword('')
-    } else {
-      setLoginError('Mot de passe incorrect.')
+    try {
+      await loginConfirmateur(password)
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Mot de passe incorrect.')
+      return
     }
+    setAuth(true)
+    setPassword('')
   }
 
+  // Jeton expiré ou refusé par le serveur : retour à l'écran de connexion
+  useEffect(() => {
+    const onExpired = () => setAuth(false)
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired)
+  }, [])
+
   const handleLogout = () => {
-    setConfirmateurAuthenticated(false)
+    logoutConfirmateur()
     setAuth(false)
   }
+
+  // Les hooks doivent être appelés avant le retour anticipé (écran de connexion)
+  useEffect(() => {
+    if (!auth) return
+    getOrders().then(setOrders)
+    syncOrdersWithYalidine().then((r) => {
+      if (r.success && r.updated > 0) getOrders().then(setOrders)
+    })
+  }, [auth])
+
+  useEffect(() => {
+    if (auth) {
+      apiGetProducts().then((list) => {
+        const normalized = (list || []).map((p) => normalizeProduct(p)).filter(Boolean) as Antichoc[]
+        setProducts(normalized)
+      })
+    }
+  }, [auth])
 
   if (!auth) {
     return (
@@ -115,22 +141,6 @@ export function ConfirmPage() {
       </div>
     )
   }
-
-  useEffect(() => {
-    getOrders().then(setOrders)
-    syncOrdersWithYalidine().then((r) => {
-      if (r.success && r.updated > 0) getOrders().then(setOrders)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (auth) {
-      apiGetProducts().then((list) => {
-        const normalized = (list || []).map((p) => normalizeProduct(p)).filter(Boolean) as Antichoc[]
-        setProducts(normalized)
-      })
-    }
-  }, [auth])
 
   const refreshOrders = () => {
     getOrders().then(setOrders)

@@ -9,8 +9,79 @@ import type { DeliveryPrices } from './delivery'
 
 const BASE = (import.meta.env.VITE_API_URL as string) || ''
 
+// --- Authentification (jeton signé par le serveur, voir server/auth.js) ---
+
+export type AuthRole = 'admin' | 'confirmateur'
+
+const TOKEN_KEYS: Record<AuthRole, string> = {
+  admin: 'protecphone_admin_token',
+  confirmateur: 'protecphone_confirmateur_token',
+}
+
+/** Émis quand le serveur refuse le jeton (expiré / invalide) : les pages repassent à l'écran de connexion. */
+export const AUTH_EXPIRED_EVENT = 'protecphone:auth-expired'
+
+function tokenExpiry(token: string): number {
+  try {
+    const payload = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/')
+    return Number(JSON.parse(atob(payload)).exp) || 0
+  } catch {
+    return 0
+  }
+}
+
+function getAuthToken(role: AuthRole): string | null {
+  const token = sessionStorage.getItem(TOKEN_KEYS[role])
+  if (!token) return null
+  if (tokenExpiry(token) < Date.now()) {
+    sessionStorage.removeItem(TOKEN_KEYS[role])
+    return null
+  }
+  return token
+}
+
+export function isRoleAuthenticated(role: AuthRole): boolean {
+  return getAuthToken(role) !== null
+}
+
+export function logoutRole(role: AuthRole): void {
+  sessionStorage.removeItem(TOKEN_KEYS[role])
+}
+
+/** Connexion : le mot de passe est vérifié côté serveur, qui renvoie un jeton. */
+export async function apiLogin(role: AuthRole, password: string): Promise<void> {
+  const res = await fetch(BASE + '/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, password }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || !data.token) throw new Error(data.error || `Erreur ${res.status}`)
+  sessionStorage.setItem(TOKEN_KEYS[role], data.token)
+}
+
+/** En-tête Authorization (jeton admin en priorité, sinon confirmateur). */
+export function authHeaders(): Record<string, string> {
+  const token = getAuthToken('admin') || getAuthToken('confirmateur')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+/** fetch avec le jeton ; sur 401, déconnecte et prévient les pages. */
+export async function authFetch(url: string, options?: RequestInit): Promise<Response> {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(), ...options?.headers },
+  })
+  if (res.status === 401 && url.indexOf('/api/auth/login') === -1) {
+    logoutRole('admin')
+    logoutRole('confirmateur')
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+  }
+  return res
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + url, {
+  const res = await authFetch(BASE + url, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
@@ -149,7 +220,7 @@ export async function apiAddProduct(product: Antichoc): Promise<Antichoc[]> {
 
 /** Supprime un produit de la base (et les landing pages / références collections liées). */
 export async function apiDeleteProduct(id: string): Promise<void> {
-  const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  const res = await authFetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok && res.status !== 204) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as { error?: string }).error || 'Erreur lors de la suppression')
@@ -205,7 +276,7 @@ export async function apiUpdateLanding(
 }
 
 export async function apiDeleteLanding(slug: string): Promise<void> {
-  const res = await fetch('/api/landing-pages/' + encodeURIComponent(slug), { method: 'DELETE' })
+  const res = await authFetch('/api/landing-pages/' + encodeURIComponent(slug), { method: 'DELETE' })
   if (!res.ok && res.status !== 204) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as { error?: string }).error || 'Erreur')
@@ -249,7 +320,7 @@ export async function apiUpdateCollection(slug: string, data: { name?: string; l
 }
 
 export async function apiDeleteCollection(slug: string): Promise<void> {
-  const res = await fetch('/api/collections/' + encodeURIComponent(slug), { method: 'DELETE' })
+  const res = await authFetch('/api/collections/' + encodeURIComponent(slug), { method: 'DELETE' })
   if (!res.ok && res.status !== 204) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as { error?: string }).error || 'Erreur')

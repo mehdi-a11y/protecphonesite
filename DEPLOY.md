@@ -70,6 +70,7 @@ node server/index.js
 | `VITE_TIKTOK_PIXEL_ID` | `.env` sur le VPS | **Au build** |
 | `VITE_TIKTOK_PIXEL_ID_2`, `_3`, ... `_10` | `.env` sur le VPS | **Au build** (pixels supplémentaires) |
 | `TWILIO_*` | `.env` sur le VPS | Au démarrage du serveur Node |
+| `ADMIN_PASSWORD` / `CONFIRMATEUR_PASSWORD` / `AUTH_SECRET` | `.env` sur le VPS | Au démarrage du serveur Node (connexion `/admin` et `/confirmateur`) |
 
 ### 5. Vérifier que les pixels TikTok sont actifs
 
@@ -230,4 +231,4 @@ Si votre site est en ligne à **https://www.protecphone.shop/** (ou tout autre d
 ## Rappel
 
 - Avec **DATABASE_URL** (PostgreSQL sur Render), les **commandes**, **produits** et **tarifs de livraison** sont stockés dans une base partagée. Sans `DATABASE_URL`, le serveur utilise un stockage en mémoire (données perdues au redémarrage).
-- En production, changez le **mot de passe admin** dans le code (`src/types.ts` → `ADMIN_PASSWORD`) ou prévoyez une variable d’environnement.
+- Les mots de passe **admin** et **confirmateur** sont vérifiés par le serveur : définissez `ADMIN_PASSWORD`, `CONFIRMATEUR_PASSWORD` et `AUTH_SECRET` (longue chaîne aléatoire, ex. `openssl rand -hex 32`) dans le `.env` du VPS. Sans mot de passe, la connexion correspondante est désactivée. Les routes d’administration de l’API (`/api/orders` en lecture, modifications produits, tarifs, landings, collections…) exigent ce jeton.

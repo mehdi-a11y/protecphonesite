@@ -16,6 +16,7 @@ import compression from 'compression'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
+import { loginHandler, requireAdmin, requireStaff } from './auth.js'
 import {
   initDb,
   dbGetOrders,
@@ -84,6 +85,9 @@ app.use(cors())
 // Limite très élevée pour l'enregistrement des produits avec photos en base64 (compressées côté client)
 app.use(express.json({ limit: '100mb' }))
 app.use(express.urlencoded({ extended: true, limit: '100mb' }))
+
+// --- Authentification admin / confirmateur (voir server/auth.js) ---
+app.post('/api/auth/login', loginHandler)
 
 const YALIDINE_API_BASE = 'https://api.yalidine.app/v1/'
 const API_ID = process.env.YALIDINE_API_ID || ''
@@ -245,7 +249,7 @@ async function fetchYalidineCentersForWilaya(wilayaCode) {
   return []
 }
 
-app.post('/api/yalidine/parcels', async (req, res) => {
+app.post('/api/yalidine/parcels', requireStaff, async (req, res) => {
   if (!API_ID || !API_TOKEN) {
     return res.status(500).json({
       error: 'YALIDINE_API_ID et YALIDINE_API_TOKEN doivent être définis (fichier .env ou variables d\'environnement).',
@@ -398,7 +402,7 @@ app.get('/api/yalidine/stopdesks', async (req, res) => {
 })
 
 // Récupérer le statut de colis (pour synchronisation livré / retourné / annulé)
-app.get('/api/yalidine/parcels/status', async (req, res) => {
+app.get('/api/yalidine/parcels/status', requireStaff, async (req, res) => {
   if (!API_ID || !API_TOKEN) {
     return res.status(500).json({
       error: 'YALIDINE_API_ID et YALIDINE_API_TOKEN doivent être définis.',
@@ -659,7 +663,7 @@ function apiToOrder(a) {
   }
 }
 
-app.get('/api/orders', async (_req, res) => {
+app.get('/api/orders', requireStaff, async (_req, res) => {
   try {
     const orders = await dbGetOrders()
     res.json(orders.map(orderToApi))
@@ -668,7 +672,7 @@ app.get('/api/orders', async (_req, res) => {
   }
 })
 
-app.get('/api/whatsapp/check', (_req, res) => {
+app.get('/api/whatsapp/check', requireAdmin, (_req, res) => {
   const sid = !!process.env.TWILIO_ACCOUNT_SID
   const token = !!process.env.TWILIO_AUTH_TOKEN
   const from = !!process.env.TWILIO_WHATSAPP_FROM
@@ -683,7 +687,7 @@ app.get('/api/whatsapp/check', (_req, res) => {
 })
 
 // Diagnostic et test des notifications email confirmateur
-app.get('/api/email/check', (_req, res) => {
+app.get('/api/email/check', requireAdmin, (_req, res) => {
   const configured = isEmailConfigured()
   const useResend = !!(process.env.RESEND_API_KEY || '').trim()
   const to = (process.env.CONFIRMATEUR_EMAILS || 'protecphonedz@gmail.com')
@@ -694,7 +698,7 @@ app.get('/api/email/check', (_req, res) => {
   res.json({ configured, method: useResend ? 'resend' : 'smtp', message, to })
 })
 
-app.post('/api/email/test', async (_req, res) => {
+app.post('/api/email/test', requireAdmin, async (_req, res) => {
   const result = await sendTestEmail()
   if (result.ok) {
     return res.json({ ok: true, message: 'Email de test envoyé. Vérifiez la boîte des confirmateurs (et les spams).' })
@@ -723,7 +727,7 @@ app.post('/api/orders', async (req, res) => {
   }
 })
 
-app.patch('/api/orders/:id', async (req, res) => {
+app.patch('/api/orders/:id', requireStaff, async (req, res) => {
   try {
     const { id } = req.params
     const orders = await dbGetOrders()
@@ -751,7 +755,7 @@ app.patch('/api/orders/:id', async (req, res) => {
   }
 })
 
-app.patch('/api/orders/:id/status', async (req, res) => {
+app.patch('/api/orders/:id/status', requireStaff, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body
@@ -776,7 +780,7 @@ app.patch('/api/orders/:id/status', async (req, res) => {
   }
 })
 
-app.patch('/api/orders/:id/yalidine', async (req, res) => {
+app.patch('/api/orders/:id/yalidine', requireStaff, async (req, res) => {
   try {
     const { id } = req.params
     const { tracking, sentAt } = req.body
@@ -788,7 +792,7 @@ app.patch('/api/orders/:id/yalidine', async (req, res) => {
   }
 })
 
-app.patch('/api/orders/:id/achat-done', async (req, res) => {
+app.patch('/api/orders/:id/achat-done', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
     const done = req.body?.done === true
@@ -799,7 +803,7 @@ app.patch('/api/orders/:id/achat-done', async (req, res) => {
   }
 })
 
-app.patch('/api/orders/:id/depot-done', async (req, res) => {
+app.patch('/api/orders/:id/depot-done', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
     const done = req.body?.done === true
@@ -810,7 +814,7 @@ app.patch('/api/orders/:id/depot-done', async (req, res) => {
   }
 })
 
-app.post('/api/orders/:id/request-change', async (req, res) => {
+app.post('/api/orders/:id/request-change', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
     const reason = req.body?.reason != null ? String(req.body.reason).trim() : ''
@@ -830,7 +834,7 @@ app.post('/api/orders/:id/request-change', async (req, res) => {
   }
 })
 
-app.delete('/api/orders/:id', async (req, res) => {
+app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params
     await dbDeleteOrder(id)
@@ -890,7 +894,7 @@ app.get('/api/products/:id/photo', async (req, res) => {
   }
 })
 
-app.put('/api/products', async (req, res) => {
+app.put('/api/products', requireAdmin, async (req, res) => {
   try {
     const products = Array.isArray(req.body) ? req.body : [req.body]
     if (!products.length) return res.status(400).json({ error: 'products requis' })
@@ -905,7 +909,7 @@ app.put('/api/products', async (req, res) => {
 })
 
 // Ajoute ou met à jour un seul produit (upsert direct : évite de réécrire tout le catalogue à chaque sauvegarde)
-app.post('/api/products/add', async (req, res) => {
+app.post('/api/products/add', requireAdmin, async (req, res) => {
   try {
     if (!req.body || !req.body.id) return res.status(400).json({ error: 'product avec id requis' })
     const resolved = await resolveIncomingProductImages(req.body)
@@ -917,7 +921,7 @@ app.post('/api/products/add', async (req, res) => {
   }
 })
 
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', requireAdmin, async (req, res) => {
   try {
     const id = req.params.id
     if (!id) return res.status(400).json({ error: 'id requis' })
@@ -938,7 +942,7 @@ app.get('/api/delivery-prices', async (_req, res) => {
   }
 })
 
-app.put('/api/delivery-prices', async (req, res) => {
+app.put('/api/delivery-prices', requireAdmin, async (req, res) => {
   try {
     const prices = req.body
     if (!prices || typeof prices !== 'object') return res.status(400).json({ error: 'body requis' })
@@ -967,7 +971,7 @@ app.get('/api/landing-pages/:slug', async (req, res) => {
   }
 })
 
-app.post('/api/landing-pages', async (req, res) => {
+app.post('/api/landing-pages', requireAdmin, async (req, res) => {
   try {
     const { slug, antichocId, title } = req.body || {}
     if (!slug || !antichocId || typeof slug !== 'string' || typeof antichocId !== 'string') {
@@ -982,7 +986,7 @@ app.post('/api/landing-pages', async (req, res) => {
   }
 })
 
-app.patch('/api/landing-pages/:slug', async (req, res) => {
+app.patch('/api/landing-pages/:slug', requireAdmin, async (req, res) => {
   try {
     const { slug: newSlug, antichocId, title } = req.body || {}
     const updated = await dbUpdateLanding(req.params.slug, {
@@ -997,7 +1001,7 @@ app.patch('/api/landing-pages/:slug', async (req, res) => {
   }
 })
 
-app.delete('/api/landing-pages/:slug', async (req, res) => {
+app.delete('/api/landing-pages/:slug', requireAdmin, async (req, res) => {
   try {
     await dbDeleteLanding(req.params.slug)
     res.status(204).send()
@@ -1059,7 +1063,7 @@ app.get('/api/collections/:slug', async (req, res) => {
   }
 })
 
-app.post('/api/collections', async (req, res) => {
+app.post('/api/collections', requireAdmin, async (req, res) => {
   try {
     const { slug, name, landingSlugs } = req.body || {}
     if (!slug || typeof slug !== 'string') return res.status(400).json({ error: 'slug requis' })
@@ -1073,7 +1077,7 @@ app.post('/api/collections', async (req, res) => {
   }
 })
 
-app.patch('/api/collections/:slug', async (req, res) => {
+app.patch('/api/collections/:slug', requireAdmin, async (req, res) => {
   try {
     const existing = await dbGetCollectionBySlug(req.params.slug)
     if (!existing) return res.status(404).json({ error: 'Collection introuvable' })
@@ -1087,7 +1091,7 @@ app.patch('/api/collections/:slug', async (req, res) => {
   }
 })
 
-app.delete('/api/collections/:slug', async (req, res) => {
+app.delete('/api/collections/:slug', requireAdmin, async (req, res) => {
   try {
     await dbDeleteCollection(req.params.slug)
     res.status(204).send()

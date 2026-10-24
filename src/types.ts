@@ -57,13 +57,6 @@ export interface Order {
   confirmedOrderCategory?: 'depot' | 'achats' | 'bloquees'
 }
 
-export const ADMIN_PASSWORD = 'mehdi2026dz'
-
-export const CONFIRMATEUR_PASSWORD = 'brahim2003'
-
-const ADMIN_AUTH_KEY = 'protecphone_admin_auth'
-const CONFIRMATEUR_AUTH_KEY = 'protecphone_confirmateur_auth'
-
 import * as api from './api'
 
 export async function getOrders(): Promise<Order[]> {
@@ -109,20 +102,29 @@ export async function setOrderDepotDone(orderId: string, done: boolean): Promise
   await api.apiSetOrderDepotDone(orderId, done)
 }
 
+/** Session admin : jeton valide (vérifié côté serveur à chaque appel API). */
 export function isAdminAuthenticated(): boolean {
-  return sessionStorage.getItem(ADMIN_AUTH_KEY) === '1'
+  return api.isRoleAuthenticated('admin')
 }
 
-export function setAdminAuthenticated(value: boolean): void {
-  if (value) sessionStorage.setItem(ADMIN_AUTH_KEY, '1')
-  else sessionStorage.removeItem(ADMIN_AUTH_KEY)
+/** Connexion admin : le mot de passe est vérifié par le serveur (ADMIN_PASSWORD dans .env). */
+export async function loginAdmin(password: string): Promise<void> {
+  await api.apiLogin('admin', password)
+}
+
+export function logoutAdmin(): void {
+  api.logoutRole('admin')
 }
 
 export function isConfirmateurAuthenticated(): boolean {
-  return sessionStorage.getItem(CONFIRMATEUR_AUTH_KEY) === '1'
+  return api.isRoleAuthenticated('confirmateur')
 }
 
-export function setConfirmateurAuthenticated(value: boolean): void {
-  if (value) sessionStorage.setItem(CONFIRMATEUR_AUTH_KEY, '1')
-  else sessionStorage.removeItem(CONFIRMATEUR_AUTH_KEY)
+/** Connexion confirmateur : vérifiée par le serveur (CONFIRMATEUR_PASSWORD dans .env). */
+export async function loginConfirmateur(password: string): Promise<void> {
+  await api.apiLogin('confirmateur', password)
+}
+
+export function logoutConfirmateur(): void {
+  api.logoutRole('confirmateur')
 }
