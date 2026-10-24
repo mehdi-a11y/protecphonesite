@@ -429,6 +429,14 @@ export async function dbFindOrderByYalidineTracking(tracking) {
   return memoryOrders.find((o) => (o.yalidineTracking || '').trim() === String(tracking).trim()) || null
 }
 
+export async function dbFindOrderById(orderId) {
+  if (pool) {
+    const { rows } = await pool.query('SELECT * FROM orders WHERE id = $1 LIMIT 1', [String(orderId).trim()])
+    return rows[0] ? rowToOrder(rows[0]) : null
+  }
+  return memoryOrders.find((o) => o.id === String(orderId).trim()) || null
+}
+
 function rowToOrder(r) {
   return {
     id: r.id,

@@ -33,6 +33,7 @@ import {
   dbUpdateOrderYalidine,
   dbDeleteOrder,
   dbFindOrderByYalidineTracking,
+  dbFindOrderById,
   dbGetProducts,
   dbGetProductsLight,
   dbGetProductLight,
@@ -509,6 +510,30 @@ app.post('/api/yalidine/webhook', async (req, res) => {
   }
   if (type || events.length) {
     console.log('[Yalidine webhook]', type, events.length, 'event(s)')
+  }
+})
+
+// --- Contact client d'un colis (pour n8n : l'API Yalidine masque le téléphone) ---
+// Protégé par l'en-tête X-Api-Key = N8N_LOOKUP_KEY. Sans cette variable, la route est désactivée.
+app.get('/api/n8n/parcel-contact', async (req, res) => {
+  const key = (process.env.N8N_LOOKUP_KEY || '').trim()
+  if (!key) return res.status(503).json({ error: 'N8N_LOOKUP_KEY non configurée' })
+  if ((req.get('x-api-key') || '').trim() !== key) return res.status(401).json({ error: 'Non autorisé' })
+  const tracking = String(req.query.tracking || '').trim()
+  const orderId = String(req.query.order_id || '').trim()
+  if (!tracking && !orderId) return res.status(400).json({ error: 'tracking ou order_id requis' })
+  try {
+    const order = (tracking && await dbFindOrderByYalidineTracking(tracking)) || (orderId && await dbFindOrderById(orderId))
+    if (!order) return res.status(404).json({ error: 'Commande introuvable' })
+    res.json({
+      order_id: order.id,
+      tracking: order.yalidineTracking || tracking || null,
+      customer_name: order.customerName || '',
+      phone: normalizePhoneToE164(order.phone) || '',
+      wilaya: order.wilaya || '',
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 
