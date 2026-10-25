@@ -598,32 +598,63 @@ function notifyOrder(event, order, source) {
   notifyTeam(event, order, { wilayaName: WILAYA_CODE_TO_NAME[order.wilaya] || order.wilaya, source })
 }
 
+/** Résumé d'une commande pour n8n (message WhatsApp de confirmation). */
+function orderToN8nPayload(order) {
+  return {
+    order_id: order.id,
+    confirmation_code: order.confirmationCode || '',
+    customer_name: order.customerName || '',
+    phone: (normalizePhoneToE164(order.phone) || '').replace(/\D/g, ''),
+    wilaya: WILAYA_CODE_TO_NAME[order.wilaya] || order.wilaya || '',
+    delivery_type: order.deliveryType || '',
+    total: order.total ?? null,
+    items: (order.items || []).map((it) => {
+      const name = it?.antichoc?.name || 'Article'
+      const model = formatPhoneModel(it?.selectedPhoneId)
+      return model ? `${name} (${model})` : name
+    }),
+    status: order.status,
+    created_at: order.createdAt,
+  }
+}
+
 async function notifyN8nNewOrder(order) {
   const url = (process.env.N8N_NEW_ORDER_WEBHOOK_URL || '').trim()
   const key = (process.env.N8N_LOOKUP_KEY || '').trim()
   if (!url || !key) return
-  const items = (order.items || []).map((it) => {
-    const name = it?.antichoc?.name || 'Article'
-    const model = formatPhoneModel(it?.selectedPhoneId)
-    return model ? `${name} (${model})` : name
-  })
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
-    body: JSON.stringify({
-      order_id: order.id,
-      confirmation_code: order.confirmationCode || '',
-      customer_name: order.customerName || '',
-      phone: (normalizePhoneToE164(order.phone) || '').replace(/\D/g, ''),
-      wilaya: WILAYA_CODE_TO_NAME[order.wilaya] || order.wilaya || '',
-      delivery_type: order.deliveryType || '',
-      total: order.total ?? null,
-      items,
-    }),
+    body: JSON.stringify(orderToN8nPayload(order)),
     signal: AbortSignal.timeout(10000),
   })
   if (!res.ok) throw new Error(`n8n a répondu ${res.status}`)
 }
+
+// Commandes en attente à relancer par WhatsApp : ?statuses=tentative1,tentative2 (défaut).
+// Une seule commande par numéro (la plus récente) ; seuls les mobiles algériens (05/06/07) sont gardés.
+app.get('/api/n8n/pending-orders', requireN8nKey, async (req, res) => {
+  const statuses = String(req.query.statuses || 'tentative1,tentative2').split(',').map((x) => x.trim()).filter(Boolean)
+  if (statuses.some((st) => !PENDING_STATUSES.includes(st))) {
+    return res.status(400).json({ error: 'statuses doit contenir uniquement : ' + PENDING_STATUSES.join(', ') })
+  }
+  try {
+    const orders = (await dbGetOrders())
+      .filter((o) => statuses.includes(o.status))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    const seenPhones = new Set()
+    const out = []
+    for (const o of orders) {
+      const p = orderToN8nPayload(o)
+      if (!/^213[567]\d{8}$/.test(p.phone) || seenPhones.has(p.phone)) continue
+      seenPhones.add(p.phone)
+      out.push(p)
+    }
+    res.json(out)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
 
 // --- Webhook WhatsApp (réponse du client : confirmation de commande) ---
 const PENDING_STATUSES = ['none', 'tentative1', 'tentative2', 'tentative3', 'callback']
