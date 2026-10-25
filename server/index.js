@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { readFileSync, existsSync } from 'fs'
 import { loginHandler, requireAdmin, requireStaff } from './auth.js'
-import { notifyTeam } from './notify.js'
+import { notifyTeam, notifyTeamMessage } from './notify.js'
 import {
   initDb,
   dbGetOrders,
@@ -630,6 +630,17 @@ async function notifyN8nNewOrder(order) {
   })
   if (!res.ok) throw new Error(`n8n a répondu ${res.status}`)
 }
+
+// Notification libre pour l'équipe (ex. bilan quotidien de la relance) : { title, message }.
+// Le canal ntfy reste un secret du serveur (NTFY_TOPIC) : n8n n'a pas besoin de le connaître.
+app.post('/api/n8n/team-notify', requireN8nKey, async (req, res) => {
+  const title = String(req.body?.title || '').trim().slice(0, 120)
+  const message = String(req.body?.message || '').slice(0, 2000)
+  if (!title) return res.status(400).json({ error: 'title requis' })
+  if (!(process.env.NTFY_TOPIC || '').trim()) return res.status(503).json({ error: 'NTFY_TOPIC non configurée' })
+  const ok = await notifyTeamMessage({ title, message })
+  res.status(ok ? 200 : 502).json({ ok })
+})
 
 // Commandes en attente à relancer par WhatsApp : ?statuses=tentative1,tentative2 (défaut).
 // Une seule commande par numéro (la plus récente) ; seuls les mobiles algériens (05/06/07) sont gardés.

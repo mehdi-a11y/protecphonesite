@@ -18,6 +18,27 @@ const EVENTS = {
   retourne: { title: 'Colis retourné', tags: ['leftwards_arrow_with_hook'], priority: 4 },
 }
 
+/** Envoie une notification libre (ex. bilan quotidien n8n). Ne lève jamais d'erreur. */
+export async function notifyTeamMessage({ title, message, tags = ['bar_chart'], priority = 3 }) {
+  const topic = (process.env.NTFY_TOPIC || '').trim()
+  if (!topic || !title) return false
+  const server = (process.env.NTFY_SERVER || 'https://ntfy.sh').trim().replace(/\/+$/, '')
+  const token = (process.env.NTFY_TOKEN || '').trim()
+  try {
+    const res = await fetch(server, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ topic, title, message: message || '', tags, priority }),
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) console.error('[ntfy] message', title, 'réponse', res.status)
+    return res.ok
+  } catch (e) {
+    console.error('[ntfy] message', title, e.message)
+    return false
+  }
+}
+
 /**
  * Envoie une notification d'événement de commande. Ne lève jamais d'erreur : une notification
  * ratée ne doit pas bloquer la commande.
