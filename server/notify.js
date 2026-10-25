@@ -7,14 +7,15 @@
  *   SITE_URL    : adresse du site pour le lien des notifications (défaut https://www.protecphone.shop).
  */
 
+// L'app ntfy affiche déjà l'emoji de l'étiquette (tags) devant le titre : pas d'emoji dans le titre
 const EVENTS = {
-  new: { title: '🛒 Nouvelle commande', tags: ['shopping_cart'], priority: 4 },
-  confirmed: { title: '✅ Commande confirmée', tags: ['white_check_mark'], priority: 3 },
-  callback: { title: '📞 Client à rappeler', tags: ['telephone_receiver'], priority: 4 },
-  cancelled: { title: '❌ Commande annulée', tags: ['x'], priority: 3 },
-  expedie: { title: '📦 Colis expédié', tags: ['package'], priority: 2 },
-  livre: { title: '🎉 Commande livrée', tags: ['tada'], priority: 3 },
-  retourne: { title: '↩️ Colis retourné', tags: ['warning'], priority: 4 },
+  new: { title: 'Nouvelle commande', tags: ['shopping_cart'], priority: 4 },
+  confirmed: { title: 'Commande confirmée', tags: ['white_check_mark'], priority: 3 },
+  callback: { title: 'Client à rappeler', tags: ['telephone_receiver'], priority: 4 },
+  cancelled: { title: 'Commande annulée', tags: ['x'], priority: 3 },
+  expedie: { title: 'Colis expédié', tags: ['package'], priority: 2 },
+  livre: { title: 'Commande livrée', tags: ['tada'], priority: 3 },
+  retourne: { title: 'Colis retourné', tags: ['leftwards_arrow_with_hook'], priority: 4 },
 }
 
 /**
@@ -35,8 +36,9 @@ export async function notifyTeam(event, order, details = {}) {
   // Pas de téléphone ni d'adresse : la notification reste lisible sur un écran verrouillé
   const firstName = String(order.customerName || '').trim().split(/\s+/)[0] || 'Client'
   const total = order.total != null ? `${Number(order.total).toLocaleString('fr-FR')} DA` : ''
+  // Prénom isolé (U+2068…U+2069) : un prénom en arabe ne doit pas inverser l'ordre de la ligne
   const lines = [
-    [firstName, details.wilayaName, total].filter(Boolean).join(' — '),
+    [`⁨${firstName}⁩`, details.wilayaName, total].filter(Boolean).join(' — '),
     order.yalidineTracking ? `${order.id} · ${order.yalidineTracking}` : order.id,
   ]
   if (details.source) lines.push(`Par : ${details.source}`)
