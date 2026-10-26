@@ -609,6 +609,9 @@ export function AdminPage() {
           ← Retour au site
         </Link>
         <div className="flex items-center gap-4">
+          <Link to="/admin/whatsapp" className="text-brand-muted hover:text-white text-sm">
+            Statistiques WhatsApp
+          </Link>
           <span className="text-brand-accent text-sm font-medium">Admin</span>
           <button
             type="button"

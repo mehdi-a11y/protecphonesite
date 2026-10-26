@@ -92,6 +92,33 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
+/** Statistiques WhatsApp d'une journée (calculées par n8n). */
+export interface WhatsAppStats {
+  jour: string
+  numero: { numero: string; connecte: boolean; statut: string; reponses_branchees: boolean; restriction: boolean }
+  confirmations: {
+    envoyees: number
+    non_parties: number
+    confirmees: number
+    a_rappeler: number
+    sans_reponse: number
+    liste_a_rappeler: { commande: string; client: string; telephone: string }[]
+    liste_non_parties: { commande: string; client: string; telephone: string }[]
+  }
+  suivi: {
+    envoyes: number
+    non_partis: number
+    par_statut: Record<string, number>
+    liste_non_partis: { colis: string; client: string; statut: string; telephone: string }[]
+  }
+  reponses_colis: { colis: string; telephone: string; choix: string; recu_le: string }[]
+  historique: { jour: string; confirmations_envoyees: number; confirmees: number; a_rappeler: number; suivi_envoyes: number; reponses_colis: number }[]
+}
+
+export async function apiGetWhatsAppStats(jour: string): Promise<WhatsAppStats> {
+  return fetchJson<WhatsAppStats>('/api/admin/whatsapp-stats?jour=' + encodeURIComponent(jour))
+}
+
 export async function apiGetOrders(): Promise<Order[]> {
   const list = await fetchJson<Order[]>('/api/orders')
   return (list || []).map((o) => ({

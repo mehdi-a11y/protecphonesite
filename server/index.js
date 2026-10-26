@@ -642,6 +642,36 @@ app.post('/api/n8n/team-notify', requireN8nKey, async (req, res) => {
   res.status(ok ? 200 : 502).json({ ok })
 })
 
+// Statistiques WhatsApp d'une journée pour la page admin (calculées par n8n à partir de ses tables).
+// URL : N8N_STATS_WEBHOOK_URL, sinon déduite du domaine de N8N_NEW_ORDER_WEBHOOK_URL.
+function n8nStatsUrl() {
+  const explicit = (process.env.N8N_STATS_WEBHOOK_URL || '').trim()
+  if (explicit) return explicit
+  const base = (process.env.N8N_NEW_ORDER_WEBHOOK_URL || '').trim()
+  if (!base) return ''
+  try {
+    return new URL('/webhook/whatsapp-stats-k7d2m9', base).toString()
+  } catch {
+    return ''
+  }
+}
+
+app.get('/api/admin/whatsapp-stats', requireAdmin, async (req, res) => {
+  const url = n8nStatsUrl()
+  const key = (process.env.N8N_LOOKUP_KEY || '').trim()
+  if (!url || !key) return res.status(503).json({ error: 'n8n non configuré (N8N_NEW_ORDER_WEBHOOK_URL / N8N_LOOKUP_KEY)' })
+  const jour = String(req.query.jour || '')
+  const target = new URL(url)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(jour)) target.searchParams.set('jour', jour)
+  try {
+    const r = await fetch(target, { headers: { 'X-Api-Key': key }, signal: AbortSignal.timeout(20000) })
+    if (!r.ok) return res.status(502).json({ error: `n8n a répondu ${r.status}` })
+    res.json(await r.json())
+  } catch (e) {
+    res.status(502).json({ error: 'n8n injoignable : ' + e.message })
+  }
+})
+
 // Commandes en attente à relancer par WhatsApp : ?statuses=tentative1,tentative2 (défaut).
 // Une seule commande par numéro (la plus récente) ; seuls les mobiles algériens (05/06/07) sont gardés.
 app.get('/api/n8n/pending-orders', requireN8nKey, async (req, res) => {

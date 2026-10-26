@@ -9,6 +9,7 @@ import './index.css'
 
 // Lazy load des pages lourdes pour accélérer le premier affichage
 const AdminPage = lazy(() => import('./pages/AdminPage.tsx').then((m) => ({ default: m.AdminPage })))
+const WhatsAppStatsPage = lazy(() => import('./pages/WhatsAppStatsPage.tsx').then((m) => ({ default: m.WhatsAppStatsPage })))
 const ConfirmPage = lazy(() => import('./pages/ConfirmPage.tsx').then((m) => ({ default: m.ConfirmPage })))
 const ProductLandingPage = lazy(() => import('./pages/ProductLandingPage.tsx').then((m) => ({ default: m.ProductLandingPage })))
 const CollectionPage = lazy(() => import('./pages/CollectionPage.tsx').then((m) => ({ default: m.CollectionPage })))
@@ -43,7 +44,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/samsung" element={<App initialStep="samsung" />} />
           <Route path="/" element={<App />} />
           <Route path="/admin" element={<Suspense fallback={<PageFallback />}><AdminPage /></Suspense>} />
-          <Route path="/confirmateur" element={<Suspense fallback={<PageFallback />}><ConfirmPage /></Suspense>} />
+          <Route path="/admin/whatsapp" element={<Suspense fallback={<PageFallback />}><WhatsAppStatsPage /></Suspense>} />
+          <Route path="/confirmateur"element={<Suspense fallback={<PageFallback />}><ConfirmPage /></Suspense>} />
           <Route path="/p/:slug" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />
           <Route path="/c/:slug" element={<Suspense fallback={<PageFallback />}><CollectionPage /></Suspense>} />
           <Route
