@@ -609,6 +609,9 @@ export function AdminPage() {
           ← Retour au site
         </Link>
         <div className="flex items-center gap-4">
+          <Link to="/admin/dashboard" className="text-brand-muted hover:text-white text-sm">
+            Tableau de bord
+          </Link>
           <Link to="/admin/whatsapp" className="text-brand-muted hover:text-white text-sm">
             Statistiques WhatsApp
           </Link>
