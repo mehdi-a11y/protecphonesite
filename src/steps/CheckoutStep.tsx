@@ -8,7 +8,7 @@ import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
 import type { DeliveryType } from '../types'
 import { apiGetYalidineStopdesks, apiGetCommunes, type YalidineStopdesk } from '../api'
 import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
-import { trackTikTokCompletePayment, trackTikTokInitiateCheckout } from '../tiktokPixel'
+import { identifyTikTokUser, trackTikTokCompletePayment, trackTikTokInitiateCheckout } from '../tiktokPixel'
 
 interface Props {
   cart: CartItem[]
@@ -130,6 +130,7 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
           : {}),
       })
       trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+      await identifyTikTokUser(phone)
       trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
       onConfirm(orderId, confirmationCode)
     } finally {
