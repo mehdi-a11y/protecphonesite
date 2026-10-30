@@ -12,6 +12,7 @@ declare global {
       load: (pixelId: string) => void
       page: () => void
       track: (event: string, props?: Record<string, unknown>) => void
+      identify: (props: Record<string, string>) => void
     }
   }
 }
@@ -63,6 +64,36 @@ function trackTikTok(event: string, props?: Record<string, unknown>): void {
     } else {
       window.ttq.track(event)
     }
+  } catch {
+    // ignore
+  }
+}
+
+/** Numéro algérien au format E.164 (+213XXXXXXXXX), ou null si invalide. */
+function toE164Algeria(phone: string): string | null {
+  let digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.startsWith('213')) digits = digits.slice(3)
+  if (digits.startsWith('0')) digits = digits.slice(1)
+  return digits.length === 9 ? `+213${digits}` : null
+}
+
+async function sha256(value: string): Promise<string> {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Advanced Matching : envoie le téléphone du client (haché SHA-256) à TikTok.
+ * À appeler avant trackTikTokCompletePayment pour améliorer l'attribution (EMQ).
+ */
+export async function identifyTikTokUser(phone: string): Promise<void> {
+  if (PIXEL_IDS.length === 0 || !window.ttq || !crypto?.subtle) return
+  const e164 = toE164Algeria(phone)
+  if (!e164) return
+  try {
+    const hashed = await sha256(e164)
+    window.ttq.identify({ phone_number: hashed, external_id: hashed })
   } catch {
     // ignore
   }
