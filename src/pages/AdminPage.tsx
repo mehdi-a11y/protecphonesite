@@ -2162,6 +2162,18 @@ export function AdminPage() {
                     <h3 className="text-lg font-semibold text-white">Gérer le stock</h3>
                     <p className="text-brand-muted text-sm mb-2">{p.name}</p>
                     <p className="text-xs text-brand-muted mb-3">Stock ou « Disponible chez le fournisseur ». Si stock = 0 et pas disponible fournisseur, le client ne peut pas commander cette variante.</p>
+                    {(() => {
+                      const allOn = variantEntries.length > 0 && variantEntries.every(({ key }) => stockModalSupplierDraft[key] === true)
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setStockModalSupplierDraft(Object.fromEntries(variantEntries.map(({ key }) => [key, !allOn])))}
+                          className="mb-3 self-start px-3 py-1.5 rounded-lg bg-brand-accent/20 text-brand-accent text-xs hover:bg-brand-accent/30"
+                        >
+                          {allOn ? 'Tout décocher « Disponible chez le fournisseur »' : `Tout disponible chez le fournisseur (${variantEntries.length} variantes)`}
+                        </button>
+                      )
+                    })()}
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
                       {variantEntries.map(({ key, colorId, modelId }) => {
                         const colorName = colorId ? getColorName(colorId, p) : '—'
