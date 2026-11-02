@@ -65,12 +65,15 @@ const TEXTS = {
     pickDesign: 'اختار التصميم',
     designUnavailable: 'غير متوفر لهذا الموديل',
     offer: 'العرض',
-    pieces: (n: number) => (n === 1 ? 'كوك واحد' : 'كوكين'),
+    pieces: (n: number, phone: boolean) => (phone ? (n === 1 ? 'انتيشوك واحد' : '2 انتيشوك') : n === 1 ? 'قطعة واحدة' : 'قطعتين'),
     save: 'وفّر',
     popular: 'الأكثر طلباً',
     gift: 'هدية',
     free: 'مجاناً',
     giftEvery: 'مع كل طلب',
+    badPhone: 'رقم الهاتف غير صحيح (مثال: 0555 12 34 56)',
+    faqTitle: 'أسئلة شائعة',
+    codNote: 'ما تخلّص والو دروك · تخلّص كي توصلك السلعة',
   },
   fr: {
     defaultBanner: 'Livraison 58 wilayas · Paiement à la livraison',
@@ -117,12 +120,15 @@ const TEXTS = {
     pickDesign: 'Choisissez le motif',
     designUnavailable: 'Indisponible pour ce modèle',
     offer: 'Offre',
-    pieces: (n: number) => (n === 1 ? '1 coque' : '2 coques'),
+    pieces: (n: number, phone: boolean) => (phone ? (n === 1 ? '1 coque' : '2 coques') : n === 1 ? '1 pièce' : '2 pièces'),
     save: 'Économisez',
     popular: 'Le plus choisi',
     gift: 'Cadeau',
     free: 'Offert',
     giftEvery: 'avec chaque commande',
+    badPhone: 'Numéro invalide (ex. 0555 12 34 56)',
+    faqTitle: 'Questions fréquentes',
+    codNote: 'Rien à payer maintenant · paiement à la livraison',
   },
 } as const
 
@@ -302,6 +308,10 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const galleryPhotos = photos.filter((_, i) => i > 0 && !designPhotoIndexes.has(i))
   const oldPrice = landing.oldPrice && landing.oldPrice > product.price ? landing.oldPrice : 0
   const discount = oldPrice ? Math.round((1 - product.price / oldPrice) * 100) : 0
+  const faq = (landing.faq ?? [])
+    .map((line) => line.split('|').map((x) => x.trim()))
+    .filter(([q, a]) => q && a)
+    .map(([q, ...a]) => ({ q, a: a.join(' | ') }))
   const features = (landing.benefits ?? []).map(parseLandingBenefit).filter((f): f is NonNullable<typeof f> => f != null)
   const ctaText = landing.ctaText?.trim() || t.cta
   const summaryPhoto = (hasDesigns && designPhoto(slotDesign(0))) || heroPhoto
@@ -338,6 +348,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     if (!available) return setHint(t.unavailable)
     if (!modelOk) return setHint(t.pickModel)
     if (!colorOk) return setHint(hasDesigns ? t.pickDesign : t.pickColor)
+    if (!/^0[567]\d{8}$/.test(form.phone.replace(/[\s.-]/g, '').replace(/^\+?213/, '0'))) return setHint(t.badPhone)
     if (!form.canSubmitOrder) return setHint(t.fillForm)
     setHint('')
     trackCheckoutOnce()
@@ -355,6 +366,17 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
 
   const inputCls =
     'w-full px-4 py-3 rounded-xl bg-[var(--lp-surface)] border border-[var(--lp-border-strong)] text-[var(--lp-text)] placeholder-[var(--lp-faint)] focus:outline-none focus:border-[var(--lp-accent)] focus:ring-2 focus:ring-[var(--lp-accent)]/20'
+
+  const trustStrip = (
+    <div className="grid grid-cols-3 gap-2 mt-4 text-xs text-center">
+      {t.trust.map(([icon, label]) => (
+        <div key={label} className="rounded-xl bg-[var(--lp-surface)] border border-[var(--lp-border)] p-2.5 font-semibold">
+          <div className="text-xl mb-1">{icon}</div>
+          {label}
+        </div>
+      ))}
+    </div>
+  )
 
   const giftBanner = giftName ? (
     <div className="flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed" style={{ borderColor: accent, backgroundColor: `${accent}14` }}>
@@ -377,6 +399,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         fontFamily: lang === 'ar' ? "'Cairo', 'Outfit', system-ui, sans-serif" : undefined,
       }}
     >
+      {/* Pulsation douce des boutons de commande (attire l'œil sans gêner) */}
+      <style>{`@keyframes lp-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}.lp-pulse{animation:lp-pulse 1.8s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.lp-pulse{animation:none}}`}</style>
       {/* Bandeau */}
       <div className="text-white text-center py-2 px-4 text-xs sm:text-sm font-semibold" style={{ backgroundColor: accent }}>
         {landing.topBanner?.trim() || t.defaultBanner}
@@ -434,10 +458,11 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
               {oldPrice > 0 && <span className="text-lg text-[var(--lp-faint)] line-through">{fmt(oldPrice)}</span>}
             </div>
             {bundlePrice > 0 && (
-              <p className="mt-2 font-bold"><span style={{ color: accent }}>{t.pieces(2)} : {fmt(bundlePrice)}</span></p>
+              <p className="mt-2 font-bold"><span style={{ color: accent }}>{t.pieces(2, isPhone)} : {fmt(bundlePrice)}</span></p>
             )}
             {landing.subtitle && <p className="text-[var(--lp-muted)] mt-3 leading-relaxed">{landing.subtitle}</p>}
             {giftBanner && <div className="mt-4">{giftBanner}</div>}
+            <p className="mt-3 text-sm font-semibold text-[var(--lp-muted)]">💵 {t.codNote}</p>
           </section>
         )}
 
@@ -475,7 +500,24 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           ) : (
             <div className="rounded-3xl bg-[var(--lp-surface)] border border-[var(--lp-border)] aspect-square flex items-center justify-center text-8xl">{product.image}</div>
           )}
+          <div className="flex items-baseline justify-center gap-3 mt-5">
+            <span className="text-4xl font-extrabold" style={{ color: accent }}>{fmt(product.price)}</span>
+            {oldPrice > 0 && <span className="text-lg text-[var(--lp-faint)] line-through">{fmt(oldPrice)}</span>}
+          </div>
+          {bundlePrice > 0 && (
+            <p className="mt-1 font-bold">{t.pieces(2, isPhone)} : <span style={{ color: accent }}>{fmt(bundlePrice)}</span></p>
+          )}
           {giftBanner && <div className="mt-4">{giftBanner}</div>}
+          <button
+            type="button"
+            onClick={scrollToForm}
+            className="lp-pulse w-full mt-4 py-4 rounded-2xl text-white font-extrabold text-lg shadow-lg"
+            style={{ backgroundColor: accent }}
+          >
+            {ctaText} 👈
+          </button>
+          <p className="mt-2 text-sm text-[var(--lp-muted)]">{t.codNote}</p>
+          {trustStrip}
         </section>
 
         {/* Motifs : un clic choisit le motif et descend au formulaire */}
@@ -539,14 +581,6 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           </section>
         )}
 
-        {/* Description */}
-        {product.description && (
-          <section className="pt-12">
-            <h2 className="text-2xl font-extrabold text-center mb-4">{t.description}</h2>
-            <p className="text-[var(--lp-muted)] leading-relaxed whitespace-pre-line">{product.description}</p>
-          </section>
-        )}
-
         {/* Offre */}
         <section className="mt-12 p-6 rounded-3xl text-center text-white" style={{ background: `linear-gradient(135deg, ${accent}, #0f172a)` }}>
           {landing.offerTitle && <h2 className="text-2xl font-extrabold mb-2">{landing.offerTitle}</h2>}
@@ -557,7 +591,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           </div>
           {bundlePrice > 0 && (
             <p className="-mt-2 mb-5 font-bold text-lg">
-              {t.pieces(2)} : {fmt(bundlePrice)} <span className="text-white/70 text-sm">({t.save} {fmt(product.price * 2 - bundlePrice)})</span>
+              {t.pieces(2, isPhone)} : {fmt(bundlePrice)} <span className="text-white/70 text-sm">({t.save} {fmt(product.price * 2 - bundlePrice)})</span>
             </p>
           )}
           {giftName && <p className="-mt-2 mb-5 font-semibold">🎁 {giftName} {t.free}</p>}
@@ -635,7 +669,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                               {t.popular}
                             </span>
                           )}
-                          <span className="block font-bold">{t.pieces(n)}</span>
+                          <span className="block font-bold">{t.pieces(n, isPhone)}</span>
                           <span className="block text-lg font-extrabold" style={{ color: accent }}>{fmt(price)}</span>
                           {n === 2 && product.price * 2 > bundlePrice && (
                             <span className="block text-xs text-green-600 font-bold">{t.save} {fmt(product.price * 2 - bundlePrice)}</span>
@@ -825,29 +859,38 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 className="w-full py-4 rounded-2xl text-white font-extrabold text-lg shadow-lg transition-opacity disabled:opacity-60"
                 style={{ backgroundColor: accent }}
               >
-                {form.isSubmitting ? t.sending : t.submit}
+                {form.isSubmitting ? t.sending : `${t.submit} · ${fmt(subtotal + (form.wilaya ? form.deliveryPrice : 0))}`}
               </button>
             </form>
           )}
         </section>
 
-        {simple && (
-          <>
-            <div className="grid grid-cols-3 gap-2 mt-5 text-xs text-center">
-              {t.trust.map(([icon, label]) => (
-                <div key={label} className="rounded-xl bg-[var(--lp-surface)] border border-[var(--lp-border)] p-2.5 font-semibold">
-                  <div className="text-xl mb-1">{icon}</div>
-                  {label}
-                </div>
+        {simple && trustStrip}
+
+        {/* Questions fréquentes : lèvent les derniers doutes avant de commander */}
+        {faq.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-xl font-extrabold mb-3">{t.faqTitle}</h2>
+            <div className="space-y-2">
+              {faq.map(({ q, a }, i) => (
+                <details key={i} className="group rounded-2xl bg-[var(--lp-surface)] border border-[var(--lp-border)] p-4" open={i === 0}>
+                  <summary className="font-bold cursor-pointer list-none flex justify-between gap-3">
+                    {q}
+                    <span className="shrink-0 transition-transform group-open:rotate-45" style={{ color: accent }}>＋</span>
+                  </summary>
+                  <p className="text-[var(--lp-muted)] text-sm mt-2 leading-relaxed">{a}</p>
+                </details>
               ))}
             </div>
-            {product.description && (
-              <section className="mt-8">
-                <h2 className="text-xl font-extrabold mb-3">{t.description}</h2>
-                <p className="text-[var(--lp-muted)] leading-relaxed whitespace-pre-line">{product.description}</p>
-              </section>
-            )}
-          </>
+          </section>
+        )}
+
+        {/* Description en bas : le client a déjà tout vu plus haut, elle ne retarde plus le formulaire */}
+        {product.description && (
+          <section className="mt-10">
+            <h2 className="text-xl font-extrabold mb-3">{t.description}</h2>
+            <p className="text-[var(--lp-muted)] leading-relaxed whitespace-pre-line">{product.description}</p>
+          </section>
         )}
       </main>
 
@@ -859,13 +902,20 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       {/* Barre fixe */}
       {available && !formVisible && !confirmed && (
         <div className="fixed bottom-0 inset-x-0 z-40 p-3 bg-[var(--lp-bar)] backdrop-blur border-t border-[var(--lp-border)]">
-          <button
-            type="button"
-            onClick={scrollToForm}
-            className="w-full max-w-xl mx-auto block py-4 rounded-2xl bg-[var(--lp-ink)] text-white font-extrabold text-lg shadow-xl"
-          >
-            {landing.ctaText?.trim() || `${t.orderNow} !!`}
-          </button>
+          <div className="max-w-xl mx-auto flex items-center gap-3">
+            <div className="shrink-0 leading-tight">
+              <p className="text-lg font-extrabold" style={{ color: accent }}>{fmt(product.price)}</p>
+              {oldPrice > 0 && <p className="text-xs text-[var(--lp-faint)] line-through">{fmt(oldPrice)}</p>}
+            </div>
+            <button
+              type="button"
+              onClick={scrollToForm}
+              className="lp-pulse flex-1 py-3.5 rounded-2xl text-white font-extrabold text-lg shadow-xl"
+              style={{ backgroundColor: accent }}
+            >
+              {ctaText}
+            </button>
+          </div>
         </div>
       )}
 

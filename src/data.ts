@@ -101,6 +101,8 @@ export interface ProductLandingContent {
   bundlePrice?: number;
   /** Cadeau ajouté à chaque commande (ex. « Incassable Magic HOCO Plus ») ; vide = aucun */
   gift?: string;
+  /** Questions fréquentes, une ligne chacune : « question | réponse » */
+  faq?: string[];
 }
 
 /** Un motif d'une coque : nom affiché et index de sa photo dans photoGallery. */

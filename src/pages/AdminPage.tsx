@@ -1972,6 +1972,17 @@ export function AdminPage() {
                               className={`${fieldCls} resize-y`}
                             />
                           </div>
+                          <div>
+                            <label className="block text-xs text-brand-muted mb-1">Questions fréquentes — une ligne chacune : question | réponse</label>
+                            <textarea
+                              value={(lp.faq ?? []).join('\n')}
+                              onChange={(e) => handleProductLandingChange(p.id, { faq: e.target.value.split('\n') })}
+                              rows={3}
+                              dir="auto"
+                              placeholder={'كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام'}
+                              className={`${fieldCls} resize-y`}
+                            />
+                          </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-xs text-brand-muted mb-1">Prix pour 2 (DA, vide = pas d’offre)</label>
