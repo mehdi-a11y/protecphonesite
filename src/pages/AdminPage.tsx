@@ -15,6 +15,7 @@ import {
 } from '../types'
 import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
 import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, type IPhoneModelId, type SamsungModelId } from '../data'
+import { GENERAL_MODEL_ID, generalCompatibleWith, getModelName, type DeviceType, type ProductLandingContent } from '../data'
 import type { Antichoc } from '../data'
 import {
   WILAYAS,
@@ -143,7 +144,7 @@ export function AdminPage() {
   const [newLandingProductPhotos, setNewLandingProductPhotos] = useState<string[]>([])
   const [newLandingProductIphones, setNewLandingProductIphones] = useState<IPhoneModelId[]>([])
   const [newLandingProductSamsungs, setNewLandingProductSamsungs] = useState<SamsungModelId[]>([])
-  const [newLandingProductDeviceType, setNewLandingProductDeviceType] = useState<'iphone' | 'samsung'>('iphone')
+  const [newLandingProductDeviceType, setNewLandingProductDeviceType] = useState<DeviceType>('iphone')
   const [newLandingProductColorIds, setNewLandingProductColorIds] = useState<string[]>([])
   const [landingMessage, setLandingMessage] = useState<string | null>(null)
   const [collections, setCollections] = useState<Collection[]>([])
@@ -309,6 +310,30 @@ export function AdminPage() {
     setProducts((prev) => [...prev, newProduct])
   }
 
+  const handleAddProductGeneral = () => {
+    const newProduct: Antichoc = {
+      id: `general-${Date.now()}`,
+      name: 'Nouveau produit général',
+      description: '',
+      price: 0,
+      wholesalePrice: 0,
+      quantity: 0,
+      image: '📦',
+      photoUrl: '',
+      deviceType: 'general',
+      compatibleWith: generalCompatibleWith(),
+    }
+    setProducts((prev) => [...prev, newProduct])
+    setEditingProductId(newProduct.id)
+  }
+
+  /** Contenu de la landing page d'un produit général (marque, accroche, ancien prix, avantages…). */
+  const handleProductLandingChange = (id: string, partial: Partial<ProductLandingContent>) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, landing: { ...(p.landing ?? {}), ...partial } } : p)),
+    )
+  }
+
   const handleProductChange = (
     id: string,
     field: 'name' | 'price' | 'wholesalePrice' | 'quantity' | 'description' | 'photoUrl',
@@ -407,11 +432,19 @@ export function AdminPage() {
 
   const handleProductDeviceTypeChange = (
     id: string,
-    deviceType: 'iphone' | 'samsung',
+    deviceType: DeviceType,
   ) => {
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p
+        if (deviceType === 'general') {
+          return {
+            ...p,
+            deviceType: 'general',
+            compatibleWith: generalCompatibleWith(),
+            compatibleWithSamsung: undefined,
+          }
+        }
         if (deviceType === 'samsung') {
           return {
             ...p,
@@ -1241,7 +1274,7 @@ export function AdminPage() {
               const stock = getVariantStock(product, colorId, phoneId)
               if (stock > 0) continue
               if (!needToBuyVariantFromSupplier(product, colorId, phoneId)) continue
-              const phoneName = SAMSUNG_ULTRA_MODELS.find((m) => m.id === phoneId)?.name ?? IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+              const phoneName = getModelName(phoneId)
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
               linesToBuy.push({
                 productName: item.antichoc.name,
@@ -1344,7 +1377,7 @@ export function AdminPage() {
                 continue
               }
               if (!isVariantBlockedNoSupplier(product, colorId, phoneId)) continue
-              const phoneName = SAMSUNG_ULTRA_MODELS.find((m) => m.id === phoneId)?.name ?? IPHONE_MODELS.find((m) => m.id === phoneId)?.name ?? phoneId
+              const phoneName = getModelName(phoneId)
               const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
               blockedLines.push({
                 productName: item.antichoc.name,
@@ -1510,6 +1543,13 @@ export function AdminPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={handleAddProductGeneral}
+                  className="px-4 py-2 rounded-lg bg-brand-accent/20 text-brand-accent text-sm hover:bg-brand-accent/30"
+                >
+                  Ajouter un produit général
+                </button>
+                <button
+                  type="button"
                   onClick={resetToDefaultProducts}
                   className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
                 >
@@ -1560,16 +1600,19 @@ export function AdminPage() {
                     <tr key={p.id} className="border-b border-white/5 align-top">
                       <td className="py-2 pr-4 text-white text-xs">
                         <select
-                          value={p.deviceType === 'samsung' ? 'samsung' : 'iphone'}
-                          onChange={(e) => handleProductDeviceTypeChange(p.id, e.target.value as 'iphone' | 'samsung')}
+                          value={p.deviceType ?? 'iphone'}
+                          onChange={(e) => handleProductDeviceTypeChange(p.id, e.target.value as DeviceType)}
                           className="w-full max-w-[120px] bg-brand-card border border-white/10 rounded px-2 py-1 text-xs focus:border-brand-accent focus:outline-none"
                         >
                           <option value="iphone">iPhone</option>
                           <option value="samsung">Samsung</option>
+                          <option value="general">Général</option>
                         </select>
                       </td>
                       <td className="py-2 pr-4 text-white text-xs max-w-[220px]">
-                        {p.deviceType === 'samsung' ? (
+                        {p.deviceType === 'general' ? (
+                          <span className="text-brand-muted">Pas de modèle (produit général)</span>
+                        ) : p.deviceType === 'samsung' ? (
                           <select
                             multiple
                             value={p.compatibleWithSamsung ?? SAMSUNG_ULTRA_MODELS.map((m) => m.id)}
@@ -1786,10 +1829,65 @@ export function AdminPage() {
                       <textarea
                         value={p.description}
                         onChange={(e) => handleProductChange(p.id, 'description', e.target.value)}
-                        rows={3}
+                        rows={p.deviceType === 'general' ? 6 : 3}
                         className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none resize-none"
                       />
                     </div>
+                    {p.deviceType === 'general' && (
+                      <div className="space-y-3 rounded-lg border border-brand-accent/30 bg-brand-accent/5 p-3">
+                        <p className="text-xs font-semibold text-brand-accent uppercase tracking-wider">Landing page</p>
+                        <div>
+                          <label className="block text-xs text-brand-muted mb-1">Nom de marque (affiché en haut, vide = aucun)</label>
+                          <input
+                            type="text"
+                            value={p.landing?.brandName ?? ''}
+                            onChange={(e) => handleProductLandingChange(p.id, { brandName: e.target.value })}
+                            className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-brand-muted mb-1">Accroche (sous le titre)</label>
+                          <input
+                            type="text"
+                            value={p.landing?.subtitle ?? ''}
+                            onChange={(e) => handleProductLandingChange(p.id, { subtitle: e.target.value })}
+                            className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-brand-muted mb-1">Ancien prix barré (DA)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={p.landing?.oldPrice ?? ''}
+                              onChange={(e) => handleProductLandingChange(p.id, { oldPrice: e.target.value ? Number(e.target.value) : undefined })}
+                              className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-brand-muted mb-1">Texte du bouton</label>
+                            <input
+                              type="text"
+                              value={p.landing?.ctaText ?? ''}
+                              onChange={(e) => handleProductLandingChange(p.id, { ctaText: e.target.value })}
+                              placeholder="Commander maintenant"
+                              className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-brand-muted mb-1">Avantages (un par ligne)</label>
+                          <textarea
+                            value={(p.landing?.benefits ?? []).join('\n')}
+                            onChange={(e) => handleProductLandingChange(p.id, { benefits: e.target.value.split('\n') })}
+                            rows={4}
+                            className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none resize-none"
+                          />
+                        </div>
+                        <p className="text-[11px] text-brand-muted">Couleurs facultatives. Cliquez « Enregistrer les produits », puis créez la landing page dans l’onglet Landing pages.</p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs text-brand-muted mb-1">Photo (URL)</label>
                       <div className="flex gap-2 items-center">
@@ -1832,8 +1930,6 @@ export function AdminPage() {
               const variantEntries = colorIds.flatMap((cid) =>
                 modelIds.map((mid) => ({ key: variantKey(cid, mid), colorId: cid, modelId: mid })),
               )
-              const getModelName = (modelId: string) =>
-                SAMSUNG_ULTRA_MODELS.find((m) => m.id === modelId)?.name ?? IPHONE_MODELS.find((m) => m.id === modelId)?.name ?? modelId
               return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setStockModalProductId(null)}>
                   <div className="bg-brand-card border border-white/10 rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col p-6" onClick={(e) => e.stopPropagation()}>
@@ -2391,7 +2487,7 @@ export function AdminPage() {
                     <option value="">Choisir un produit</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — {p.price} DA {p.deviceType === 'samsung' ? '(Samsung)' : '(iPhone)'}
+                        {p.name} — {p.price} DA {p.deviceType === 'samsung' ? '(Samsung)' : p.deviceType === 'general' ? '(Général)' : '(iPhone)'}
                       </option>
                     ))}
                   </select>
@@ -2447,9 +2543,21 @@ export function AdminPage() {
                           />
                           <span className="text-white text-sm">Samsung</span>
                         </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="newLandingDeviceType"
+                            checked={newLandingProductDeviceType === 'general'}
+                            onChange={() => setNewLandingProductDeviceType('general')}
+                            className="text-brand-accent focus:ring-brand-accent"
+                          />
+                          <span className="text-white text-sm">Général (autre produit)</span>
+                        </label>
                       </div>
                     </div>
-                    {newLandingProductDeviceType === 'iphone' ? (
+                    {newLandingProductDeviceType === 'general' ? (
+                      <p className="text-[11px] text-brand-muted">Produit général : pas de modèle de téléphone, landing sans la marque ProtecPhone. Accroche, ancien prix et avantages se règlent ensuite dans Produits → Modifier.</p>
+                    ) : newLandingProductDeviceType === 'iphone' ? (
                       <div>
                         <p className="text-xs text-brand-muted mb-1">Modèles iPhone compatibles (plusieurs possibles)</p>
                         <select
@@ -2637,14 +2745,18 @@ export function AdminPage() {
                     const selectedColorEmojis = newLandingProductColorIds
                       .map((id) => ANTICHOC_COLORS.find((c) => c.id === id)?.emoji)
                       .filter(Boolean) as string[]
-                    const imageEmojis = selectedColorEmojis.length ? selectedColorEmojis.join(' ') : '📱'
+                    const imageEmojis = selectedColorEmojis.length ? selectedColorEmojis.join(' ') : (newLandingProductDeviceType === 'general' ? '📦' : '📱')
                     const allPhotos = [
                       ...newLandingProductPhotos,
                       ...(newLandingProductPhotoUrl.trim() ? [newLandingProductPhotoUrl.trim()] : []),
                     ]
                     const variantStocks: Record<string, number> = {}
                     const landingColorIds = newLandingProductColorIds.length > 0 ? newLandingProductColorIds : ['']
-                    if (newLandingProductDeviceType === 'samsung') {
+                    if (newLandingProductDeviceType === 'general') {
+                      landingColorIds.forEach((cid) => {
+                        variantStocks[variantKey(cid, GENERAL_MODEL_ID)] = quantity
+                      })
+                    } else if (newLandingProductDeviceType === 'samsung') {
                       const landingSamsungIds = newLandingProductSamsungs.length > 0 ? newLandingProductSamsungs : (SAMSUNG_ULTRA_MODELS.map((m) => m.id) as SamsungModelId[])
                       landingColorIds.forEach((cid) => {
                         landingSamsungIds.forEach((mid) => {
@@ -2671,7 +2783,9 @@ export function AdminPage() {
                       colorIds: newLandingProductColorIds.length > 0 ? newLandingProductColorIds : undefined,
                       photoUrl: allPhotos[0] ?? '',
                       photoGallery: allPhotos.length > 0 ? allPhotos : undefined,
-                      ...(newLandingProductDeviceType === 'samsung'
+                      ...(newLandingProductDeviceType === 'general'
+                        ? { deviceType: 'general' as const, compatibleWith: generalCompatibleWith() }
+                        : newLandingProductDeviceType === 'samsung'
                         ? {
                             deviceType: 'samsung' as const,
                             compatibleWith: [],

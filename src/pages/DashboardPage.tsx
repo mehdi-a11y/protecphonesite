@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGetOrders, apiGetWhatsAppStats, apiLogin, isRoleAuthenticated, AUTH_EXPIRED_EVENT, type WhatsAppStats } from '../api'
-import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS } from '../data'
+import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, GENERAL_MODEL_ID } from '../data'
 import { getWilayaName } from '../delivery'
 import type { Order } from '../types'
 import './dashboard.css'
@@ -357,7 +357,7 @@ export function DashboardPage() {
       for (const it of o.items || []) {
         const name = (it.antichoc?.name || 'Article').replace(/\s+/g, ' ').trim()
         produits.set(name, (produits.get(name) || 0) + 1)
-        if (it.selectedPhoneId) {
+        if (it.selectedPhoneId && it.selectedPhoneId !== GENERAL_MODEL_ID) {
           const m = PHONE_NAMES[it.selectedPhoneId] || it.selectedPhoneId
           modeles.set(m, (modeles.get(m) || 0) + 1)
         }

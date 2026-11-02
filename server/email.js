@@ -45,7 +45,8 @@ const COLOR_NAMES = {
 function formatOrderItemLabel(item) {
   const name = item.antichoc?.name || 'Article'
   const colorName = item.selectedColorId ? (COLOR_NAMES[item.selectedColorId] || item.selectedColorId) : ''
-  const phoneName = item.selectedPhoneId ? (PHONE_NAMES[item.selectedPhoneId] || item.selectedPhoneId) : ''
+  // 'standard' = produit général (pas de modèle de téléphone)
+  const phoneName = item.selectedPhoneId && item.selectedPhoneId !== 'standard' ? (PHONE_NAMES[item.selectedPhoneId] || item.selectedPhoneId) : ''
   const variant = [colorName, phoneName].filter(Boolean).join(' — ')
   const suffix = item.isUpsell ? ' (offre -50%)' : ''
   return variant ? `${name} — ${variant}${suffix}` : `${name}${suffix}`

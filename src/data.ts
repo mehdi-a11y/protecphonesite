@@ -38,6 +38,44 @@ export const SAMSUNG_ULTRA_MODELS = [
 
 export type SamsungModelId = (typeof SAMSUNG_ULTRA_MODELS)[number]['id'];
 
+/**
+ * Produits généraux (hors téléphonie) : pas de choix de modèle. On utilise un modèle unique
+ * « standard » pour garder la même logique de variantes / stock / commandes que les coques.
+ */
+export const GENERAL_MODEL_ID = 'standard'
+export const GENERAL_MODEL_NAME = 'Modèle unique'
+
+export type DeviceType = 'iphone' | 'samsung' | 'general'
+
+/** compatibleWith d'un produit général (le type IPhoneModelId est historique). */
+export function generalCompatibleWith(): IPhoneModelId[] {
+  return [GENERAL_MODEL_ID] as unknown as IPhoneModelId[]
+}
+
+/** Nom lisible d'un modèle (iPhone, Samsung ou modèle unique d'un produit général). */
+export function getModelName(modelId: string): string {
+  if (modelId === GENERAL_MODEL_ID) return GENERAL_MODEL_NAME
+  return (
+    SAMSUNG_ULTRA_MODELS.find((m) => m.id === modelId)?.name ??
+    IPHONE_MODELS.find((m) => m.id === modelId)?.name ??
+    modelId
+  )
+}
+
+/** Contenu marketing de la landing page d'un produit général. */
+export interface ProductLandingContent {
+  /** Nom de marque affiché à la place de « ProtecPhone » */
+  brandName?: string;
+  /** Sous-titre / accroche sous le titre */
+  subtitle?: string;
+  /** Ancien prix barré (DA) */
+  oldPrice?: number;
+  /** Avantages (une ligne = un avantage) */
+  benefits?: string[];
+  /** Texte du bouton (défaut : « Commander maintenant ») */
+  ctaText?: string;
+}
+
 // Couleurs / designs des antichocs (stock à liquider)
 export interface Antichoc {
   id: string;
@@ -54,10 +92,16 @@ export interface Antichoc {
   colorIds?: string[]; // couleurs sélectionnées (ids ANTICHOC_COLORS)
   photoUrl: string; // première photo (URL ou base64)
   photoGallery?: string[]; // plusieurs photos (la première = photoUrl si une seule)
-  /** 'iphone' par défaut. Si 'samsung', utiliser compatibleWithSamsung. */
-  deviceType?: 'iphone' | 'samsung';
+  /** 'iphone' par défaut. Si 'samsung', utiliser compatibleWithSamsung. Si 'general', modèle unique GENERAL_MODEL_ID. */
+  deviceType?: DeviceType;
   compatibleWith: IPhoneModelId[]; // modèles iPhone (si deviceType === 'iphone')
   compatibleWithSamsung?: SamsungModelId[]; // modèles Samsung (si deviceType === 'samsung')
+  /** Contenu de landing page (produits généraux) */
+  landing?: ProductLandingContent;
+}
+
+export function isGeneralProduct(p: { deviceType?: string } | null | undefined): boolean {
+  return p?.deviceType === 'general'
 }
 
 /** Normalise un objet produit (API ou cache) pour avoir la forme Antichoc attendue par l'UI. */
@@ -71,8 +115,10 @@ export function normalizeProduct(p: Partial<Antichoc> | null): Antichoc | null {
   const image = typeof p.image === 'string' ? p.image : String(p.image ?? '')
   const photoUrl = typeof p.photoUrl === 'string' ? p.photoUrl : String(p.photoUrl ?? '')
   const colorIds = Array.isArray(p.colorIds) ? p.colorIds.filter((x) => typeof x === 'string') : undefined
-  const deviceType = p.deviceType === 'samsung' ? 'samsung' : 'iphone'
-  const compatibleWith = Array.isArray(p.compatibleWith)
+  const deviceType: DeviceType = p.deviceType === 'samsung' || p.deviceType === 'general' ? p.deviceType : 'iphone'
+  const compatibleWith = deviceType === 'general'
+    ? generalCompatibleWith()
+    : Array.isArray(p.compatibleWith)
     ? p.compatibleWith.filter((x) => typeof x === 'string') as IPhoneModelId[]
     : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[])
   const compatibleWithSamsung = Array.isArray(p.compatibleWithSamsung)
@@ -105,6 +151,7 @@ export function normalizeProduct(p: Partial<Antichoc> | null): Antichoc | null {
     deviceType,
     compatibleWith: compatibleWith.length ? compatibleWith : (IPHONE_MODELS.map((m) => m.id) as IPhoneModelId[]),
     compatibleWithSamsung: deviceType === 'samsung' && compatibleWithSamsung.length ? compatibleWithSamsung : undefined,
+    landing: p.landing && typeof p.landing === 'object' ? p.landing : undefined,
   }
 }
 
@@ -210,8 +257,8 @@ export function formatOrderItemLabel(item: {
   const colorName = item.selectedColorId
     ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
     : ''
-  const phoneName = item.selectedPhoneId
-    ? (SAMSUNG_ULTRA_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? IPHONE_MODELS.find((m) => m.id === item.selectedPhoneId)?.name ?? item.selectedPhoneId)
+  const phoneName = item.selectedPhoneId && item.selectedPhoneId !== GENERAL_MODEL_ID
+    ? getModelName(item.selectedPhoneId)
     : ''
   const variant = [colorName, phoneName].filter(Boolean).join(' — ')
   const suffix = item.isUpsell ? ' (offre -50%)' : ''

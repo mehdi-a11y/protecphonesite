@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { fetchProductById } from '../data'
+import { fetchProductById, isGeneralProduct, GENERAL_MODEL_ID } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
 import { apiGetLandingBySlug } from '../api'
 import { ProductDetailView } from '../components/ProductDetailView'
+import { GeneralProductLanding } from '../components/GeneralProductLanding'
+import { SiteHeader } from '../components/SiteHeader'
+import { SiteFooter } from '../components/SiteFooter'
 import { CheckoutStep } from '../steps/CheckoutStep'
 import { ConfirmationStep } from '../steps/ConfirmationStep'
 import { trackAddToCart } from '../facebookPixel'
@@ -64,6 +67,18 @@ export function ProductLandingPage() {
     }
   }, [slug])
 
+  // Produit général : titre d'onglet propre au produit (sinon celui de ProtecPhone reste affiché)
+  useEffect(() => {
+    if (!antichoc || !isGeneralProduct(antichoc)) return
+    const previous = document.title
+    const name = title ?? antichoc.name
+    const brand = antichoc.landing?.brandName
+    document.title = brand ? `${name} — ${brand}` : name
+    return () => {
+      document.title = previous
+    }
+  }, [antichoc, title])
+
   const [cart, setCart] = useState<CartItem[]>([])
   const goToCheckout = (
     selectedPhoneId: string,
@@ -84,6 +99,20 @@ export function ProductLandingPage() {
     trackTikTokAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
   }
+  /** Produit général : N exemplaires identiques (modèle unique). */
+  const goToCheckoutGeneral = (selectedColorId: string, quantity: number) => {
+    const p = antichoc!
+    const items: CartItem[] = Array.from({ length: quantity }, () => ({
+      antichoc: p,
+      selectedPhoneId: GENERAL_MODEL_ID,
+      selectedColorId,
+    }))
+    setCart(items)
+    trackAddToCart(p.name, [p.id], p.price * quantity, 'DZD')
+    trackTikTokAddToCart(p.name, [p.id], p.price * quantity, 'DZD')
+    setStep('checkout')
+    window.scrollTo(0, 0)
+  }
   const goBack = () => setStep('landing')
   const onConfirm = (id: string, code: string) => {
     setOrderId(id)
@@ -95,6 +124,19 @@ export function ProductLandingPage() {
     setConfirmationCode('')
     setStep('landing')
   }
+
+  // Les produits généraux n'ont pas l'en-tête / pied de page ProtecPhone
+  const general = isGeneralProduct(antichoc)
+  const withSiteChrome = (content: React.ReactNode) =>
+    general ? (
+      <div className="min-h-screen bg-brand-dark">{content}</div>
+    ) : (
+      <div className="min-h-screen flex flex-col bg-brand-dark">
+        <SiteHeader />
+        <main className="flex-1 bg-brand-dark min-h-0">{content}</main>
+        <SiteFooter />
+      </div>
+    )
 
   if (loading) {
     return (
@@ -116,28 +158,30 @@ export function ProductLandingPage() {
   }
 
   if (step === 'checkout') {
-    return (
-      <div className="min-h-screen bg-brand-dark">
-        <CheckoutStep
-          cart={cart}
-          onBack={goBack}
-          onConfirm={onConfirm}
-        />
-      </div>
+    return withSiteChrome(
+      <CheckoutStep
+        cart={cart}
+        onBack={goBack}
+        onConfirm={onConfirm}
+      />,
     )
   }
 
   if (step === 'confirmation') {
-    return (
+    return withSiteChrome(
       <ConfirmationStep
         orderId={orderId}
         confirmationCode={confirmationCode}
         onNewOrder={onNewOrder}
-      />
+      />,
     )
   }
 
-  return (
+  if (general) {
+    return <GeneralProductLanding product={antichoc} title={title} onCommander={goToCheckoutGeneral} />
+  }
+
+  return withSiteChrome(
     <ProductDetailView
       product={antichoc}
       title={title ?? undefined}
@@ -148,6 +192,6 @@ export function ProductLandingPage() {
           ← Retour au site
         </Link>
       }
-    />
+    />,
   )
 }

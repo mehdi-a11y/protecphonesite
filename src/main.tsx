@@ -43,6 +43,8 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         {/* Tableau de bord : thème propre, sans l'en-tête du site */}
         <Route path="/admin/dashboard" element={<Suspense fallback={<PageFallback />}><DashboardPage /></Suspense>} />
+        {/* Landing produit : gère elle-même l'en-tête (ProtecPhone pour les coques, aucun pour les produits généraux) */}
+        <Route path="/p/:slug" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />
         <Route element={<SiteLayout />}>
           <Route path="/iphone" element={<App initialStep="iphone" />} />
           <Route path="/samsung" element={<App initialStep="samsung" />} />
@@ -51,7 +53,6 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/confidentialite" element={<Suspense fallback={<PageFallback />}><PrivacyPage /></Suspense>} />
           <Route path="/admin/whatsapp"element={<Suspense fallback={<PageFallback />}><WhatsAppStatsPage /></Suspense>} />
           <Route path="/confirmateur" element={<Suspense fallback={<PageFallback />}><ConfirmPage /></Suspense>} />
-          <Route path="/p/:slug" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />
           <Route path="/c/:slug" element={<Suspense fallback={<PageFallback />}><CollectionPage /></Suspense>} />
           <Route
             path="/product/:id"

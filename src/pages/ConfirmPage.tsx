@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, isConfirmateurAuthenticated, loginConfirmateur, logoutConfirmateur, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
-import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, type Antichoc, type IPhoneModelId } from '../data'
+import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, getModelName, type Antichoc, type IPhoneModelId } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { apiGetProducts, AUTH_EXPIRED_EVENT } from '../api'
 
@@ -770,7 +770,7 @@ export function ConfirmPage() {
                           className="w-32 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
                         >
                           {phoneIds.map((pid) => (
-                            <option key={pid} value={pid}>{IPHONE_MODELS.find((m) => m.id === pid)?.name ?? pid}</option>
+                            <option key={pid} value={pid}>{getModelName(pid)}</option>
                           ))}
                         </select>
                         <span className="text-brand-accent text-xs font-medium">{item.antichoc?.price ?? 0} DA</span>

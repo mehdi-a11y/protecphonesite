@@ -586,6 +586,7 @@ app.post('/api/n8n/order-reply', requireN8nKey, async (req, res) => {
 // Activé si N8N_NEW_ORDER_WEBHOOK_URL et N8N_LOOKUP_KEY sont définies.
 // 'iphone-13-pro-max' → 'iPhone 13 Pro Max', 's24-ultra' → 'Galaxy S24 Ultra'
 function formatPhoneModel(id) {
+  if (id === 'standard') return '' // produit général : pas de modèle
   const m = String(id || '').match(/^(iphone|s)-?(.+)$/i)
   if (!m) return id ? String(id) : ''
   const rest = m[2].split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -759,7 +760,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
 function slimOrderItemAntichoc(a) {
   if (!a || typeof a !== 'object') return a
   const image = typeof a.image === 'string' && a.image.startsWith('data:') ? '' : a.image
-  return { ...a, image, photoUrl: '', photoGallery: undefined }
+  return { ...a, image, photoUrl: '', photoGallery: undefined, landing: undefined }
 }
 function slimOrderItems(items) {
   if (!Array.isArray(items)) return []
