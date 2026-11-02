@@ -1,14 +1,10 @@
-import { useState, useMemo, useEffect } from 'react'
-import { isVariantOrderable, formatOrderItemLabel } from '../data'
-import { saveOrder } from '../types'
+import { useEffect } from 'react'
+import { formatOrderItemLabel } from '../data'
 import type { CartItem } from '../types'
-import type { IPhoneModelId } from '../data'
-import type { Antichoc } from '../data'
-import { WILAYAS, getDeliveryPriceForWilaya } from '../delivery'
-import type { DeliveryType } from '../types'
-import { apiGetYalidineStopdesks, apiGetCommunes, type YalidineStopdesk } from '../api'
-import { trackPurchase, trackInitiateCheckout } from '../facebookPixel'
-import { identifyTikTokUser, trackTikTokCompletePayment, trackTikTokInitiateCheckout } from '../tiktokPixel'
+import { WILAYAS } from '../delivery'
+import { trackInitiateCheckout } from '../facebookPixel'
+import { trackTikTokInitiateCheckout } from '../tiktokPixel'
+import { useCheckoutForm } from './useCheckoutForm'
 
 interface Props {
   cart: CartItem[]
@@ -16,86 +12,21 @@ interface Props {
   onConfirm: (orderId: string, confirmationCode: string) => void
 }
 
-function generateConfirmationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
 export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [wilaya, setWilaya] = useState('')
-  const [commune, setCommune] = useState('')
-  const [communes, setCommunes] = useState<string[]>([])
-  const [communesLoading, setCommunesLoading] = useState(false)
-  const [deliveryType, setDeliveryType] = useState<DeliveryType>('domicile')
-  const [stopdesks, setStopdesks] = useState<YalidineStopdesk[]>([])
-  const [stopdesksLoading, setStopdesksLoading] = useState(false)
-  const [selectedStopdeskId, setSelectedStopdeskId] = useState('')
-  const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
-  const [selectedStopdeskCommune, setSelectedStopdeskCommune] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (!wilaya) {
-      setCommunes([])
-      setCommune('')
-      return
-    }
-    setCommunesLoading(true)
-    setCommune('')
-    let cancelled = false
-    apiGetCommunes(wilaya)
-      .then((list) => { if (!cancelled && list?.length) setCommunes(list) })
-      .catch(() => { if (!cancelled) setCommunes([]) })
-      .finally(() => { if (!cancelled) setCommunesLoading(false) })
-    return () => { cancelled = true }
-  }, [wilaya])
-
-  useEffect(() => {
-    if (deliveryType !== 'yalidine' || !wilaya) {
-      setStopdesks([])
-      setSelectedStopdeskId('')
-      setSelectedStopdeskName('')
-      setSelectedStopdeskCommune('')
-      return
-    }
-    setStopdesksLoading(true)
-    setSelectedStopdeskId('')
-    setSelectedStopdeskName('')
-    setSelectedStopdeskCommune('')
-
-    let cancelled = false
-    // Bureaux uniquement depuis l'API Yalidine pour que le stopdesk_id soit accepté à l'envoi
-    apiGetYalidineStopdesks(wilaya, { onlyFromApi: true })
-      .then((list) => {
-        if (!cancelled && list && list.length > 0) setStopdesks(list)
-      })
-      .catch(() => { if (!cancelled) setStopdesks([]) })
-      .finally(() => { if (!cancelled) setStopdesksLoading(false) })
-    return () => { cancelled = true }
-  }, [deliveryType, wilaya])
-
-  const totalMain = cart.reduce((sum, i) => sum + i.antichoc.price, 0)
-  const deliveryPrice = useMemo(
-    () => (wilaya ? getDeliveryPriceForWilaya(wilaya, deliveryType) : 0),
-    [wilaya, deliveryType],
-  )
-  const total = totalMain + deliveryPrice
-
-  const canSubmitBureau =
-    (deliveryType !== 'yalidine' || (selectedStopdeskId && selectedStopdeskName)) &&
-    (deliveryType !== 'domicile' || !wilaya || commune.trim() !== '')
-
-  const invalidCartItems = useMemo(() => {
-    return cart.filter((item) => {
-      if (item.isUpsell) return false
-      const phoneId = item.selectedPhoneId
-      const colorId = item.selectedColorId ?? ''
-      if (!phoneId) return false
-      return !isVariantOrderable(item.antichoc, colorId, phoneId)
-    })
-  }, [cart])
-  const canSubmitOrder = canSubmitBureau && invalidCartItems.length === 0
+  const {
+    name, setName,
+    phone, setPhone,
+    wilaya, setWilaya,
+    commune, setCommune,
+    communes, communesLoading,
+    deliveryType, setDeliveryType,
+    stopdesks, stopdesksLoading,
+    selectedStopdeskId, selectStopdesk,
+    isSubmitting,
+    deliveryPrice, total,
+    invalidCartItems, canSubmitOrder,
+    submit,
+  } = useCheckoutForm(cart)
 
   useEffect(() => {
     if (cart.length > 0) {
@@ -106,36 +37,8 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSubmitOrder || isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      const orderId = 'CMD-' + Date.now()
-      const confirmationCode = generateConfirmationCode()
-      const finalCart: CartItem[] = [...cart]
-      await saveOrder({
-        id: orderId,
-        customerName: name,
-        phone,
-        address: deliveryType === 'domicile' ? commune.trim() : (deliveryType === 'yalidine' ? selectedStopdeskCommune : ''),
-        wilaya,
-        deliveryType,
-        deliveryPrice,
-        items: finalCart,
-        total,
-        status: 'none',
-        createdAt: new Date().toISOString(),
-        confirmationCode,
-        ...(deliveryType === 'yalidine' && selectedStopdeskId
-          ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
-          : {}),
-      })
-      trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
-      await identifyTikTokUser(phone)
-      trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
-      onConfirm(orderId, confirmationCode)
-    } finally {
-      setIsSubmitting(false)
-    }
+    const result = await submit()
+    if (result) onConfirm(result.orderId, result.confirmationCode)
   }
 
   return (
@@ -268,12 +171,8 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
                   required={deliveryType === 'yalidine'}
                   value={selectedStopdeskId}
                   onChange={(e) => {
-                    const value = e.target.value
                     const opt = e.target.options[e.target.selectedIndex]
-                    const bureau = stopdesks.find((s) => String(s.id) === value)
-                    setSelectedStopdeskId(value)
-                    setSelectedStopdeskName(opt?.textContent ?? '')
-                    setSelectedStopdeskCommune(bureau?.commune ?? '')
+                    selectStopdesk(e.target.value, opt?.textContent ?? '')
                   }}
                   className="w-full px-4 py-3 rounded-xl bg-brand-card border border-white/10 text-white focus:border-brand-accent focus:outline-none"
                   aria-label="Choisir un bureau Yalidine"

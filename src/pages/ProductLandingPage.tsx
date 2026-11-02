@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { fetchProductById, isGeneralProduct, GENERAL_MODEL_ID } from '../data'
+import { fetchProductById, isGeneralProduct } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
@@ -99,20 +99,6 @@ export function ProductLandingPage() {
     trackTikTokAddToCart(p.name, [p.id], p.price, 'DZD')
     setStep('checkout')
   }
-  /** Produit général : N exemplaires identiques (modèle unique). */
-  const goToCheckoutGeneral = (selectedColorId: string, quantity: number) => {
-    const p = antichoc!
-    const items: CartItem[] = Array.from({ length: quantity }, () => ({
-      antichoc: p,
-      selectedPhoneId: GENERAL_MODEL_ID,
-      selectedColorId,
-    }))
-    setCart(items)
-    trackAddToCart(p.name, [p.id], p.price * quantity, 'DZD')
-    trackTikTokAddToCart(p.name, [p.id], p.price * quantity, 'DZD')
-    setStep('checkout')
-    window.scrollTo(0, 0)
-  }
   const goBack = () => setStep('landing')
   const onConfirm = (id: string, code: string) => {
     setOrderId(id)
@@ -178,7 +164,7 @@ export function ProductLandingPage() {
   }
 
   if (general) {
-    return <GeneralProductLanding product={antichoc} title={title} onCommander={goToCheckoutGeneral} />
+    return <GeneralProductLanding product={antichoc} title={title} />
   }
 
   return withSiteChrome(

@@ -172,7 +172,11 @@ async function resolveIncomingProductImages(product) {
         : (existing.photoUrl ? [existing.photoUrl] : []))
     : []
   const next = { ...product }
-  if (isProxyImageUrl(next.photoUrl)) next.photoUrl = existing?.photoUrl || existingGallery[0] || ''
+  if (isProxyImageUrl(next.photoUrl)) {
+    // ?i=N = photo N de la galerie (ex. photo de galerie choisie comme principale dans l'admin)
+    const idx = proxyImageIndex(next.photoUrl)
+    next.photoUrl = (idx != null && existingGallery[idx] != null) ? existingGallery[idx] : (existing?.photoUrl || existingGallery[0] || '')
+  }
   if (isProxyImageUrl(next.image)) next.image = existing?.image || ''
   if (Array.isArray(next.photoGallery)) {
     next.photoGallery = next.photoGallery

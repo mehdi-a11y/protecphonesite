@@ -334,6 +334,36 @@ export function AdminPage() {
     )
   }
 
+  /** Galerie photos d'un produit : la 1re photo est la photo principale. */
+  const setProductGallery = (id: string, update: (gallery: string[]) => string[]) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        const current = p.photoGallery?.length ? p.photoGallery : p.photoUrl ? [p.photoUrl] : []
+        const next = update(current)
+        return { ...p, photoGallery: next.length ? next : undefined, photoUrl: next[0] ?? '' }
+      }),
+    )
+  }
+
+  const handleProductGalleryAdd = (id: string, event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    Promise.all(files.map((file) => compressImageToDataUrl(file, 1024, 0.85).catch(() => '')))
+      .then((urls) => setProductGallery(id, (g) => [...g, ...urls.filter(Boolean)]))
+  }
+
+  const handleProductColorToggle = (id: string, colorId: string) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        const current = p.colorIds ?? []
+        const next = current.includes(colorId) ? current.filter((c) => c !== colorId) : [...current, colorId]
+        return { ...p, colorIds: next.length ? next : undefined }
+      }),
+    )
+  }
+
   const handleProductChange = (
     id: string,
     field: 'name' | 'price' | 'wholesalePrice' | 'quantity' | 'description' | 'photoUrl',
@@ -1833,61 +1863,139 @@ export function AdminPage() {
                         className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none resize-none"
                       />
                     </div>
-                    {p.deviceType === 'general' && (
-                      <div className="space-y-3 rounded-lg border border-brand-accent/30 bg-brand-accent/5 p-3">
-                        <p className="text-xs font-semibold text-brand-accent uppercase tracking-wider">Landing page</p>
-                        <div>
-                          <label className="block text-xs text-brand-muted mb-1">Nom de marque (affiché en haut, vide = aucun)</label>
-                          <input
-                            type="text"
-                            value={p.landing?.brandName ?? ''}
-                            onChange={(e) => handleProductLandingChange(p.id, { brandName: e.target.value })}
-                            className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-brand-muted mb-1">Accroche (sous le titre)</label>
-                          <input
-                            type="text"
-                            value={p.landing?.subtitle ?? ''}
-                            onChange={(e) => handleProductLandingChange(p.id, { subtitle: e.target.value })}
-                            className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                    {p.deviceType === 'general' && (() => {
+                      const lp = p.landing ?? {}
+                      const gallery = p.photoGallery?.length ? p.photoGallery : p.photoUrl ? [p.photoUrl] : []
+                      const fieldCls = 'w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none'
+                      const textFields: { key: 'brandName' | 'topBanner' | 'badge' | 'headlineHighlight' | 'subtitle' | 'heroBadge' | 'galleryTitle' | 'featuresTitle' | 'offerTitle' | 'offerText' | 'ctaText'; label: string; placeholder: string }[] = [
+                        { key: 'topBanner', label: 'Bandeau tout en haut', placeholder: 'Livraison 58 wilayas · Paiement à la livraison' },
+                        { key: 'brandName', label: 'Nom de marque (vide = aucun)', placeholder: 'dailyhub' },
+                        { key: 'badge', label: 'Pastille au-dessus du titre', placeholder: 'ابتكار HOCO الجديد' },
+                        { key: 'headlineHighlight', label: 'Titre — 2e ligne en couleur (le titre = nom du produit ou titre de la landing)', placeholder: 'أذنية آمنة' },
+                        { key: 'subtitle', label: 'Texte sous le titre', placeholder: 'اكتشف الجيل الجديد من النظافة…' },
+                        { key: 'heroBadge', label: 'Pastille sur la photo principale', placeholder: 'بث مباشر HD' },
+                        { key: 'galleryTitle', label: 'Titre de la galerie photos', placeholder: 'تفاصيل دقيقة' },
+                        { key: 'featuresTitle', label: 'Titre des avantages', placeholder: 'لماذا تختار HOCO؟' },
+                        { key: 'offerTitle', label: 'Titre du bloc offre', placeholder: 'عرض حصري' },
+                        { key: 'offerText', label: 'Texte du bloc offre', placeholder: 'اطلب الآن واستفد من السعر الخاص' },
+                        { key: 'ctaText', label: 'Texte des boutons (vide = « اطلب الآن »)', placeholder: 'اطلب الآن قبل نفاذ الكمية' },
+                      ]
+                      return (
+                        <div className="space-y-3 rounded-lg border border-brand-accent/30 bg-brand-accent/5 p-3">
+                          <p className="text-xs font-semibold text-brand-accent uppercase tracking-wider">Landing page</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-brand-muted mb-1">Langue</label>
+                              <select
+                                value={lp.lang === 'fr' ? 'fr' : 'ar'}
+                                onChange={(e) => handleProductLandingChange(p.id, { lang: e.target.value as 'ar' | 'fr' })}
+                                className={fieldCls}
+                              >
+                                <option value="ar">Arabe (droite → gauche)</option>
+                                <option value="fr">Français</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-brand-muted mb-1">Couleur principale</label>
+                              <input
+                                type="color"
+                                value={lp.accentColor || '#3b82f6'}
+                                onChange={(e) => handleProductLandingChange(p.id, { accentColor: e.target.value })}
+                                className="w-full h-[38px] rounded-lg bg-brand-dark border border-white/10 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                          {textFields.map(({ key, label, placeholder }) => (
+                            <div key={key}>
+                              <label className="block text-xs text-brand-muted mb-1">{label}</label>
+                              <input
+                                type="text"
+                                value={lp[key] ?? ''}
+                                onChange={(e) => handleProductLandingChange(p.id, { [key]: e.target.value })}
+                                placeholder={placeholder}
+                                dir="auto"
+                                className={fieldCls}
+                              />
+                            </div>
+                          ))}
                           <div>
                             <label className="block text-xs text-brand-muted mb-1">Ancien prix barré (DA)</label>
                             <input
                               type="number"
                               min={0}
-                              value={p.landing?.oldPrice ?? ''}
+                              value={lp.oldPrice ?? ''}
                               onChange={(e) => handleProductLandingChange(p.id, { oldPrice: e.target.value ? Number(e.target.value) : undefined })}
-                              className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                              className={fieldCls}
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-brand-muted mb-1">Texte du bouton</label>
-                            <input
-                              type="text"
-                              value={p.landing?.ctaText ?? ''}
-                              onChange={(e) => handleProductLandingChange(p.id, { ctaText: e.target.value })}
-                              placeholder="Commander maintenant"
-                              className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                            <label className="block text-xs text-brand-muted mb-1">Avantages — une ligne chacun : emoji | titre | texte</label>
+                            <textarea
+                              value={(lp.benefits ?? []).join('\n')}
+                              onChange={(e) => handleProductLandingChange(p.id, { benefits: e.target.value.split('\n') })}
+                              rows={4}
+                              dir="auto"
+                              placeholder={'🎥 | كاميرا HD | رؤية واضحة داخل الأذن\n🛡️ | رؤوس سيليكون طبية | آمنة للأذن الحساسة'}
+                              className={`${fieldCls} resize-y`}
                             />
                           </div>
+                          <div>
+                            <label className="block text-xs text-brand-muted mb-1">Couleurs proposées (facultatif)</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {ANTICHOC_COLORS.map((c) => {
+                                const on = p.colorIds?.includes(c.id) ?? false
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => handleProductColorToggle(p.id, c.id)}
+                                    className={`px-2 py-1 rounded-full text-[11px] border ${on ? 'border-brand-accent bg-brand-accent/20 text-white' : 'border-white/10 text-brand-muted'}`}
+                                  >
+                                    {c.name}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-brand-muted mb-1">Photos — la 1re est la photo principale, les autres forment la galerie</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {gallery.map((url, i) => (
+                                <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10">
+                                  <img src={url} alt="" className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => setProductGallery(p.id, (g) => g.filter((_, j) => j !== i))}
+                                    className="absolute top-0 right-0 w-5 h-5 bg-red-600 text-white text-xs leading-5"
+                                    title="Supprimer"
+                                  >
+                                    ×
+                                  </button>
+                                  {i > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setProductGallery(p.id, (g) => [g[i], ...g.filter((_, j) => j !== i)])}
+                                      className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[10px]"
+                                    >
+                                      Principale
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => handleProductGalleryAdd(p.id, e)}
+                              className="block text-[11px] text-brand-muted file:text-xs file:bg-white/10 file:border-0 file:px-2 file:py-1 file:rounded"
+                            />
+                          </div>
+                          <p className="text-[11px] text-brand-muted">Chaque section laissée vide est masquée. Cliquez « Enregistrer les produits », puis créez la landing page dans l’onglet Landing pages.</p>
                         </div>
-                        <div>
-                          <label className="block text-xs text-brand-muted mb-1">Avantages (un par ligne)</label>
-                          <textarea
-                            value={(p.landing?.benefits ?? []).join('\n')}
-                            onChange={(e) => handleProductLandingChange(p.id, { benefits: e.target.value.split('\n') })}
-                            rows={4}
-                            className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none resize-none"
-                          />
-                        </div>
-                        <p className="text-[11px] text-brand-muted">Couleurs facultatives. Cliquez « Enregistrer les produits », puis créez la landing page dans l’onglet Landing pages.</p>
-                      </div>
-                    )}
+                      )
+                    })()}
+                    {p.deviceType !== 'general' && (
                     <div>
                       <label className="block text-xs text-brand-muted mb-1">Photo (URL)</label>
                       <div className="flex gap-2 items-center">
@@ -1909,6 +2017,7 @@ export function AdminPage() {
                         )}
                       </div>
                     </div>
+                    )}
                     <div className="flex gap-2 pt-2">
                       <button type="button" onClick={() => setEditingProductId(null)} className="px-4 py-2 rounded-lg bg-brand-accent text-brand-dark font-medium">
                         Fermer

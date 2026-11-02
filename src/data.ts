@@ -62,18 +62,46 @@ export function getModelName(modelId: string): string {
   )
 }
 
-/** Contenu marketing de la landing page d'un produit général. */
+/** Contenu marketing de la landing page d'un produit général (chaque section vide est masquée). */
 export interface ProductLandingContent {
-  /** Nom de marque affiché à la place de « ProtecPhone » */
+  /** Langue de la page : 'ar' (arabe, de droite à gauche, par défaut) ou 'fr' */
+  lang?: 'ar' | 'fr';
+  /** Couleur principale (hex), ex. #3b82f6 */
+  accentColor?: string;
+  /** Nom de marque affiché en haut (vide = aucun) */
   brandName?: string;
+  /** Bandeau tout en haut (ex. « Commandez avant rupture de stock ») */
+  topBanner?: string;
+  /** Pastille au-dessus du titre */
+  badge?: string;
+  /** Partie du titre affichée en couleur sur la 2e ligne */
+  headlineHighlight?: string;
   /** Sous-titre / accroche sous le titre */
   subtitle?: string;
+  /** Pastille posée sur la photo principale (ex. « Live HD ») */
+  heroBadge?: string;
+  /** Titre de la section galerie photos */
+  galleryTitle?: string;
+  /** Titre de la section avantages */
+  featuresTitle?: string;
+  /** Avantages, une ligne chacun : « emoji | titre | texte » (ou juste un texte) */
+  benefits?: string[];
+  /** Titre et texte du bloc offre */
+  offerTitle?: string;
+  offerText?: string;
   /** Ancien prix barré (DA) */
   oldPrice?: number;
-  /** Avantages (une ligne = un avantage) */
-  benefits?: string[];
-  /** Texte du bouton (défaut : « Commander maintenant ») */
+  /** Texte du bouton (défaut : « Commander maintenant » / « اطلب الآن ») */
   ctaText?: string;
+}
+
+/** Une ligne d'avantage « emoji | titre | texte » → objet (tolère « titre » seul ou « titre | texte »). */
+export function parseLandingBenefit(line: string): { icon: string; title: string; text: string } | null {
+  const parts = line.split('|').map((x) => x.trim())
+  if (!parts.some(Boolean)) return null
+  if (parts.length >= 3) return { icon: parts[0], title: parts[1], text: parts.slice(2).join(' | ') }
+  if (parts.length === 2) return { icon: '', title: parts[0], text: parts[1] }
+  return { icon: '', title: parts[0], text: '' }
 }
 
 // Couleurs / designs des antichocs (stock à liquider)
