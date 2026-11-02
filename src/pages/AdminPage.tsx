@@ -13,7 +13,7 @@ import {
   logoutAdmin,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, getColorName, usesSectionLanding, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
 import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, type IPhoneModelId, type SamsungModelId } from '../data'
 import { GENERAL_MODEL_ID, generalCompatibleWith, getModelName, type DeviceType, type ProductLandingContent } from '../data'
 import type { Antichoc } from '../data'
@@ -332,18 +332,38 @@ export function AdminPage() {
   /** Contenu de la landing page d'un produit général (marque, accroche, ancien prix, avantages…). */
   const handleProductLandingChange = (id: string, partial: Partial<ProductLandingContent>) => {
     setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, landing: { ...(p.landing ?? {}), ...partial } } : p)),
+      prev.map((p) => {
+        if (p.id !== id) return p
+        const next = { ...p, landing: { ...(p.landing ?? {}), ...partial } }
+        // Motifs = variantes : leurs ids servent de couleurs (stock « motif|modèle »)
+        if (partial.designs) {
+          const ids = partial.designs.map((d) => d.id)
+          next.colorIds = ids.length ? ids : undefined
+        }
+        return next
+      }),
     )
   }
 
-  /** Galerie photos d'un produit : la 1re photo est la photo principale. */
-  const setProductGallery = (id: string, update: (gallery: string[]) => string[]) => {
+  /**
+   * Galerie photos d'un produit : la 1re photo est la photo principale.
+   * remap(ancienIndex) → nouvel index (ou -1 si supprimée) garde les motifs sur la bonne photo.
+   */
+  const setProductGallery = (id: string, update: (gallery: string[]) => string[], remap?: (index: number) => number) => {
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p
         const current = p.photoGallery?.length ? p.photoGallery : p.photoUrl ? [p.photoUrl] : []
         const next = update(current)
-        return { ...p, photoGallery: next.length ? next : undefined, photoUrl: next[0] ?? '' }
+        const designs = remap && p.landing?.designs?.length
+          ? p.landing.designs.map((d) => ({ ...d, photo: Math.max(0, remap(d.photo)) }))
+          : undefined
+        return {
+          ...p,
+          photoGallery: next.length ? next : undefined,
+          photoUrl: next[0] ?? '',
+          ...(designs ? { landing: { ...p.landing, designs } } : {}),
+        }
       }),
     )
   }
@@ -1307,7 +1327,7 @@ export function AdminPage() {
               if (stock > 0) continue
               if (!needToBuyVariantFromSupplier(product, colorId, phoneId)) continue
               const phoneName = getModelName(phoneId)
-              const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
+              const colorName = colorId ? getColorName(colorId, product) : '—'
               linesToBuy.push({
                 productName: item.antichoc.name,
                 variantLabel: colorId ? `${colorName} — ${phoneName}` : phoneName,
@@ -1410,7 +1430,7 @@ export function AdminPage() {
               }
               if (!isVariantBlockedNoSupplier(product, colorId, phoneId)) continue
               const phoneName = getModelName(phoneId)
-              const colorName = colorId ? ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId : '—'
+              const colorName = colorId ? getColorName(colorId, product) : '—'
               blockedLines.push({
                 productName: item.antichoc.name,
                 variantLabel: colorId ? `${colorName} — ${phoneName}` : phoneName,
@@ -1865,7 +1885,7 @@ export function AdminPage() {
                         className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none resize-none"
                       />
                     </div>
-                    {p.deviceType === 'general' && (() => {
+                    {usesSectionLanding(p) && (() => {
                       const lp = p.landing ?? {}
                       const gallery = p.photoGallery?.length ? p.photoGallery : p.photoUrl ? [p.photoUrl] : []
                       const fieldCls = 'w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none'
@@ -1952,6 +1972,80 @@ export function AdminPage() {
                               className={`${fieldCls} resize-y`}
                             />
                           </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-brand-muted mb-1">Prix pour 2 (DA, vide = pas d’offre)</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={lp.bundlePrice ?? ''}
+                                onChange={(e) => handleProductLandingChange(p.id, { bundlePrice: e.target.value ? Number(e.target.value) : undefined })}
+                                placeholder="4500"
+                                className={fieldCls}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-brand-muted mb-1">Cadeau offert (vide = aucun)</label>
+                              <input
+                                type="text"
+                                value={lp.gift ?? ''}
+                                onChange={(e) => handleProductLandingChange(p.id, { gift: e.target.value })}
+                                placeholder="Incassable Magic HOCO Plus"
+                                dir="auto"
+                                className={fieldCls}
+                              />
+                            </div>
+                          </div>
+                          {p.deviceType !== 'general' && (
+                            <div>
+                              <label className="block text-xs text-brand-muted mb-1">Motifs — nom + photo (cliquez une miniature de la galerie)</label>
+                              <div className="space-y-2">
+                                {(lp.designs ?? []).map((d, di) => (
+                                  <div key={d.id} className="rounded-lg border border-white/10 p-2 space-y-1.5">
+                                    <div className="flex gap-2 items-center">
+                                      {gallery[d.photo] && <img src={gallery[d.photo]} alt="" className="w-10 h-12 object-cover rounded" />}
+                                      <input
+                                        type="text"
+                                        value={d.name}
+                                        onChange={(e) => handleProductLandingChange(p.id, { designs: (lp.designs ?? []).map((x, j) => (j === di ? { ...x, name: e.target.value } : x)) })}
+                                        dir="auto"
+                                        className={fieldCls}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleProductLandingChange(p.id, { designs: (lp.designs ?? []).filter((_, j) => j !== di) })}
+                                        className="shrink-0 w-8 h-8 rounded bg-red-500/20 text-red-400"
+                                        title="Retirer le motif"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                    <div className="flex gap-1 overflow-x-auto">
+                                      {gallery.map((url, gi) => (
+                                        <button
+                                          key={gi}
+                                          type="button"
+                                          onClick={() => handleProductLandingChange(p.id, { designs: (lp.designs ?? []).map((x, j) => (j === di ? { ...x, photo: gi } : x)) })}
+                                          className={`shrink-0 w-8 h-8 rounded overflow-hidden border-2 ${d.photo === gi ? 'border-brand-accent' : 'border-transparent opacity-60'}`}
+                                        >
+                                          <img src={url} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleProductLandingChange(p.id, { designs: [...(lp.designs ?? []), { id: `motif-${Date.now().toString(36)}`, name: `Motif ${(lp.designs?.length ?? 0) + 1}`, photo: Math.max(0, gallery.length - 1) }] })}
+                                className="mt-2 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20"
+                              >
+                                + Ajouter un motif
+                              </button>
+                              <p className="mt-1 text-[11px] text-brand-muted">Nouveau motif : enregistrez, puis réglez son stock dans « Gérer le stock » (motif × modèle).</p>
+                            </div>
+                          )}
+                          {p.deviceType === 'general' && (
                           <div>
                             <label className="block text-xs text-brand-muted mb-1">Couleurs proposées (facultatif)</label>
                             <div className="flex flex-wrap gap-1.5">
@@ -1970,6 +2064,7 @@ export function AdminPage() {
                               })}
                             </div>
                           </div>
+                          )}
                           <div>
                             <label className="block text-xs text-brand-muted mb-1">Photos — la 1re est la photo principale, les autres forment la galerie</label>
                             <div className="flex flex-wrap gap-2 mb-2">
@@ -1978,7 +2073,7 @@ export function AdminPage() {
                                   <img src={url} alt="" className="w-full h-full object-cover" />
                                   <button
                                     type="button"
-                                    onClick={() => setProductGallery(p.id, (g) => g.filter((_, j) => j !== i))}
+                                    onClick={() => setProductGallery(p.id, (g) => g.filter((_, j) => j !== i), (j) => (j === i ? -1 : j > i ? j - 1 : j))}
                                     className="absolute top-0 right-0 w-5 h-5 bg-red-600 text-white text-xs leading-5"
                                     title="Supprimer"
                                   >
@@ -1987,7 +2082,7 @@ export function AdminPage() {
                                   {i > 0 && (
                                     <button
                                       type="button"
-                                      onClick={() => setProductGallery(p.id, (g) => [g[i], ...g.filter((_, j) => j !== i)])}
+                                      onClick={() => setProductGallery(p.id, (g) => [g[i], ...g.filter((_, j) => j !== i)], (j) => (j === i ? 0 : j < i ? j + 1 : j))}
                                       className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[10px]"
                                     >
                                       Principale
@@ -2008,7 +2103,16 @@ export function AdminPage() {
                         </div>
                       )
                     })()}
-                    {p.deviceType !== 'general' && (
+                    {!usesSectionLanding(p) && (
+                    <button
+                      type="button"
+                      onClick={() => handleProductLandingChange(p.id, { lang: 'ar', designs: [{ id: `motif-${Date.now().toString(36)}`, name: 'Motif 1', photo: 0 }] })}
+                      className="w-full px-3 py-2 rounded-lg border border-dashed border-brand-accent/50 text-brand-accent text-sm hover:bg-brand-accent/10"
+                    >
+                      Coque à motifs : activer la landing (motifs avec photo, offre 2 coques, cadeau)
+                    </button>
+                    )}
+                    {!usesSectionLanding(p) && (
                     <div>
                       <label className="block text-xs text-brand-muted mb-1">Photo (URL)</label>
                       <div className="flex gap-2 items-center">
@@ -2060,7 +2164,7 @@ export function AdminPage() {
                     <p className="text-xs text-brand-muted mb-3">Stock ou « Disponible chez le fournisseur ». Si stock = 0 et pas disponible fournisseur, le client ne peut pas commander cette variante.</p>
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
                       {variantEntries.map(({ key, colorId, modelId }) => {
-                        const colorName = colorId ? (ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ?? colorId) : '—'
+                        const colorName = colorId ? getColorName(colorId, p) : '—'
                         const modelName = getModelName(modelId)
                         const label = colorId ? `${colorName} — ${modelName}` : modelName
                         return (

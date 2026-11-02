@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { fetchProductById, isGeneralProduct } from '../data'
+import { fetchProductById, usesSectionLanding } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
@@ -71,7 +71,7 @@ export function ProductLandingPage() {
 
   // Produit général : titre d'onglet propre au produit (sinon celui de ProtecPhone reste affiché)
   useEffect(() => {
-    if (!antichoc || !isGeneralProduct(antichoc)) return
+    if (!antichoc || !usesSectionLanding(antichoc)) return
     const previous = document.title
     const name = title ?? antichoc.name
     const brand = antichoc.landing?.brandName
@@ -114,7 +114,7 @@ export function ProductLandingPage() {
   }
 
   // Les produits généraux n'ont pas l'en-tête / pied de page ProtecPhone
-  const general = isGeneralProduct(antichoc)
+  const general = usesSectionLanding(antichoc)
   const withSiteChrome = (content: React.ReactNode) =>
     general ? (
       <div className="min-h-screen bg-brand-dark">{content}</div>

@@ -1,0 +1,51 @@
+{
+  "productId": "coque-motifs-premium",
+  "slug": "coques-motifs",
+  "name": "Coque antichoc à motifs premium",
+  "title": "كوك يشبهلك، وحماية تدوم",
+  "extraPages": [
+    {
+      "slug": "coques-motifs-commande",
+      "title": "كوك iPhone بتصاميم فاخرة",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [],
+  "price": 2500,
+  "wholesalePrice": 450,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-lion-dore.jpg",
+    "02-cadeau-magic-hoco-plus.jpg"
+  ],
+  "description": "كوك antichoc بظهر لامع وطباعة عالية الجودة ما تتمسحش، وحواف مرفوعة تحمي الكاميرا والشاشة.\n\nمتوفر لكل موديلات iPhone من iPhone 11 حتى iPhone 17 Pro Max.\n\nالعرض:\n• كوك واحد: 2500 دج\n• 2 كوكات: 4500 دج\n\n🎁 مع كل طلب: زجاج حماية Magic HOCO Plus مجاناً على قياس تيليفونك.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#d4a017",
+    "topBanner": "🎁 زجاج حماية مجاناً مع كل طلب · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "تصاميم جديدة",
+    "headlineHighlight": "+ زجاج حماية هدية 🎁",
+    "subtitle": "اختار الستيل اللي يعجبك وموديل الآيفون تاعك. خوذ 2 بسعر أقل، وفي كل طلب زجاج حماية Magic HOCO Plus مجاناً.",
+    "heroBadge": "iPhone 11 → 17 Pro Max",
+    "galleryTitle": "الهدية تاعك مع كل طلب",
+    "featuresTitle": "علاش هاد الكوك؟",
+    "benefits": [
+      "🛡️ | حماية antichoc | الزوايا مقوّية وتحمي تيليفونك من الطيحات",
+      "📷 | حواف مرفوعة | الكاميرا والشاشة ما يلمسوش الطاولة",
+      "✨ | طباعة لامعة ما تتمسحش | الألوان تبقى كيما نهار الأول",
+      "📱 | كل موديلات iPhone | من iPhone 11 حتى iPhone 17 Pro Max",
+      "🎁 | زجاج حماية مجاناً | Magic HOCO Plus على قياس تيليفونك مع كل طلب"
+    ],
+    "offerTitle": "خوذ 2 ووفّر 💸",
+    "offerText": "كوك واحد بـ 2500 دج، ولا 2 بـ 4500 دج. والزجاج هدية في الحالتين.",
+    "oldPrice": 3500,
+    "bundlePrice": 4500,
+    "gift": "زجاج حماية Magic HOCO Plus",
+    "designs": [
+      { "id": "lion-dore", "name": "الأسد الذهبي", "photo": "01-lion-dore.jpg" }
+    ]
+  }
+}

@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /**
- * Crée (ou met à jour) un produit général + sa landing page à partir d'un dossier :
+ * Crée (ou met à jour) un produit + sa landing page à partir d'un dossier :
  *   landings/<nom>/landing.json  (textes, prix, ordre des photos)
  *   landings/<nom>/*.jpg|png|webp (photos ; la 1re de la liste = photo principale)
+ *
+ * Produit général par défaut (modèle unique). Coque à motifs : "deviceType": "iphone",
+ * "models": [ids iPhone] (vide = tous) et "landing.designs": [{ id, name, photo: "fichier.jpg" }].
  *
  * Usage (sur le VPS, dans le dossier du site, après déploiement) :
  *   node scripts/create-landing.mjs landings/hoco-hp65
@@ -18,6 +21,9 @@ import { fileURLToPath } from 'url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const GENERAL_MODEL_ID = 'standard'
+const IPHONE_MODEL_IDS = ['11', '12', '13', '14', '15', '16', '17'].flatMap((n) => [
+  `iphone-${n}`, `iphone-${n}-pro`, `iphone-${n}-pro-max`,
+])
 
 function readEnvFile() {
   const envPath = join(root, '.env')
@@ -65,7 +71,31 @@ async function main() {
   const existing = existingRes.ok ? await existingRes.json().catch(() => null) : null
 
   const photos = (spec.photos || []).map((f) => toDataUrl(join(dir, f)))
-  const variant = `|${GENERAL_MODEL_ID}`
+  const isPhone = spec.deviceType === 'iphone'
+  const modelIds = isPhone ? (spec.models?.length ? spec.models : IPHONE_MODEL_IDS) : [GENERAL_MODEL_ID]
+
+  // Motifs : la photo est donnée par nom de fichier → index dans la galerie
+  const landing = { ...(spec.landing || {}) }
+  if (Array.isArray(landing.designs)) {
+    landing.designs = landing.designs.map((d) => {
+      const photo = typeof d.photo === 'number' ? d.photo : (spec.photos || []).indexOf(d.photo)
+      if (photo < 0) throw new Error(`Photo du motif « ${d.name} » absente de "photos" : ${d.photo}`)
+      return { id: d.id, name: d.name, photo }
+    })
+  }
+  const colorIds = landing.designs?.length ? landing.designs.map((d) => d.id) : (spec.colorIds?.length ? spec.colorIds : [])
+
+  // Stock et dispo fournisseur par variante (motif|modèle) ; on garde ce qui est déjà réglé dans l'admin
+  const variantStocks = { ...(existing?.variantStocks || {}) }
+  const supplier = { ...(existing?.variantAvailableFromSupplier || {}) }
+  for (const cid of colorIds.length ? colorIds : ['']) {
+    for (const mid of modelIds) {
+      const key = `${cid}|${mid}`
+      if (variantStocks[key] === undefined) variantStocks[key] = spec.stock ?? 0
+      if (supplier[key] === undefined && spec.availableFromSupplier) supplier[key] = true
+    }
+  }
+
   const product = {
     id: spec.productId,
     name: spec.name,
@@ -73,17 +103,15 @@ async function main() {
     price: spec.price,
     wholesalePrice: existing?.wholesalePrice || spec.wholesalePrice || 0,
     quantity: existing ? existing.quantity : (spec.stock ?? 0),
-    variantStocks: existing ? existing.variantStocks : { [variant]: spec.stock ?? 0 },
-    variantAvailableFromSupplier: existing
-      ? existing.variantAvailableFromSupplier
-      : (spec.availableFromSupplier ? { [variant]: true } : undefined),
-    image: '📦',
-    colorIds: spec.colorIds?.length ? spec.colorIds : undefined,
+    variantStocks,
+    variantAvailableFromSupplier: Object.keys(supplier).length ? supplier : undefined,
+    image: isPhone ? '📱' : '📦',
+    colorIds: colorIds.length ? colorIds : undefined,
     photoUrl: photos[0] || '',
     photoGallery: photos.length ? photos : undefined,
-    deviceType: 'general',
-    compatibleWith: [GENERAL_MODEL_ID],
-    landing: spec.landing || {},
+    deviceType: isPhone ? 'iphone' : 'general',
+    compatibleWith: modelIds,
+    landing,
   }
 
   const addRes = await fetch(`${base}/api/products/add`, { method: 'POST', headers, body: JSON.stringify(product) })

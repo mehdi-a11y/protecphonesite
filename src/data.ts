@@ -95,6 +95,34 @@ export interface ProductLandingContent {
   oldPrice?: number;
   /** Texte du bouton (défaut : « Commander maintenant » / « اطلب الآن ») */
   ctaText?: string;
+  /** Motifs au choix (coques à motifs) : chaque motif est une variante (colorId = id) avec sa photo de la galerie */
+  designs?: LandingDesign[];
+  /** Prix total pour 2 articles (offre « 2 = prix réduit ») ; vide = pas d'offre */
+  bundlePrice?: number;
+  /** Cadeau ajouté à chaque commande (ex. « Incassable Magic HOCO Plus ») ; vide = aucun */
+  gift?: string;
+}
+
+/** Un motif d'une coque : nom affiché et index de sa photo dans photoGallery. */
+export interface LandingDesign {
+  id: string;
+  name: string;
+  photo: number;
+}
+
+/** Le produit a une landing page par sections (produit général, ou coque avec motifs). */
+export function usesSectionLanding(p: { deviceType?: string; landing?: ProductLandingContent } | null | undefined): boolean {
+  return isGeneralProduct(p) || (p?.landing?.designs?.length ?? 0) > 0
+}
+
+/** Nom d'une couleur ou d'un motif (motifs propres au produit, sinon couleurs ANTICHOC_COLORS). */
+export function getColorName(colorId: string, product?: { landing?: ProductLandingContent } | null): string {
+  if (!colorId) return ''
+  return (
+    product?.landing?.designs?.find((d) => d.id === colorId)?.name ||
+    ANTICHOC_COLORS.find((c) => c.id === colorId)?.name ||
+    colorId
+  )
 }
 
 /** Une ligne d'avantage « emoji | titre | texte » → objet (tolère « titre » seul ou « titre | texte »). */
@@ -278,20 +306,18 @@ export const ANTICHOC_COLORS = [
 
 /** Libellé complet d’une ligne de commande : nom produit + variante (couleur, modèle iPhone) + offre si upsell. */
 export function formatOrderItemLabel(item: {
-  antichoc: { name: string }
+  antichoc: { name: string; price?: number; landing?: ProductLandingContent }
   selectedColorId?: string
   selectedPhoneId?: string
   isUpsell?: boolean
 }): string {
   const name = item.antichoc.name
-  const colorName = item.selectedColorId
-    ? ANTICHOC_COLORS.find((c) => c.id === item.selectedColorId)?.name ?? item.selectedColorId
-    : ''
+  const colorName = item.selectedColorId ? getColorName(item.selectedColorId, item.antichoc) : ''
   const phoneName = item.selectedPhoneId && item.selectedPhoneId !== GENERAL_MODEL_ID
     ? getModelName(item.selectedPhoneId)
     : ''
   const variant = [colorName, phoneName].filter(Boolean).join(' — ')
-  const suffix = item.isUpsell ? ' (offre -50%)' : ''
+  const suffix = item.isUpsell ? (item.antichoc.price === 0 ? ' (offert)' : ' (offre -50%)') : ''
   return variant ? `${name} — ${variant}${suffix}` : `${name}${suffix}`
 }
 
@@ -343,6 +369,8 @@ export function getAntichocsForPhone(phoneId: IPhoneModelId): Antichoc[] {
   return getCatalog().filter(
     (a) =>
       a.deviceType !== 'samsung' &&
+      // Coques à motifs : vendues uniquement par leur landing page (choix du motif avec photo)
+      !usesSectionLanding(a) &&
       (a.compatibleWith && Array.isArray(a.compatibleWith) ? a.compatibleWith : []).includes(phoneId) &&
       hasOrderableVariantForPhone(a, phoneId),
   )

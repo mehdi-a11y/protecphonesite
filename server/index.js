@@ -764,7 +764,9 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
 function slimOrderItemAntichoc(a) {
   if (!a || typeof a !== 'object') return a
   const image = typeof a.image === 'string' && a.image.startsWith('data:') ? '' : a.image
-  return { ...a, image, photoUrl: '', photoGallery: undefined, landing: undefined }
+  // On garde seulement les noms des motifs (libellés des commandes), pas le reste de la landing
+  const designs = Array.isArray(a.landing?.designs) ? a.landing.designs : null
+  return { ...a, image, photoUrl: '', photoGallery: undefined, landing: designs?.length ? { designs } : undefined }
 }
 function slimOrderItems(items) {
   if (!Array.isArray(items)) return []

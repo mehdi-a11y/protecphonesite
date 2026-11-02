@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, isConfirmateurAuthenticated, loginConfirmateur, logoutConfirmateur, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
-import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, normalizeProduct, getModelName, type Antichoc, type IPhoneModelId } from '../data'
+import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, getColorName, normalizeProduct, getModelName, type Antichoc, type IPhoneModelId } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { apiGetProducts, AUTH_EXPIRED_EVENT } from '../api'
 
@@ -761,7 +761,7 @@ export function ConfirmPage() {
                           className="w-28 px-2 py-1.5 rounded-lg bg-brand-dark border border-white/10 text-white text-xs focus:border-brand-accent focus:outline-none"
                         >
                           {colorIds.map((cid) => (
-                            <option key={cid || 'none'} value={cid}>{cid ? (ANTICHOC_COLORS.find((c) => c.id === cid)?.name ?? cid) : '—'}</option>
+                            <option key={cid || 'none'} value={cid}>{cid ? getColorName(cid, antichoc) : '—'}</option>
                           ))}
                         </select>
                         <select

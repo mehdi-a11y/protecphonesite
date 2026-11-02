@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { Antichoc } from '../data'
-import { ANTICHOC_COLORS, GENERAL_MODEL_ID, isVariantOrderable, parseLandingBenefit } from '../data'
+import { ANTICHOC_COLORS, GENERAL_MODEL_ID, getModelName, isVariantOrderable, parseLandingBenefit } from '../data'
+import { getScreenProtectorUpsell } from '../data-screen-protector'
 import type { CartItem } from '../types'
 import { WILAYAS } from '../delivery'
 import { useCheckoutForm } from '../steps/useCheckoutForm'
@@ -56,6 +57,20 @@ const TEXTS = {
     description: 'الوصف',
     privacy: 'سياسة الخصوصية',
     da: 'دج',
+    model: 'موديل الهاتف',
+    chooseModel: 'اختار موديل الهاتف',
+    pickModel: 'اختار موديل الهاتف',
+    designsTitle: 'اختار الستيل تاعك',
+    design: 'التصميم',
+    pickDesign: 'اختار التصميم',
+    designUnavailable: 'غير متوفر لهذا الموديل',
+    offer: 'العرض',
+    pieces: (n: number) => (n === 1 ? 'كوك واحد' : 'كوكين'),
+    save: 'وفّر',
+    popular: 'الأكثر طلباً',
+    gift: 'هدية',
+    free: 'مجاناً',
+    giftEvery: 'مع كل طلب',
   },
   fr: {
     defaultBanner: 'Livraison 58 wilayas · Paiement à la livraison',
@@ -94,6 +109,20 @@ const TEXTS = {
     description: 'Description',
     privacy: 'Politique de confidentialité',
     da: 'DA',
+    model: 'Modèle du téléphone',
+    chooseModel: 'Choisir le modèle',
+    pickModel: 'Choisissez le modèle du téléphone',
+    designsTitle: 'Choisissez votre style',
+    design: 'Motif',
+    pickDesign: 'Choisissez le motif',
+    designUnavailable: 'Indisponible pour ce modèle',
+    offer: 'Offre',
+    pieces: (n: number) => (n === 1 ? '1 coque' : '2 coques'),
+    save: 'Économisez',
+    popular: 'Le plus choisi',
+    gift: 'Cadeau',
+    free: 'Offert',
+    giftEvery: 'avec chaque commande',
   },
 } as const
 
@@ -163,24 +192,55 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     document.head.appendChild(link)
   }, [lang])
 
+  // Coque (iPhone / Samsung) : le client choisit son modèle ; produit général : modèle unique
+  const isPhone = product.deviceType === 'iphone' || product.deviceType === 'samsung'
+  const modelIds = useMemo<string[]>(
+    () => (!isPhone ? [GENERAL_MODEL_ID] : product.deviceType === 'samsung' ? (product.compatibleWithSamsung ?? []) : product.compatibleWith),
+    [isPhone, product.deviceType, product.compatibleWith, product.compatibleWithSamsung],
+  )
+  const [modelId, setModelId] = useState(isPhone ? '' : GENERAL_MODEL_ID)
+
+  // Motifs (coques à motifs) : chacun est une variante avec sa photo de la galerie
+  const designs = useMemo(() => (landing.designs ?? []).filter((d) => d && d.id), [landing.designs])
+  const hasDesigns = designs.length > 0
+  const bundlePrice = landing.bundlePrice && landing.bundlePrice > 0 ? landing.bundlePrice : 0
+  const [designSlots, setDesignSlots] = useState<string[]>(['', ''])
+  const [activeSlot, setActiveSlot] = useState(0)
+
   const colorOptions = useMemo(() => {
-    if (!product.colorIds?.length) return []
+    if (hasDesigns || !product.colorIds?.length) return []
     return product.colorIds
       .map((id) => ANTICHOC_COLORS.find((c) => c.id === id))
       .filter((c): c is NonNullable<typeof c> => c != null)
-  }, [product.colorIds])
+  }, [product.colorIds, hasDesigns])
 
-  const orderableColorIds = useMemo(() => {
-    const ids = (product.colorIds?.length ? product.colorIds : ['']) as string[]
-    return new Set(ids.filter((cid) => isVariantOrderable(product, cid, GENERAL_MODEL_ID)))
-  }, [product])
+  /** Variante commandable pour le modèle choisi (ou pour au moins un modèle tant qu'aucun n'est choisi). */
+  const variantOrderable = (colorId: string, forModel = modelId) =>
+    forModel ? isVariantOrderable(product, colorId, forModel) : modelIds.some((m) => isVariantOrderable(product, colorId, m))
+
+  const variantIds = useMemo(
+    () => (hasDesigns ? designs.map((d) => d.id) : (product.colorIds?.length ? product.colorIds : [''])) as string[],
+    [hasDesigns, designs, product.colorIds],
+  )
+  const orderableColorIds = useMemo(
+    () => new Set(variantIds.filter((cid) => variantOrderable(cid))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [product, variantIds, modelId, modelIds],
+  )
+  const orderableModelIds = useMemo(
+    () => modelIds.filter((m) => variantIds.some((cid) => isVariantOrderable(product, cid, m))),
+    [product, modelIds, variantIds],
+  )
 
   useEffect(() => {
-    setQuantity(1)
+    setQuantity(bundlePrice ? 2 : 1)
     setHint('')
-    const firstOrderable = colorOptions.find((c) => orderableColorIds.has(c.id))
+    setDesignSlots(['', ''])
+    setActiveSlot(0)
+    const firstOrderable = colorOptions.find((c) => isVariantOrderable(product, c.id, GENERAL_MODEL_ID))
     setSelectedColorId(colorOptions.length === 1 && firstOrderable ? firstOrderable.id : '')
-  }, [product.id, colorOptions, orderableColorIds])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id, colorOptions, bundlePrice])
 
   useEffect(() => {
     try {
@@ -200,28 +260,63 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     return () => obs.disconnect()
   }, [])
 
-  const available = orderableColorIds.size > 0
-  const colorOk = colorOptions.length === 0 || (selectedColorId !== '' && orderableColorIds.has(selectedColorId))
-  const cart: CartItem[] = useMemo(
-    () =>
-      available && colorOk
-        ? Array.from({ length: quantity }, () => ({
-            antichoc: product,
-            selectedPhoneId: GENERAL_MODEL_ID,
-            selectedColorId: colorOptions.length ? selectedColorId : '',
-          }))
-        : [],
-    [available, colorOk, quantity, product, selectedColorId, colorOptions.length],
-  )
+  const available = orderableModelIds.length > 0
+  const modelOk = modelId !== '' && orderableModelIds.includes(modelId)
+  // Avec l'offre « 2 = prix réduit », un motif par article ; sans offre, un seul motif pour toute la quantité
+  const slotCount = hasDesigns ? (bundlePrice ? quantity : 1) : 0
+  const slotDesign = (i: number) => designSlots[Math.min(i, slotCount - 1)] ?? ''
+  const colorOk = hasDesigns
+    ? Array.from({ length: slotCount }, (_, i) => slotDesign(i)).every((id) => id !== '' && orderableColorIds.has(id))
+    : colorOptions.length === 0 || (selectedColorId !== '' && orderableColorIds.has(selectedColorId))
+  const bundleActive = bundlePrice > 0 && quantity === 2
+  const subtotal = bundleActive ? bundlePrice : product.price * quantity
+  const giftName = landing.gift?.trim() ?? ''
+
+  const cart: CartItem[] = useMemo(() => {
+    if (!available || !modelOk || !colorOk) return []
+    // Le total de la commande = somme des prix des articles : l'offre 2 est répartie sur les 2 coques
+    const unitPrices = bundleActive ? [bundlePrice - Math.floor(bundlePrice / 2), Math.floor(bundlePrice / 2)] : []
+    const items: CartItem[] = Array.from({ length: quantity }, (_, i) => ({
+      antichoc: unitPrices.length ? { ...product, price: unitPrices[i] } : product,
+      selectedPhoneId: modelId,
+      selectedColorId: hasDesigns ? slotDesign(i) : colorOptions.length ? selectedColorId : '',
+    }))
+    if (giftName) {
+      const base = isPhone
+        ? getScreenProtectorUpsell()
+        : { ...product, id: `gift-${product.id}`, description: '', landing: undefined, photoGallery: undefined }
+      items.push({ antichoc: { ...base, name: giftName, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
+    }
+    return items
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [available, modelOk, colorOk, quantity, product, selectedColorId, colorOptions.length, modelId, designSlots, bundleActive, bundlePrice, giftName, isPhone, hasDesigns])
   const form = useCheckoutForm(cart)
 
   const photos = product.photoGallery?.length ? product.photoGallery : product.photoUrl ? [product.photoUrl] : []
   const heroPhoto = photos[0]
+  const designPhoto = (id: string) => {
+    const d = designs.find((x) => x.id === id)
+    return d ? photos[d.photo] ?? heroPhoto : undefined
+  }
+  const designPhotoIndexes = new Set(designs.map((d) => d.photo))
+  const galleryPhotos = photos.filter((_, i) => i > 0 && !designPhotoIndexes.has(i))
   const oldPrice = landing.oldPrice && landing.oldPrice > product.price ? landing.oldPrice : 0
   const discount = oldPrice ? Math.round((1 - product.price / oldPrice) * 100) : 0
   const features = (landing.benefits ?? []).map(parseLandingBenefit).filter((f): f is NonNullable<typeof f> => f != null)
   const ctaText = landing.ctaText?.trim() || t.cta
-  const subtotal = product.price * quantity
+  const summaryPhoto = (hasDesigns && designPhoto(slotDesign(0))) || heroPhoto
+
+  /** Choix d'un motif pour l'emplacement actif, puis passage à l'emplacement suivant vide. */
+  const pickDesign = (id: string, slot = activeSlot) => {
+    const next = [...designSlots]
+    next[slot] = id
+    setDesignSlots(next)
+    const d = designs.find((x) => x.id === id)
+    if (d) setSelectedImageIndex(d.photo)
+    const empty = Array.from({ length: slotCount }, (_, i) => i).find((i) => i !== slot && !next[i])
+    setActiveSlot(empty ?? slot)
+    setHint('')
+  }
 
   const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
@@ -241,7 +336,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!available) return setHint(t.unavailable)
-    if (!colorOk) return setHint(t.pickColor)
+    if (!modelOk) return setHint(t.pickModel)
+    if (!colorOk) return setHint(hasDesigns ? t.pickDesign : t.pickColor)
     if (!form.canSubmitOrder) return setHint(t.fillForm)
     setHint('')
     trackCheckoutOnce()
@@ -251,12 +347,25 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       // Évite une 2e commande identique si le client reclique
       form.setName('')
       form.setPhone('')
-      setQuantity(1)
+      setQuantity(bundlePrice ? 2 : 1)
+      setDesignSlots(['', ''])
+      setActiveSlot(0)
     }
   }
 
   const inputCls =
     'w-full px-4 py-3 rounded-xl bg-[var(--lp-surface)] border border-[var(--lp-border-strong)] text-[var(--lp-text)] placeholder-[var(--lp-faint)] focus:outline-none focus:border-[var(--lp-accent)] focus:ring-2 focus:ring-[var(--lp-accent)]/20'
+
+  const giftBanner = giftName ? (
+    <div className="flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed" style={{ borderColor: accent, backgroundColor: `${accent}14` }}>
+      <span className="text-3xl shrink-0">🎁</span>
+      <p className="text-sm leading-snug text-start">
+        <span className="font-extrabold">{t.gift} : {giftName}</span>
+        <br />
+        <span className="text-[var(--lp-muted)]">{t.free} {t.giftEvery}</span>
+      </p>
+    </div>
+  ) : null
 
   return (
     <div
@@ -324,7 +433,11 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
               <span className="text-3xl font-extrabold" style={{ color: accent }}>{fmt(product.price)}</span>
               {oldPrice > 0 && <span className="text-lg text-[var(--lp-faint)] line-through">{fmt(oldPrice)}</span>}
             </div>
+            {bundlePrice > 0 && (
+              <p className="mt-2 font-bold"><span style={{ color: accent }}>{t.pieces(2)} : {fmt(bundlePrice)}</span></p>
+            )}
             {landing.subtitle && <p className="text-[var(--lp-muted)] mt-3 leading-relaxed">{landing.subtitle}</p>}
+            {giftBanner && <div className="mt-4">{giftBanner}</div>}
           </section>
         )}
 
@@ -362,14 +475,42 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           ) : (
             <div className="rounded-3xl bg-[var(--lp-surface)] border border-[var(--lp-border)] aspect-square flex items-center justify-center text-8xl">{product.image}</div>
           )}
+          {giftBanner && <div className="mt-4">{giftBanner}</div>}
         </section>
 
+        {/* Motifs : un clic choisit le motif et descend au formulaire */}
+        {hasDesigns && (
+          <section className="pt-12">
+            <h2 className="text-2xl font-extrabold text-center mb-5">{t.designsTitle}</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {designs.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => {
+                    const firstEmpty = designSlots.findIndex((id, i) => i < slotCount && !id)
+                    pickDesign(d.id, firstEmpty === -1 ? activeSlot : firstEmpty)
+                    scrollToForm()
+                  }}
+                  className="group text-start rounded-2xl overflow-hidden border border-[var(--lp-border)] bg-[var(--lp-surface)] shadow-sm"
+                >
+                  <img src={photos[d.photo] ?? heroPhoto} alt={d.name} loading="lazy" className="w-full aspect-[3/4] object-cover transition-transform group-hover:scale-105" />
+                  <span className="flex items-center justify-between gap-2 px-3 py-2">
+                    <span className="font-bold text-sm truncate">{d.name}</span>
+                    <span className="shrink-0 text-xs font-bold px-2 py-1 rounded-full text-white" style={{ backgroundColor: accent }}>{t.cta}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Galerie */}
-        {photos.length > 1 && (
+        {galleryPhotos.length > 0 && (
           <section className="pt-12">
             {landing.galleryTitle && <h2 className="text-2xl font-extrabold text-center mb-5">{landing.galleryTitle}</h2>}
             <div className="grid grid-cols-2 gap-3">
-              {photos.slice(1).map((url, i) => (
+              {galleryPhotos.map((url, i) => (
                 <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface)]" />
               ))}
             </div>
@@ -414,6 +555,12 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             <span className="text-4xl font-extrabold">{fmt(product.price)}</span>
             {oldPrice > 0 && <span className="text-lg text-white/60 line-through">{fmt(oldPrice)}</span>}
           </div>
+          {bundlePrice > 0 && (
+            <p className="-mt-2 mb-5 font-bold text-lg">
+              {t.pieces(2)} : {fmt(bundlePrice)} <span className="text-white/70 text-sm">({t.save} {fmt(product.price * 2 - bundlePrice)})</span>
+            </p>
+          )}
+          {giftName && <p className="-mt-2 mb-5 font-semibold">🎁 {giftName} {t.free}</p>}
           <button type="button" onClick={scrollToForm} className="w-full py-4 rounded-2xl bg-white text-slate-900 font-extrabold text-lg hover:bg-slate-100 transition-colors">
             {ctaText}
           </button>
@@ -436,7 +583,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         >
           {simple && <p className="text-lg font-extrabold mb-4">{t.orderNow}</p>}
           <div className={`flex items-start gap-3 mb-4 ${simple ? 'hidden' : ''}`}>
-            {heroPhoto && <img src={heroPhoto} alt="" className="w-16 h-16 rounded-xl object-cover border border-[var(--lp-border)]" />}
+            {summaryPhoto && <img src={summaryPhoto} alt="" className="w-16 h-16 rounded-xl object-cover border border-[var(--lp-border)]" />}
             <div className="min-w-0 flex-1">
               <p className="font-bold leading-snug">{displayTitle}</p>
               <div className="flex items-baseline gap-2 mt-1">
@@ -451,6 +598,88 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             <p className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">{t.unavailable}</p>
           ) : (
             <form onSubmit={handleSubmit} onFocus={trackCheckoutOnce} className="space-y-4">
+              {isPhone && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1">{t.model} <span className="text-red-500">*</span></label>
+                  <select
+                    required
+                    dir="ltr"
+                    value={modelId}
+                    onChange={(e) => { setModelId(e.target.value); setHint('') }}
+                    className={`${inputCls} text-start`}
+                  >
+                    <option value="">{t.chooseModel}</option>
+                    {orderableModelIds.map((m) => (
+                      <option key={m} value={m}>{getModelName(m)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {bundlePrice > 0 && (
+                <div>
+                  <p className="text-sm font-semibold mb-2">{t.offer}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[1, 2].map((n) => {
+                      const price = n === 2 ? bundlePrice : product.price
+                      const on = quantity === n
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => { setQuantity(n); if (activeSlot >= n) setActiveSlot(0) }}
+                          className={`relative px-3 pt-4 pb-3 rounded-2xl border-2 text-center transition-colors ${on ? 'border-[var(--lp-accent)] bg-[var(--lp-accent)]/10' : 'border-[var(--lp-border-strong)] bg-[var(--lp-surface)]'}`}
+                        >
+                          {n === 2 && (
+                            <span className="absolute -top-2.5 inset-x-0 mx-auto w-max px-2 py-0.5 rounded-full text-[11px] font-bold text-white" style={{ backgroundColor: accent }}>
+                              {t.popular}
+                            </span>
+                          )}
+                          <span className="block font-bold">{t.pieces(n)}</span>
+                          <span className="block text-lg font-extrabold" style={{ color: accent }}>{fmt(price)}</span>
+                          {n === 2 && product.price * 2 > bundlePrice && (
+                            <span className="block text-xs text-green-600 font-bold">{t.save} {fmt(product.price * 2 - bundlePrice)}</span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {hasDesigns && Array.from({ length: slotCount }, (_, slot) => {
+                const chosen = designs.find((d) => d.id === designSlots[slot])
+                return (
+                  <div key={slot} onClick={() => setActiveSlot(slot)}>
+                    <p className="text-sm font-semibold mb-2">
+                      {t.design}{slotCount > 1 ? ` ${slot + 1}` : ''} <span className="text-red-500">*</span>
+                      {chosen && <span className="font-normal text-[var(--lp-faint)] ms-2">{chosen.name}</span>}
+                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {designs.map((d) => {
+                        const orderable = orderableColorIds.has(d.id)
+                        const on = designSlots[slot] === d.id
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); if (orderable) pickDesign(d.id, slot) }}
+                            disabled={!orderable}
+                            title={orderable ? d.name : `${d.name} — ${t.designUnavailable}`}
+                            className={`shrink-0 w-[72px] rounded-xl overflow-hidden border-2 transition-all ${
+                              on ? 'border-[var(--lp-accent)] ring-2 ring-[var(--lp-accent)]/40' : orderable ? 'border-[var(--lp-border-strong)]' : 'border-[var(--lp-border)] opacity-30 cursor-not-allowed'
+                            }`}
+                          >
+                            <img src={photos[d.photo] ?? heroPhoto} alt={d.name} loading="lazy" className="w-full aspect-[3/4] object-cover" />
+                            <span className="block px-1 py-0.5 text-[10px] font-semibold truncate">{d.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+
               {colorOptions.length > 0 && (
                 <div>
                   <p className="text-sm font-semibold mb-2">
@@ -549,7 +778,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div className={`flex items-center justify-between ${bundlePrice > 0 ? 'hidden' : ''}`}>
                 <p className="text-sm font-semibold">{t.quantity}</p>
                 <div className="inline-flex items-center rounded-xl border border-[var(--lp-border-strong)] bg-[var(--lp-surface)]" dir="ltr">
                   <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-11 h-11 text-xl hover:bg-[var(--lp-surface-2)] rounded-l-xl" aria-label="-">−</button>
@@ -565,6 +794,20 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                   <span className="truncate">{displayTitle} × {quantity}</span>
                   <span className="shrink-0">{fmt(subtotal)}</span>
                 </div>
+                {(hasDesigns || modelId !== GENERAL_MODEL_ID) && (
+                  <p className="text-xs text-[var(--lp-muted)]">
+                    {[
+                      modelId && modelId !== GENERAL_MODEL_ID ? getModelName(modelId) : '',
+                      ...Array.from({ length: slotCount }, (_, i) => designs.find((d) => d.id === slotDesign(i))?.name ?? ''),
+                    ].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+                {giftName && (
+                  <div className="flex justify-between gap-2 font-semibold" style={{ color: accent }}>
+                    <span className="truncate">🎁 {giftName}</span>
+                    <span className="shrink-0">{t.free}</span>
+                  </div>
+                )}
                 <div className="flex justify-between gap-2 text-[var(--lp-muted)]">
                   <span>{t.shipping}</span>
                   <span>{form.wilaya ? fmt(form.deliveryPrice) : t.shippingTbd}</span>

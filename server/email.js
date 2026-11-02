@@ -44,11 +44,14 @@ const COLOR_NAMES = {
  */
 function formatOrderItemLabel(item) {
   const name = item.antichoc?.name || 'Article'
-  const colorName = item.selectedColorId ? (COLOR_NAMES[item.selectedColorId] || item.selectedColorId) : ''
+  const design = item.selectedColorId && Array.isArray(item.antichoc?.landing?.designs)
+    ? item.antichoc.landing.designs.find((d) => d && d.id === item.selectedColorId)
+    : null
+  const colorName = item.selectedColorId ? (design?.name || COLOR_NAMES[item.selectedColorId] || item.selectedColorId) : ''
   // 'standard' = produit général (pas de modèle de téléphone)
   const phoneName = item.selectedPhoneId && item.selectedPhoneId !== 'standard' ? (PHONE_NAMES[item.selectedPhoneId] || item.selectedPhoneId) : ''
   const variant = [colorName, phoneName].filter(Boolean).join(' — ')
-  const suffix = item.isUpsell ? ' (offre -50%)' : ''
+  const suffix = item.isUpsell ? (Number(item.antichoc?.price) === 0 ? ' (offert)' : ' (offre -50%)') : ''
   return variant ? `${name} — ${variant}${suffix}` : `${name}${suffix}`
 }
 
