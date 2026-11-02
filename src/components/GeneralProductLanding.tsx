@@ -99,6 +99,36 @@ const TEXTS = {
 
 const ARABIC_FONT_ID = 'landing-font-cairo'
 
+/** Couleurs de la page selon le thème (clair par défaut, sombre « sport »), exposées en variables CSS --lp-*. */
+function themeVars(dark: boolean, accent: string): Record<string, string> {
+  const palette = dark
+    ? {
+        page: `radial-gradient(120% 60% at 50% 0%, ${accent}26 0%, #0b0b0f 55%, #0b0b0f 100%)`,
+        surface: '#16161d', surface2: '#1f1f28', text: '#f8fafc', muted: '#cbd5e1', faint: '#94a3b8',
+        border: '#262631', borderStrong: '#34343f', bar: 'rgba(11,11,15,.88)', shadow: 'rgba(0,0,0,.55)', ink: accent,
+      }
+    : {
+        page: 'linear-gradient(180deg, #f0f9ff 0%, #ffffff 35%, #ffffff 100%)',
+        surface: '#ffffff', surface2: '#f8fafc', text: '#0f172a', muted: '#475569', faint: '#94a3b8',
+        border: '#f1f5f9', borderStrong: '#e2e8f0', bar: 'rgba(255,255,255,.9)', shadow: 'rgba(226,232,240,.6)', ink: '#0f172a',
+      }
+  return {
+    '--lp-accent': accent,
+    '--lp-surface': palette.surface,
+    '--lp-surface-2': palette.surface2,
+    '--lp-text': palette.text,
+    '--lp-muted': palette.muted,
+    '--lp-faint': palette.faint,
+    '--lp-border': palette.border,
+    '--lp-border-strong': palette.borderStrong,
+    '--lp-bar': palette.bar,
+    '--lp-shadow': palette.shadow,
+    '--lp-ink': palette.ink,
+    background: palette.page,
+    colorScheme: dark ? 'dark' : 'light',
+  }
+}
+
 /**
  * Landing page d'un produit général (hors téléphonie), par sections configurables dans l'admin.
  * Le formulaire de commande est intégré à la page et enregistre la commande comme le checkout
@@ -108,6 +138,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const simple = template === 'simple'
   const landing = product.landing ?? {}
   const lang = landing.lang === 'fr' ? 'fr' : 'ar'
+  const dark = landing.theme === 'dark'
   const t = TEXTS[lang]
   const accent = /^#[0-9a-f]{3,8}$/i.test(landing.accentColor ?? '') ? landing.accentColor! : DEFAULT_ACCENT
   const displayTitle = title ?? product.name
@@ -225,15 +256,15 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   }
 
   const inputCls =
-    'w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[var(--lp-accent)] focus:ring-2 focus:ring-[var(--lp-accent)]/20'
+    'w-full px-4 py-3 rounded-xl bg-[var(--lp-surface)] border border-[var(--lp-border-strong)] text-[var(--lp-text)] placeholder-[var(--lp-faint)] focus:outline-none focus:border-[var(--lp-accent)] focus:ring-2 focus:ring-[var(--lp-accent)]/20'
 
   return (
     <div
       dir={lang === 'ar' ? 'rtl' : 'ltr'}
       lang={lang}
-      className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white text-slate-900"
+      className="min-h-screen text-[var(--lp-text)]"
       style={{
-        ['--lp-accent' as string]: accent,
+        ...themeVars(dark, accent),
         fontFamily: lang === 'ar' ? "'Cairo', 'Outfit', system-ui, sans-serif" : undefined,
       }}
     >
@@ -242,7 +273,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         {landing.topBanner?.trim() || t.defaultBanner}
       </div>
       {landing.brandName && (
-        <header className="px-4 h-12 flex items-center justify-center border-b border-slate-100 bg-white/70 backdrop-blur">
+        <header className="px-4 h-12 flex items-center justify-center border-b border-[var(--lp-border)] bg-[var(--lp-bar)] backdrop-blur">
           <span className="font-extrabold text-lg tracking-tight">{landing.brandName}</span>
         </header>
       )}
@@ -251,7 +282,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         {/* Page simple : photos avec miniatures + titre + prix, puis directement le formulaire */}
         {simple && (
           <section className="pt-5">
-            <div className="relative rounded-3xl bg-white border border-slate-100 shadow-lg shadow-slate-200/60 overflow-hidden">
+            <div className="relative rounded-3xl bg-[var(--lp-surface)] border border-[var(--lp-border)] shadow-lg shadow-[color:var(--lp-shadow)] overflow-hidden">
               {photos[selectedImageIndex] ?? heroPhoto ? (
                 <img
                   src={photos[selectedImageIndex] ?? heroPhoto}
@@ -263,7 +294,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 <div className="aspect-square flex items-center justify-center text-8xl">{product.image}</div>
               )}
               {discount > 0 && (
-                <span className="absolute top-4 start-4 px-3 py-1 rounded-full bg-red-600 text-white text-sm font-bold">-{discount}%</span>
+                <span className="absolute top-4 start-4 px-3 py-1 rounded-full bg-red-600 text-white text-sm font-bold"><bdi dir="ltr">-{discount}%</bdi></span>
               )}
             </div>
             {photos.length > 1 && (
@@ -274,7 +305,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                     type="button"
                     onClick={() => setSelectedImageIndex(i)}
                     className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-colors ${
-                      selectedImageIndex === i ? 'border-[var(--lp-accent)]' : 'border-slate-200'
+                      selectedImageIndex === i ? 'border-[var(--lp-accent)]' : 'border-[var(--lp-border-strong)]'
                     }`}
                     aria-label={`${i + 1}`}
                   >
@@ -286,14 +317,14 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             <div className="mt-2 flex items-start justify-between gap-3">
               <h1 className="text-2xl font-extrabold leading-snug">{displayTitle}</h1>
               {discount > 0 && (
-                <span className="shrink-0 mt-1 px-2.5 py-1 rounded-full bg-red-100 text-red-600 text-sm font-bold">-{discount}%</span>
+                <span className="shrink-0 mt-1 px-2.5 py-1 rounded-full bg-red-100 text-red-600 text-sm font-bold"><bdi dir="ltr">-{discount}%</bdi></span>
               )}
             </div>
             <div className="flex items-baseline gap-3 mt-2">
               <span className="text-3xl font-extrabold" style={{ color: accent }}>{fmt(product.price)}</span>
-              {oldPrice > 0 && <span className="text-lg text-slate-400 line-through">{fmt(oldPrice)}</span>}
+              {oldPrice > 0 && <span className="text-lg text-[var(--lp-faint)] line-through">{fmt(oldPrice)}</span>}
             </div>
-            {landing.subtitle && <p className="text-slate-600 mt-3 leading-relaxed">{landing.subtitle}</p>}
+            {landing.subtitle && <p className="text-[var(--lp-muted)] mt-3 leading-relaxed">{landing.subtitle}</p>}
           </section>
         )}
 
@@ -314,22 +345,22 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
               </>
             )}
           </h1>
-          {landing.subtitle && <p className="text-slate-600 text-lg leading-relaxed mb-6">{landing.subtitle}</p>}
+          {landing.subtitle && <p className="text-[var(--lp-muted)] text-lg leading-relaxed mb-6">{landing.subtitle}</p>}
           {heroPhoto ? (
-            <div className="relative rounded-3xl bg-white shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+            <div className="relative rounded-3xl bg-[var(--lp-surface)] shadow-xl shadow-[color:var(--lp-shadow)] border border-[var(--lp-border)] overflow-hidden">
               <img src={heroPhoto} alt={displayTitle} fetchPriority="high" className="w-full aspect-square object-cover" />
               {landing.heroBadge && (
-                <span className="absolute top-4 end-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white shadow-lg font-bold text-sm">
+                <span className="absolute top-4 end-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-[var(--lp-surface)] shadow-lg font-bold text-sm">
                   <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
                   {landing.heroBadge}
                 </span>
               )}
               {discount > 0 && (
-                <span className="absolute top-4 start-4 px-3 py-1 rounded-full bg-red-600 text-white text-sm font-bold">-{discount}%</span>
+                <span className="absolute top-4 start-4 px-3 py-1 rounded-full bg-red-600 text-white text-sm font-bold"><bdi dir="ltr">-{discount}%</bdi></span>
               )}
             </div>
           ) : (
-            <div className="rounded-3xl bg-white border border-slate-100 aspect-square flex items-center justify-center text-8xl">{product.image}</div>
+            <div className="rounded-3xl bg-[var(--lp-surface)] border border-[var(--lp-border)] aspect-square flex items-center justify-center text-8xl">{product.image}</div>
           )}
         </section>
 
@@ -339,7 +370,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             {landing.galleryTitle && <h2 className="text-2xl font-extrabold text-center mb-5">{landing.galleryTitle}</h2>}
             <div className="grid grid-cols-2 gap-3">
               {photos.slice(1).map((url, i) => (
-                <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-2xl border border-slate-100 bg-white" />
+                <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface)]" />
               ))}
             </div>
           </section>
@@ -351,7 +382,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             {landing.featuresTitle && <h2 className="text-2xl font-extrabold text-center mb-5">{landing.featuresTitle}</h2>}
             <div className="space-y-3">
               {features.map((f, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-[var(--lp-surface)] border border-[var(--lp-border)] shadow-sm">
                   {f.icon && (
                     <span className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${accent}1a` }}>
                       {f.icon}
@@ -359,7 +390,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                   )}
                   <div className="min-w-0">
                     <p className="font-bold">{f.title}</p>
-                    {f.text && <p className="text-slate-600 text-sm mt-0.5 leading-relaxed">{f.text}</p>}
+                    {f.text && <p className="text-[var(--lp-muted)] text-sm mt-0.5 leading-relaxed">{f.text}</p>}
                   </div>
                 </div>
               ))}
@@ -371,7 +402,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         {product.description && (
           <section className="pt-12">
             <h2 className="text-2xl font-extrabold text-center mb-4">{t.description}</h2>
-            <p className="text-slate-600 leading-relaxed whitespace-pre-line">{product.description}</p>
+            <p className="text-[var(--lp-muted)] leading-relaxed whitespace-pre-line">{product.description}</p>
           </section>
         )}
 
@@ -401,17 +432,17 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         <section
           ref={formRef}
           id="commander"
-          className={`${simple ? 'mt-5' : 'mt-12'} p-5 rounded-3xl bg-white border border-slate-100 shadow-xl shadow-slate-200/60 scroll-mt-4`}
+          className={`${simple ? 'mt-5' : 'mt-12'} p-5 rounded-3xl bg-[var(--lp-surface)] border border-[var(--lp-border)] shadow-xl shadow-[color:var(--lp-shadow)] scroll-mt-4`}
         >
           {simple && <p className="text-lg font-extrabold mb-4">{t.orderNow}</p>}
           <div className={`flex items-start gap-3 mb-4 ${simple ? 'hidden' : ''}`}>
-            {heroPhoto && <img src={heroPhoto} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-100" />}
+            {heroPhoto && <img src={heroPhoto} alt="" className="w-16 h-16 rounded-xl object-cover border border-[var(--lp-border)]" />}
             <div className="min-w-0 flex-1">
               <p className="font-bold leading-snug">{displayTitle}</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-xl font-extrabold" style={{ color: accent }}>{fmt(product.price)}</span>
-                {oldPrice > 0 && <span className="text-sm text-slate-400 line-through">{fmt(oldPrice)}</span>}
-                {discount > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-bold">-{discount}%</span>}
+                {oldPrice > 0 && <span className="text-sm text-[var(--lp-faint)] line-through">{fmt(oldPrice)}</span>}
+                {discount > 0 && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-bold"><bdi dir="ltr">-{discount}%</bdi></span>}
               </div>
             </div>
           </div>
@@ -424,7 +455,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 <div>
                   <p className="text-sm font-semibold mb-2">
                     {t.color} <span className="text-red-500">*</span>
-                    {selectedColorId && <span className="font-normal text-slate-500 ms-2">{colorOptions.find((c) => c.id === selectedColorId)?.name}</span>}
+                    {selectedColorId && <span className="font-normal text-[var(--lp-faint)] ms-2">{colorOptions.find((c) => c.id === selectedColorId)?.name}</span>}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {colorOptions.map((c) => {
@@ -436,7 +467,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                           onClick={() => orderable && setSelectedColorId(c.id)}
                           disabled={!orderable}
                           className={`w-10 h-10 rounded-full border-2 transition-all ${
-                            selectedColorId === c.id ? 'border-slate-900 ring-2 ring-[var(--lp-accent)]/40' : orderable ? 'border-slate-200' : 'border-slate-100 opacity-40 cursor-not-allowed'
+                            selectedColorId === c.id ? 'border-[var(--lp-text)] ring-2 ring-[var(--lp-accent)]/40' : orderable ? 'border-[var(--lp-border-strong)]' : 'border-[var(--lp-border)] opacity-40 cursor-not-allowed'
                           }`}
                           style={{ backgroundColor: c.hex }}
                           title={c.name}
@@ -475,7 +506,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                       type="button"
                       onClick={() => form.setDeliveryType(type)}
                       className={`px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                        form.deliveryType === type ? 'border-[var(--lp-accent)] bg-[var(--lp-accent)]/10' : 'border-slate-200 bg-white'
+                        form.deliveryType === type ? 'border-[var(--lp-accent)] bg-[var(--lp-accent)]/10' : 'border-[var(--lp-border-strong)] bg-[var(--lp-surface)]'
                       }`}
                     >
                       {type === 'domicile' ? `🏠 ${t.home}` : `🏢 ${t.office}`}
@@ -520,25 +551,25 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
 
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">{t.quantity}</p>
-                <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white" dir="ltr">
-                  <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-11 h-11 text-xl hover:bg-slate-50 rounded-l-xl" aria-label="-">−</button>
+                <div className="inline-flex items-center rounded-xl border border-[var(--lp-border-strong)] bg-[var(--lp-surface)]" dir="ltr">
+                  <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-11 h-11 text-xl hover:bg-[var(--lp-surface-2)] rounded-l-xl" aria-label="-">−</button>
                   <span className="w-10 text-center font-bold">{String(quantity).padStart(2, '0')}</span>
-                  <button type="button" onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))} className="w-11 h-11 text-xl hover:bg-slate-50 rounded-r-xl" aria-label="+">+</button>
+                  <button type="button" onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))} className="w-11 h-11 text-xl hover:bg-[var(--lp-surface-2)] rounded-r-xl" aria-label="+">+</button>
                 </div>
               </div>
 
               {/* Récapitulatif */}
-              <div className="rounded-2xl bg-slate-50 p-4 space-y-2 text-sm">
+              <div className="rounded-2xl bg-[var(--lp-surface-2)] p-4 space-y-2 text-sm">
                 <p className="font-bold mb-1">{t.summary}</p>
                 <div className="flex justify-between gap-2">
                   <span className="truncate">{displayTitle} × {quantity}</span>
                   <span className="shrink-0">{fmt(subtotal)}</span>
                 </div>
-                <div className="flex justify-between gap-2 text-slate-600">
+                <div className="flex justify-between gap-2 text-[var(--lp-muted)]">
                   <span>{t.shipping}</span>
                   <span>{form.wilaya ? fmt(form.deliveryPrice) : t.shippingTbd}</span>
                 </div>
-                <div className="flex justify-between gap-2 pt-2 border-t border-slate-200 text-base font-extrabold">
+                <div className="flex justify-between gap-2 pt-2 border-t border-[var(--lp-border-strong)] text-base font-extrabold">
                   <span>{t.total}</span>
                   <span style={{ color: accent }}>{fmt(subtotal + (form.wilaya ? form.deliveryPrice : 0))}</span>
                 </div>
@@ -561,7 +592,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           <>
             <div className="grid grid-cols-3 gap-2 mt-5 text-xs text-center">
               {t.trust.map(([icon, label]) => (
-                <div key={label} className="rounded-xl bg-white border border-slate-100 p-2.5 font-semibold">
+                <div key={label} className="rounded-xl bg-[var(--lp-surface)] border border-[var(--lp-border)] p-2.5 font-semibold">
                   <div className="text-xl mb-1">{icon}</div>
                   {label}
                 </div>
@@ -570,25 +601,25 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             {product.description && (
               <section className="mt-8">
                 <h2 className="text-xl font-extrabold mb-3">{t.description}</h2>
-                <p className="text-slate-600 leading-relaxed whitespace-pre-line">{product.description}</p>
+                <p className="text-[var(--lp-muted)] leading-relaxed whitespace-pre-line">{product.description}</p>
               </section>
             )}
           </>
         )}
       </main>
 
-      <footer className="border-t border-slate-100 py-6 px-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-[var(--lp-border)] py-6 px-4 text-center text-xs text-[var(--lp-faint)]">
         {landing.brandName && <p className="mb-1">© {new Date().getFullYear()} {landing.brandName}</p>}
-        <Link to="/confidentialite" className="hover:text-slate-900">{t.privacy}</Link>
+        <Link to="/confidentialite" className="hover:text-[var(--lp-text)]">{t.privacy}</Link>
       </footer>
 
       {/* Barre fixe */}
       {available && !formVisible && !confirmed && (
-        <div className="fixed bottom-0 inset-x-0 z-40 p-3 bg-white/90 backdrop-blur border-t border-slate-100">
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 bg-[var(--lp-bar)] backdrop-blur border-t border-[var(--lp-border)]">
           <button
             type="button"
             onClick={scrollToForm}
-            className="w-full max-w-xl mx-auto block py-4 rounded-2xl bg-slate-900 text-white font-extrabold text-lg shadow-xl"
+            className="w-full max-w-xl mx-auto block py-4 rounded-2xl bg-[var(--lp-ink)] text-white font-extrabold text-lg shadow-xl"
           >
             {landing.ctaText?.trim() || `${t.orderNow} !!`}
           </button>
@@ -598,11 +629,11 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       {/* Confirmation */}
       {confirmed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
+          <div className="w-full max-w-sm rounded-3xl bg-[var(--lp-surface)] p-6 text-center shadow-2xl">
             <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl text-white" style={{ backgroundColor: accent }}>✓</div>
             <p className="text-xl font-extrabold mb-2">{t.successTitle}</p>
-            <p className="text-slate-600 mb-3">{t.successText}</p>
-            <p className="text-sm text-slate-500 mb-5" dir="ltr">{t.orderNumber} : {confirmed.orderId}</p>
+            <p className="text-[var(--lp-muted)] mb-3">{t.successText}</p>
+            <p className="text-sm text-[var(--lp-faint)] mb-5" dir="ltr">{t.orderNumber} : {confirmed.orderId}</p>
             <button type="button" onClick={() => setConfirmed(null)} className="w-full py-3 rounded-2xl text-white font-bold" style={{ backgroundColor: accent }}>
               {t.ok}
             </button>

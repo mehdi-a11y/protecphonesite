@@ -1898,6 +1898,17 @@ export function AdminPage() {
                               </select>
                             </div>
                             <div>
+                              <label className="block text-xs text-brand-muted mb-1">Thème</label>
+                              <select
+                                value={lp.theme === 'dark' ? 'dark' : 'light'}
+                                onChange={(e) => handleProductLandingChange(p.id, { theme: e.target.value === 'dark' ? 'dark' : 'light' })}
+                                className={fieldCls}
+                              >
+                                <option value="light">Clair</option>
+                                <option value="dark">Sombre (sport)</option>
+                              </select>
+                            </div>
+                            <div>
                               <label className="block text-xs text-brand-muted mb-1">Couleur principale</label>
                               <input
                                 type="color"

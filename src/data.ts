@@ -68,6 +68,8 @@ export interface ProductLandingContent {
   lang?: 'ar' | 'fr';
   /** Couleur principale (hex), ex. #3b82f6 */
   accentColor?: string;
+  /** Thème de la page : 'light' (clair, par défaut) ou 'dark' (sombre, style sport) */
+  theme?: 'light' | 'dark';
   /** Nom de marque affiché en haut (vide = aucun) */
   brandName?: string;
   /** Bandeau tout en haut (ex. « Commandez avant rupture de stock ») */
