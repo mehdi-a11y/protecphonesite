@@ -1,8 +1,9 @@
 /**
  * TikTok Pixel — suivi des conversions pour TikTok Ads.
  * Définir VITE_TIKTOK_PIXEL_ID dans .env, et pour des pixels supplémentaires :
- * VITE_TIKTOK_PIXEL_ID_2, VITE_TIKTOK_PIXEL_ID_3, VITE_TIKTOK_PIXEL_ID_4... (jusqu'à _10).
- * Les événements sont envoyés à tous les pixels définis.
+ * VITE_TIKTOK_PIXEL_ID_2, VITE_TIKTOK_PIXEL_ID_3, ... VITE_TIKTOK_PIXEL_ID_11, _12... (sans limite).
+ * Chaque variable peut aussi contenir plusieurs IDs séparés par des virgules.
+ * Les événements sont envoyés à tous les pixels définis (doublons ignorés).
  * Doc : https://ads.tiktok.com/help/article/tiktok-pixel
  */
 
@@ -17,8 +18,8 @@ declare global {
   }
 }
 
-/** Nombre max de pixels numérotés supportés (VITE_TIKTOK_PIXEL_ID_2 à _MAX_EXTRA_PIXELS). */
-const MAX_EXTRA_PIXELS = 10
+/** VITE_TIKTOK_PIXEL_ID (n° 1) ou VITE_TIKTOK_PIXEL_ID_<n>, sans limite de n. */
+const PIXEL_ENV_KEY = /^VITE_TIKTOK_PIXEL_ID(?:_(\d+))?$/
 
 function parsePixelIds(raw: string | undefined): string[] {
   if (!raw) return []
@@ -27,10 +28,14 @@ function parsePixelIds(raw: string | undefined): string[] {
 
 function getPixelIds(): string[] {
   const env = import.meta.env as Record<string, string | undefined>
-  const ids = parsePixelIds(env.VITE_TIKTOK_PIXEL_ID)
-  for (let i = 2; i <= MAX_EXTRA_PIXELS; i++) {
-    ids.push(...parsePixelIds(env[`VITE_TIKTOK_PIXEL_ID_${i}`]))
-  }
+  const keys = Object.keys(env)
+    .map((key) => {
+      const m = PIXEL_ENV_KEY.exec(key)
+      return m ? { key, order: m[1] ? Number(m[1]) : 1 } : null
+    })
+    .filter((k): k is { key: string; order: number } => k !== null)
+    .sort((a, b) => a.order - b.order)
+  const ids = keys.flatMap(({ key }) => parsePixelIds(env[key]))
   return [...new Set(ids)]
 }
 

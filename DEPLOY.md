@@ -31,7 +31,7 @@ VITE_FB_PIXEL_ID=votre_id_facebook
 VITE_FB_PIXEL_ID_2=votre_second_id_facebook
 VITE_TIKTOK_PIXEL_ID=votre_premier_id_tiktok
 VITE_TIKTOK_PIXEL_ID_2=votre_second_id_tiktok
-# VITE_TIKTOK_PIXEL_ID_3=votre_troisieme_id_tiktok   (autant que besoin, jusqu'à _10)
+# VITE_TIKTOK_PIXEL_ID_3=votre_troisieme_id_tiktok   (autant que besoin : _11, _12... sans limite)
 ```
 
 Enregistrez (`Ctrl+O`, Entrée, `Ctrl+X` avec nano).
@@ -68,7 +68,7 @@ node server/index.js
 | `VITE_FB_PIXEL_ID` | `.env` sur le VPS | **Au build** (`npm run build`) |
 | `VITE_FB_PIXEL_ID_2` | `.env` sur le VPS | **Au build** (second pixel Facebook) |
 | `VITE_TIKTOK_PIXEL_ID` | `.env` sur le VPS | **Au build** |
-| `VITE_TIKTOK_PIXEL_ID_2`, `_3`, ... `_10` | `.env` sur le VPS | **Au build** (pixels supplémentaires) |
+| `VITE_TIKTOK_PIXEL_ID_2`, `_3`, ... `_11`, `_12`... (sans limite) | `.env` sur le VPS | **Au build** (pixels supplémentaires) |
 | `TWILIO_*` | `.env` sur le VPS | Au démarrage du serveur Node |
 | `ADMIN_PASSWORD` / `CONFIRMATEUR_PASSWORD` / `AUTH_SECRET` | `.env` sur le VPS | Au démarrage du serveur Node (connexion `/admin` et `/confirmateur`) |
 
