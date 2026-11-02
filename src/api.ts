@@ -266,10 +266,14 @@ export async function apiSaveDeliveryPrices(prices: DeliveryPrices): Promise<voi
   })
 }
 
+/** 'full' = landing complète (sections), 'simple' = page produit courte (photos + formulaire). Produits généraux uniquement. */
+export type LandingTemplate = 'full' | 'simple'
+
 export interface LandingPage {
   slug: string
   antichocId: string
   title: string | null
+  template?: LandingTemplate
 }
 
 export async function apiGetLandingPages(): Promise<LandingPage[]> {
@@ -284,7 +288,7 @@ export async function apiGetLandingBySlug(slug: string): Promise<LandingPage | n
   return res.json()
 }
 
-export async function apiCreateLanding(landing: { slug: string; antichocId: string; title?: string | null }): Promise<LandingPage> {
+export async function apiCreateLanding(landing: { slug: string; antichocId: string; title?: string | null; template?: LandingTemplate }): Promise<LandingPage> {
   return fetchJson<LandingPage>('/api/landing-pages', {
     method: 'POST',
     body: JSON.stringify(landing),
@@ -293,7 +297,7 @@ export async function apiCreateLanding(landing: { slug: string; antichocId: stri
 
 export async function apiUpdateLanding(
   slug: string,
-  data: { slug?: string; antichocId?: string; title?: string | null },
+  data: { slug?: string; antichocId?: string; title?: string | null; template?: LandingTemplate },
 ): Promise<LandingPage> {
   return fetchJson<LandingPage>('/api/landing-pages/' + encodeURIComponent(slug), {
     method: 'PATCH',

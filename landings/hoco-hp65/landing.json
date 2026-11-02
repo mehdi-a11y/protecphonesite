@@ -3,6 +3,13 @@
   "slug": "hoco-hp65",
   "name": "HOCO HP65 | Cure-Oreilles Avec Caméra",
   "title": "نظّف أذنيك وأنت ترى",
+  "extraPages": [
+    {
+      "slug": "hoco-hp65-commande",
+      "title": "منظف الأذن بالكاميرا HOCO HP65",
+      "template": "simple"
+    }
+  ],
   "price": 4900,
   "wholesalePrice": 0,
   "stock": 0,

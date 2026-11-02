@@ -134,6 +134,8 @@ export function AdminPage() {
   const [newLandingSlug, setNewLandingSlug] = useState('')
   const [newLandingAntichocId, setNewLandingAntichocId] = useState('')
   const [newLandingTitle, setNewLandingTitle] = useState('')
+  const [newLandingTemplate, setNewLandingTemplate] = useState<'full' | 'simple'>('full')
+  const [editLandingTemplate, setEditLandingTemplate] = useState<'full' | 'simple'>('full')
   const [landingProductMode, setLandingProductMode] = useState<'existing' | 'new'>('existing')
   const [newLandingProductName, setNewLandingProductName] = useState('')
   const [newLandingProductPrice, setNewLandingProductPrice] = useState('')
@@ -2827,6 +2829,17 @@ export function AdminPage() {
                   className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white placeholder-brand-muted focus:border-brand-accent focus:outline-none"
                 />
               </div>
+              <div>
+                <label className="block text-sm text-brand-muted mb-1">Type de page (produits généraux)</label>
+                <select
+                  value={newLandingTemplate}
+                  onChange={(e) => setNewLandingTemplate(e.target.value === 'simple' ? 'simple' : 'full')}
+                  className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none"
+                >
+                  <option value="full">Landing complète (sections, offre, formulaire)</option>
+                  <option value="simple">Page produit simple (photos + formulaire)</option>
+                </select>
+              </div>
               {landingMessage && (
                 <p className={`text-sm ${landingMessage.startsWith('Erreur') ? 'text-red-400' : 'text-emerald-400'}`}>
                   {landingMessage}
@@ -2932,9 +2945,11 @@ export function AdminPage() {
                       slug: cleanSlug,
                       antichocId,
                       title: newLandingTitle.trim() || undefined,
+                      template: newLandingTemplate,
                     })
                     setNewLandingSlug('')
                     setNewLandingTitle('')
+                    setNewLandingTemplate('full')
                     setNewLandingProductName('')
                     setNewLandingProductPrice('')
                     setNewLandingProductWholesalePrice('')
@@ -2983,6 +2998,17 @@ export function AdminPage() {
                     />
                   </div>
                   <div>
+                    <label className="block text-xs text-brand-muted mb-1">Type de page (produits généraux)</label>
+                    <select
+                      value={editLandingTemplate}
+                      onChange={(e) => setEditLandingTemplate(e.target.value === 'simple' ? 'simple' : 'full')}
+                      className="w-full px-4 py-2 rounded-lg bg-brand-dark border border-white/10 text-white focus:border-brand-accent focus:outline-none text-sm"
+                    >
+                      <option value="full">Landing complète</option>
+                      <option value="simple">Page produit simple</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-xs text-brand-muted mb-1">Produit</label>
                     <select
                       value={editLandingAntichocId}
@@ -3010,6 +3036,7 @@ export function AdminPage() {
                             slug: cleanSlug,
                             title: editLandingTitle.trim() || null,
                             antichocId: editLandingAntichocId,
+                            template: editLandingTemplate,
                           })
                           setLandingMessage('Landing mise à jour.')
                           setEditingLanding(null)
@@ -3052,6 +3079,11 @@ export function AdminPage() {
                           <span className="font-mono text-brand-accent">/p/{lp.slug}</span>
                           {lp.title && <span className="ml-2 text-brand-muted text-sm">— {lp.title}</span>}
                           {product && <span className="ml-2 text-white text-sm">({product.name})</span>}
+                          {product?.deviceType === 'general' && (
+                            <span className="ml-2 px-2 py-0.5 rounded bg-white/10 text-brand-muted text-xs">
+                              {lp.template === 'simple' ? 'Page simple' : 'Landing complète'}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <button
@@ -3061,6 +3093,7 @@ export function AdminPage() {
                               setEditLandingSlug(lp.slug)
                               setEditLandingTitle(lp.title ?? '')
                               setEditLandingAntichocId(lp.antichocId)
+                              setEditLandingTemplate(lp.template === 'simple' ? 'simple' : 'full')
                             }}
                             className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20"
                           >

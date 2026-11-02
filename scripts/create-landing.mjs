@@ -90,14 +90,21 @@ async function main() {
   if (!addRes.ok) throw new Error(`Enregistrement du produit échoué (${addRes.status}) : ${await addRes.text()}`)
   console.log(`${existing ? 'Produit mis à jour' : 'Produit créé'} : ${spec.name} (${photos.length} photos)`)
 
-  const landingRes = await fetch(`${base}/api/landing-pages`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ slug: spec.slug, antichocId: spec.productId, title: spec.title || null }),
-  })
-  if (!landingRes.ok) throw new Error(`Création de la landing échouée (${landingRes.status}) : ${await landingRes.text()}`)
-  const landing = await landingRes.json()
-  console.log(`Landing en ligne : /p/${landing.slug}`)
+  // Une ou plusieurs pages pour le même produit (ex. landing complète + page produit simple)
+  const pages = [
+    { slug: spec.slug, title: spec.title, template: spec.template || 'full' },
+    ...(spec.extraPages || []),
+  ]
+  for (const page of pages) {
+    const landingRes = await fetch(`${base}/api/landing-pages`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ slug: page.slug, antichocId: spec.productId, title: page.title || null, template: page.template || 'full' }),
+    })
+    if (!landingRes.ok) throw new Error(`Création de la page /p/${page.slug} échouée (${landingRes.status}) : ${await landingRes.text()}`)
+    const landing = await landingRes.json()
+    console.log(`Page en ligne : /p/${landing.slug} (${landing.template === 'simple' ? 'page simple' : 'landing complète'})`)
+  }
 }
 
 main().catch((e) => {

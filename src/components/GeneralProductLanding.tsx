@@ -11,6 +11,8 @@ import { trackTikTokViewContent, trackTikTokInitiateCheckout, trackTikTokAddToCa
 interface Props {
   product: Antichoc
   title?: string | null
+  /** 'full' = landing complète par sections (défaut), 'simple' = page produit courte : photos + formulaire */
+  template?: 'full' | 'simple'
 }
 
 const MAX_QUANTITY = 10
@@ -102,7 +104,8 @@ const ARABIC_FONT_ID = 'landing-font-cairo'
  * Le formulaire de commande est intégré à la page et enregistre la commande comme le checkout
  * classique (mêmes commandes / confirmateur / admin).
  */
-export function GeneralProductLanding({ product, title }: Props) {
+export function GeneralProductLanding({ product, title, template = 'full' }: Props) {
+  const simple = template === 'simple'
   const landing = product.landing ?? {}
   const lang = landing.lang === 'fr' ? 'fr' : 'ar'
   const t = TEXTS[lang]
@@ -111,6 +114,7 @@ export function GeneralProductLanding({ product, title }: Props) {
   const fmt = (n: number) => `${n.toLocaleString('fr-FR')} ${t.da}`
 
   const [selectedColorId, setSelectedColorId] = useState('')
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [hint, setHint] = useState('')
   const [confirmed, setConfirmed] = useState<{ orderId: string } | null>(null)
@@ -244,6 +248,56 @@ export function GeneralProductLanding({ product, title }: Props) {
       )}
 
       <main className="max-w-xl mx-auto px-4 pb-32">
+        {/* Page simple : photos avec miniatures + titre + prix, puis directement le formulaire */}
+        {simple && (
+          <section className="pt-5">
+            <div className="relative rounded-3xl bg-white border border-slate-100 shadow-lg shadow-slate-200/60 overflow-hidden">
+              {photos[selectedImageIndex] ?? heroPhoto ? (
+                <img
+                  src={photos[selectedImageIndex] ?? heroPhoto}
+                  alt={displayTitle}
+                  fetchPriority="high"
+                  className="w-full aspect-square object-cover"
+                />
+              ) : (
+                <div className="aspect-square flex items-center justify-center text-8xl">{product.image}</div>
+              )}
+              {discount > 0 && (
+                <span className="absolute top-4 start-4 px-3 py-1 rounded-full bg-red-600 text-white text-sm font-bold">-{discount}%</span>
+              )}
+            </div>
+            {photos.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {photos.map((url, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(i)}
+                    className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-colors ${
+                      selectedImageIndex === i ? 'border-[var(--lp-accent)]' : 'border-slate-200'
+                    }`}
+                    aria-label={`${i + 1}`}
+                  >
+                    <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 flex items-start justify-between gap-3">
+              <h1 className="text-2xl font-extrabold leading-snug">{displayTitle}</h1>
+              {discount > 0 && (
+                <span className="shrink-0 mt-1 px-2.5 py-1 rounded-full bg-red-100 text-red-600 text-sm font-bold">-{discount}%</span>
+              )}
+            </div>
+            <div className="flex items-baseline gap-3 mt-2">
+              <span className="text-3xl font-extrabold" style={{ color: accent }}>{fmt(product.price)}</span>
+              {oldPrice > 0 && <span className="text-lg text-slate-400 line-through">{fmt(oldPrice)}</span>}
+            </div>
+            {landing.subtitle && <p className="text-slate-600 mt-3 leading-relaxed">{landing.subtitle}</p>}
+          </section>
+        )}
+
+        {!simple && (<>
         {/* Hero */}
         <section className="pt-8 text-center">
           {landing.badge && (
@@ -341,10 +395,16 @@ export function GeneralProductLanding({ product, title }: Props) {
             ))}
           </div>
         </section>
+        </>)}
 
         {/* Commande */}
-        <section ref={formRef} id="commander" className="mt-12 p-5 rounded-3xl bg-white border border-slate-100 shadow-xl shadow-slate-200/60 scroll-mt-4">
-          <div className="flex items-start gap-3 mb-4">
+        <section
+          ref={formRef}
+          id="commander"
+          className={`${simple ? 'mt-5' : 'mt-12'} p-5 rounded-3xl bg-white border border-slate-100 shadow-xl shadow-slate-200/60 scroll-mt-4`}
+        >
+          {simple && <p className="text-lg font-extrabold mb-4">{t.orderNow}</p>}
+          <div className={`flex items-start gap-3 mb-4 ${simple ? 'hidden' : ''}`}>
             {heroPhoto && <img src={heroPhoto} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-100" />}
             <div className="min-w-0 flex-1">
               <p className="font-bold leading-snug">{displayTitle}</p>
@@ -496,6 +556,25 @@ export function GeneralProductLanding({ product, title }: Props) {
             </form>
           )}
         </section>
+
+        {simple && (
+          <>
+            <div className="grid grid-cols-3 gap-2 mt-5 text-xs text-center">
+              {t.trust.map(([icon, label]) => (
+                <div key={label} className="rounded-xl bg-white border border-slate-100 p-2.5 font-semibold">
+                  <div className="text-xl mb-1">{icon}</div>
+                  {label}
+                </div>
+              ))}
+            </div>
+            {product.description && (
+              <section className="mt-8">
+                <h2 className="text-xl font-extrabold mb-3">{t.description}</h2>
+                <p className="text-slate-600 leading-relaxed whitespace-pre-line">{product.description}</p>
+              </section>
+            )}
+          </>
+        )}
       </main>
 
       <footer className="border-t border-slate-100 py-6 px-4 text-center text-xs text-slate-500">

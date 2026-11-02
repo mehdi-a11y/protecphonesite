@@ -1149,13 +1149,13 @@ app.get('/api/landing-pages/:slug', async (req, res) => {
 
 app.post('/api/landing-pages', requireAdmin, async (req, res) => {
   try {
-    const { slug, antichocId, title } = req.body || {}
+    const { slug, antichocId, title, template } = req.body || {}
     if (!slug || !antichocId || typeof slug !== 'string' || typeof antichocId !== 'string') {
       return res.status(400).json({ error: 'slug et antichocId requis' })
     }
     const cleanSlug = slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
     if (!cleanSlug) return res.status(400).json({ error: 'slug invalide' })
-    await dbSaveLanding({ slug: cleanSlug, antichocId: antichocId.trim(), title: title ? String(title).trim() : null })
+    await dbSaveLanding({ slug: cleanSlug, antichocId: antichocId.trim(), title: title ? String(title).trim() : null, template })
     res.json(await dbGetLandingBySlug(cleanSlug))
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -1164,11 +1164,12 @@ app.post('/api/landing-pages', requireAdmin, async (req, res) => {
 
 app.patch('/api/landing-pages/:slug', requireAdmin, async (req, res) => {
   try {
-    const { slug: newSlug, antichocId, title } = req.body || {}
+    const { slug: newSlug, antichocId, title, template } = req.body || {}
     const updated = await dbUpdateLanding(req.params.slug, {
       slug: newSlug,
       antichocId,
       title,
+      template,
     })
     if (!updated) return res.status(404).json({ error: 'Landing page introuvable' })
     res.json(updated)

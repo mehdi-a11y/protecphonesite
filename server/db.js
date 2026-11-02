@@ -101,6 +101,9 @@ async function runMigrations() {
       )
     `)
     await client.query(`
+      ALTER TABLE landing_pages ADD COLUMN IF NOT EXISTS template TEXT
+    `).catch(() => {})
+    await client.query(`
       CREATE TABLE IF NOT EXISTS collections (
         slug TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -761,8 +764,8 @@ export async function dbSaveDeliveryPrices(prices) {
 // --- Landing pages ---
 export async function dbGetLandingPages() {
   if (pool) {
-    const { rows } = await pool.query('SELECT slug, antichoc_id, title FROM landing_pages ORDER BY slug')
-    return rows.map((r) => ({ slug: r.slug, antichocId: r.antichoc_id, title: r.title || null }))
+    const { rows } = await pool.query('SELECT slug, antichoc_id, title, template FROM landing_pages ORDER BY slug')
+    return rows.map(rowToLanding)
   }
   return Array.from(memoryLandingPages.values())
 }
@@ -770,27 +773,36 @@ export async function dbGetLandingPages() {
 export async function dbGetLandingBySlug(slug) {
   if (pool) {
     const { rows } = await pool.query(
-      'SELECT slug, antichoc_id, title FROM landing_pages WHERE slug = $1',
+      'SELECT slug, antichoc_id, title, template FROM landing_pages WHERE slug = $1',
       [slug],
     )
     if (rows.length === 0) return null
-    const r = rows[0]
-    return { slug: r.slug, antichocId: r.antichoc_id, title: r.title || null }
+    return rowToLanding(rows[0])
   }
   return memoryLandingPages.get(slug) || null
 }
 
+/** Type de page d'une landing de produit général : 'full' (landing complète, défaut) ou 'simple' (page produit courte). */
+export function normalizeLandingTemplate(v) {
+  return v === 'simple' ? 'simple' : 'full'
+}
+
+function rowToLanding(r) {
+  return { slug: r.slug, antichocId: r.antichoc_id, title: r.title || null, template: normalizeLandingTemplate(r.template) }
+}
+
 export async function dbSaveLanding(landing) {
   const { slug, antichocId, title } = landing
+  const template = normalizeLandingTemplate(landing.template)
   if (pool) {
     await pool.query(
-      `INSERT INTO landing_pages (slug, antichoc_id, title) VALUES ($1, $2, $3)
-       ON CONFLICT (slug) DO UPDATE SET antichoc_id = $2, title = $3`,
-      [slug, antichocId, title || null],
+      `INSERT INTO landing_pages (slug, antichoc_id, title, template) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (slug) DO UPDATE SET antichoc_id = $2, title = $3, template = $4`,
+      [slug, antichocId, title || null, template],
     )
     return
   }
-  memoryLandingPages.set(slug, { slug, antichocId, title: title || null })
+  memoryLandingPages.set(slug, { slug, antichocId, title: title || null, template })
 }
 
 export async function dbDeleteLanding(slug) {
@@ -802,7 +814,7 @@ export async function dbDeleteLanding(slug) {
 }
 
 /** Met à jour une landing (slug, title, antichocId). Si le slug change, met à jour les collections qui référencent l'ancien slug. */
-export async function dbUpdateLanding(oldSlug, { slug: newSlug, antichocId, title }) {
+export async function dbUpdateLanding(oldSlug, { slug: newSlug, antichocId, title, template }) {
   const existing = await dbGetLandingBySlug(oldSlug)
   if (!existing) return null
   const slug = (newSlug && String(newSlug).trim()) || oldSlug
@@ -824,7 +836,8 @@ export async function dbUpdateLanding(oldSlug, { slug: newSlug, antichocId, titl
 
   const finalAntichocId = antichocIdVal ?? existing.antichocId
   const finalTitle = titleVal !== null ? titleVal : existing.title
-  await dbSaveLanding({ slug: cleanSlug, antichocId: finalAntichocId, title: finalTitle })
+  const finalTemplate = template !== undefined ? template : existing.template
+  await dbSaveLanding({ slug: cleanSlug, antichocId: finalAntichocId, title: finalTitle, template: finalTemplate })
   return dbGetLandingBySlug(cleanSlug)
 }
 

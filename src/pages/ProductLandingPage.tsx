@@ -5,7 +5,7 @@ import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCard
 import { loadDeliveryPrices } from '../delivery'
 import type { Antichoc } from '../data'
 import type { CartItem } from '../types'
-import { apiGetLandingBySlug } from '../api'
+import { apiGetLandingBySlug, type LandingTemplate } from '../api'
 import { ProductDetailView } from '../components/ProductDetailView'
 import { GeneralProductLanding } from '../components/GeneralProductLanding'
 import { SiteHeader } from '../components/SiteHeader'
@@ -23,6 +23,7 @@ export function ProductLandingPage() {
   const [step, setStep] = useState<Step>('landing')
   const [antichoc, setAntichoc] = useState<Antichoc | null>(null)
   const [title, setTitle] = useState<string | null>(null)
+  const [template, setTemplate] = useState<LandingTemplate>('full')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orderId, setOrderId] = useState('')
@@ -53,6 +54,7 @@ export function ProductLandingPage() {
         }
         setAntichoc(product)
         setTitle(landing.title || null)
+        setTemplate(landing.template === 'simple' ? 'simple' : 'full')
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Erreur')
@@ -164,7 +166,7 @@ export function ProductLandingPage() {
   }
 
   if (general) {
-    return <GeneralProductLanding product={antichoc} title={title} />
+    return <GeneralProductLanding product={antichoc} title={title} template={template} />
   }
 
   return withSiteChrome(
