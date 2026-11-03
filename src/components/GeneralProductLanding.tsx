@@ -72,6 +72,7 @@ const TEXTS = {
     free: 'مجاناً',
     giftEvery: 'مع كل طلب',
     badPhone: 'رقم الهاتف غير صحيح (مثال: 0555 12 34 56)',
+    required: 'هذه الخانة مطلوبة',
     faqTitle: 'أسئلة شائعة',
     codNote: 'ما تخلّص والو دروك · تخلّص كي توصلك السلعة',
   },
@@ -127,6 +128,7 @@ const TEXTS = {
     free: 'Offert',
     giftEvery: 'avec chaque commande',
     badPhone: 'Numéro invalide (ex. 0555 12 34 56)',
+    required: 'Champ obligatoire',
     faqTitle: 'Questions fréquentes',
     codNote: 'Rien à payer maintenant · paiement à la livraison',
   },
@@ -185,6 +187,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const [hint, setHint] = useState('')
   const [confirmed, setConfirmed] = useState<{ orderId: string } | null>(null)
   const [formVisible, setFormVisible] = useState(false)
+  const [showErrors, setShowErrors] = useState(false)
   const formRef = useRef<HTMLElement>(null)
   const checkoutTracked = useRef(false)
 
@@ -343,14 +346,40 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     }
   }
 
+  // Champs manquants : affichés en rouge après un premier clic sur « تأكيد الطلب »
+  const phoneValid = /^0[567]\d{8}$/.test(form.phone.replace(/[\s.-]/g, '').replace(/^\+?213/, '0'))
+  const slotMissing = (i: number) => !slotDesign(i) || !orderableColorIds.has(slotDesign(i))
+  const errors = {
+    model: isPhone && !modelOk,
+    color: colorOptions.length > 0 && !colorOk,
+    name: !form.name.trim(),
+    phone: !phoneValid,
+    wilaya: !form.wilaya,
+    commune: form.deliveryType === 'domicile' && !!form.wilaya && !form.commune.trim(),
+    office: form.deliveryType === 'yalidine' && !!form.wilaya && !form.selectedStopdeskId,
+  }
+  const designsMissing = hasDesigns && Array.from({ length: slotCount }, (_, i) => i).some(slotMissing)
+  const hasErrors = designsMissing || Object.values(errors).some(Boolean)
+  const err = (key: keyof typeof errors) => showErrors && errors[key]
+  const fieldCls = (invalid: boolean) =>
+    invalid ? `${inputCls} !border-red-500 ring-2 ring-red-500/25` : inputCls
+  const errMsg = (invalid: boolean, text: string = t.required) =>
+    invalid ? <p className="text-xs text-red-500 font-semibold mt-1">⚠️ {text}</p> : null
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!available) return setHint(t.unavailable)
-    if (!modelOk) return setHint(t.pickModel)
-    if (!colorOk) return setHint(hasDesigns ? t.pickDesign : t.pickColor)
-    if (!/^0[567]\d{8}$/.test(form.phone.replace(/[\s.-]/g, '').replace(/^\+?213/, '0'))) return setHint(t.badPhone)
-    if (!form.canSubmitOrder) return setHint(t.fillForm)
+    if (hasErrors || !form.canSubmitOrder) {
+      setShowErrors(true)
+      setHint(t.fillForm)
+      // Amène le client sur le premier champ en rouge
+      requestAnimationFrame(() => {
+        formRef.current?.querySelector('[data-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      return
+    }
     setHint('')
+    setShowErrors(false)
     trackCheckoutOnce()
     const result = await form.submit()
     if (result) {
@@ -631,22 +660,23 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           {!available ? (
             <p className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">{t.unavailable}</p>
           ) : (
-            <form onSubmit={handleSubmit} onFocus={trackCheckoutOnce} className="space-y-4">
+            <form noValidate onSubmit={handleSubmit} onFocus={trackCheckoutOnce} className="space-y-4">
               {isPhone && (
-                <div>
-                  <label className="block text-sm font-semibold mb-1">{t.model} <span className="text-red-500">*</span></label>
+                <div data-invalid={err('model')}>
+                  <label className={`block text-sm font-semibold mb-1 ${err('model') ? 'text-red-500' : ''}`}>{t.model} <span className="text-red-500">*</span></label>
                   <select
                     required
                     dir="ltr"
                     value={modelId}
                     onChange={(e) => { setModelId(e.target.value); setHint('') }}
-                    className={`${inputCls} text-start`}
+                    className={`${fieldCls(err('model'))} text-start`}
                   >
                     <option value="">{t.chooseModel}</option>
                     {orderableModelIds.map((m) => (
                       <option key={m} value={m}>{getModelName(m)}</option>
                     ))}
                   </select>
+                  {errMsg(err('model'), t.pickModel)}
                 </div>
               )}
 
@@ -683,9 +713,15 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
 
               {hasDesigns && Array.from({ length: slotCount }, (_, slot) => {
                 const chosen = designs.find((d) => d.id === designSlots[slot])
+                const missing = showErrors && slotMissing(slot)
                 return (
-                  <div key={slot} onClick={() => setActiveSlot(slot)}>
-                    <p className="text-sm font-semibold mb-2">
+                  <div
+                    key={slot}
+                    data-invalid={missing}
+                    onClick={() => setActiveSlot(slot)}
+                    className={missing ? 'rounded-2xl p-2 -m-2 ring-2 ring-red-500/60' : ''}
+                  >
+                    <p className={`text-sm font-semibold mb-2 ${missing ? 'text-red-500' : ''}`}>
                       {t.design}{slotCount > 1 ? ` ${slot + 1}` : ''} <span className="text-red-500">*</span>
                       {chosen && <span className="font-normal text-[var(--lp-faint)] ms-2">{chosen.name}</span>}
                     </p>
@@ -710,13 +746,14 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                         )
                       })}
                     </div>
+                    {errMsg(missing, t.pickDesign)}
                   </div>
                 )
               })}
 
               {colorOptions.length > 0 && (
-                <div>
-                  <p className="text-sm font-semibold mb-2">
+                <div data-invalid={err('color')}>
+                  <p className={`text-sm font-semibold mb-2 ${err('color') ? 'text-red-500' : ''}`}>
                     {t.color} <span className="text-red-500">*</span>
                     {selectedColorId && <span className="font-normal text-[var(--lp-faint)] ms-2">{colorOptions.find((c) => c.id === selectedColorId)?.name}</span>}
                   </p>
@@ -739,25 +776,29 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                       )
                     })}
                   </div>
+                  {errMsg(err('color'), t.pickColor)}
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-semibold mb-1">{t.name}</label>
-                <input type="text" required value={form.name} onChange={(e) => form.setName(e.target.value)} className={inputCls} />
+              <div data-invalid={err('name')}>
+                <label className={`block text-sm font-semibold mb-1 ${err('name') ? 'text-red-500' : ''}`}>{t.name}</label>
+                <input type="text" required value={form.name} onChange={(e) => form.setName(e.target.value)} className={fieldCls(err('name'))} />
+                {errMsg(err('name'))}
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">{t.phone}</label>
-                <input type="tel" required dir="ltr" value={form.phone} onChange={(e) => form.setPhone(e.target.value)} placeholder="05 XX XX XX XX" className={`${inputCls} text-start`} />
+              <div data-invalid={err('phone')}>
+                <label className={`block text-sm font-semibold mb-1 ${err('phone') ? 'text-red-500' : ''}`}>{t.phone}</label>
+                <input type="tel" required dir="ltr" value={form.phone} onChange={(e) => form.setPhone(e.target.value)} placeholder="05 XX XX XX XX" className={`${fieldCls(err('phone'))} text-start`} />
+                {errMsg(err('phone'), form.phone.trim() ? t.badPhone : t.required)}
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">{t.wilaya}</label>
-                <select required value={form.wilaya} onChange={(e) => form.setWilaya(e.target.value)} className={inputCls}>
+              <div data-invalid={err('wilaya')}>
+                <label className={`block text-sm font-semibold mb-1 ${err('wilaya') ? 'text-red-500' : ''}`}>{t.wilaya}</label>
+                <select required value={form.wilaya} onChange={(e) => form.setWilaya(e.target.value)} className={fieldCls(err('wilaya'))}>
                   <option value="">{t.chooseWilaya}</option>
                   {WILAYAS.map((w) => (
                     <option key={w.code} value={w.code}>{w.code} - {w.name}</option>
                   ))}
                 </select>
+                {errMsg(err('wilaya'))}
               </div>
 
               <div>
@@ -779,9 +820,9 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
               </div>
 
               {form.wilaya && form.deliveryType === 'domicile' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-1">{t.commune}</label>
-                  <select required value={form.commune} onChange={(e) => form.setCommune(e.target.value)} className={inputCls}>
+                <div data-invalid={err('commune')}>
+                  <label className={`block text-sm font-semibold mb-1 ${err('commune') ? 'text-red-500' : ''}`}>{t.commune}</label>
+                  <select required value={form.commune} onChange={(e) => form.setCommune(e.target.value)} className={fieldCls(err('commune'))}>
                     <option value="">
                       {form.communesLoading ? t.loadingCommunes : form.communes.length === 0 ? t.noCommune : t.chooseCommune}
                     </option>
@@ -789,16 +830,17 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                  {errMsg(err('commune'))}
                 </div>
               )}
               {form.wilaya && form.deliveryType === 'yalidine' && (
-                <div>
-                  <label className="block text-sm font-semibold mb-1">{t.office}</label>
+                <div data-invalid={err('office')}>
+                  <label className={`block text-sm font-semibold mb-1 ${err('office') ? 'text-red-500' : ''}`}>{t.office}</label>
                   <select
                     required
                     value={form.selectedStopdeskId}
                     onChange={(e) => form.selectStopdesk(e.target.value, e.target.options[e.target.selectedIndex]?.textContent ?? '')}
-                    className={inputCls}
+                    className={fieldCls(err('office'))}
                   >
                     <option value="">
                       {form.stopdesksLoading ? t.loadingOffices : form.stopdesks.length === 0 ? t.noOffice : t.chooseOffice}
