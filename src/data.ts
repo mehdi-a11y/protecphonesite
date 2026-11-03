@@ -382,6 +382,7 @@ export function getAntichocsForSamsung(modelId: SamsungModelId): Antichoc[] {
   return getCatalog().filter(
     (a) =>
       a.deviceType === 'samsung' &&
+      !usesSectionLanding(a) &&
       (a.compatibleWithSamsung && a.compatibleWithSamsung.length ? a.compatibleWithSamsung : []).includes(modelId) &&
       hasOrderableVariantForSamsung(a, modelId),
   )

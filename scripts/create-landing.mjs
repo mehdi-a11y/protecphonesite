@@ -4,8 +4,8 @@
  *   landings/<nom>/landing.json  (textes, prix, ordre des photos)
  *   landings/<nom>/*.jpg|png|webp (photos ; la 1re de la liste = photo principale)
  *
- * Produit général par défaut (modèle unique). Coque à motifs : "deviceType": "iphone",
- * "models": [ids iPhone] (vide = tous) et "landing.designs": [{ id, name, photo: "fichier.jpg" }].
+ * Produit général par défaut (modèle unique). Coque à motifs : "deviceType": "iphone" ou "samsung",
+ * "models": [ids des modèles] (vide = tous) et "landing.designs": [{ id, name, photo: "fichier.jpg" }].
  *
  * Usage (sur le VPS, dans le dossier du site, après déploiement) :
  *   node scripts/create-landing.mjs landings/hoco-hp65
@@ -24,6 +24,7 @@ const GENERAL_MODEL_ID = 'standard'
 const IPHONE_MODEL_IDS = ['11', '12', '13', '14', '15', '16', '17'].flatMap((n) => [
   `iphone-${n}`, `iphone-${n}-pro`, `iphone-${n}-pro-max`,
 ])
+const SAMSUNG_MODEL_IDS = ['21', '22', '23', '24', '25', '26'].map((n) => `s${n}-ultra`)
 
 function readEnvFile() {
   const envPath = join(root, '.env')
@@ -71,8 +72,11 @@ async function main() {
   const existing = existingRes.ok ? await existingRes.json().catch(() => null) : null
 
   const photos = (spec.photos || []).map((f) => toDataUrl(join(dir, f)))
-  const isPhone = spec.deviceType === 'iphone'
-  const modelIds = isPhone ? (spec.models?.length ? spec.models : IPHONE_MODEL_IDS) : [GENERAL_MODEL_ID]
+  const isSamsung = spec.deviceType === 'samsung'
+  const isPhone = spec.deviceType === 'iphone' || isSamsung
+  const modelIds = isPhone
+    ? (spec.models?.length ? spec.models : isSamsung ? SAMSUNG_MODEL_IDS : IPHONE_MODEL_IDS)
+    : [GENERAL_MODEL_ID]
 
   // Motifs : la photo est donnée par nom de fichier → index dans la galerie
   const landing = { ...(spec.landing || {}) }
@@ -109,8 +113,9 @@ async function main() {
     colorIds: colorIds.length ? colorIds : undefined,
     photoUrl: photos[0] || '',
     photoGallery: photos.length ? photos : undefined,
-    deviceType: isPhone ? 'iphone' : 'general',
-    compatibleWith: modelIds,
+    deviceType: isSamsung ? 'samsung' : isPhone ? 'iphone' : 'general',
+    compatibleWith: isSamsung ? [] : modelIds,
+    compatibleWithSamsung: isSamsung ? modelIds : undefined,
     landing,
   }
 

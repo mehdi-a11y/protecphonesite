@@ -1,0 +1,66 @@
+{
+  "productId": "coque-motifs-premium-samsung",
+  "slug": "coques-motifs-samsung",
+  "name": "Coque antichoc à motifs premium (Samsung)",
+  "title": "انتيشوك يشبهلك، لسامسونغ تاعك",
+  "extraPages": [
+    {
+      "slug": "coques-motifs-samsung-commande",
+      "title": "انتيشوك Samsung Ultra بتصاميم فاخرة",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "samsung",
+  "models": [
+    "s23-ultra",
+    "s24-ultra",
+    "s25-ultra"
+  ],
+  "price": 2500,
+  "wholesalePrice": 450,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-lion-dore.jpg",
+    "02-cadeau-magic-hoco-plus.jpg"
+  ],
+  "description": "انتيشوك بظهر لامع وطباعة عالية الجودة ما تتمسحش، وحواف مرفوعة تحمي الكاميرا والشاشة.\n\nمتوفر لـ Samsung S23 Ultra و S24 Ultra و S25 Ultra.\n\nالعرض:\n• انتيشوك واحد: 2500 دج\n• 2 انتيشوك: 4500 دج\n\n🎁 مع كل طلب: زجاج حماية Magic HOCO Plus مجاناً على قياس تيليفونك.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#d4a017",
+    "topBanner": "🎁 زجاج حماية مجاناً مع كل طلب · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "تصاميم جديدة",
+    "headlineHighlight": "+ زجاج حماية هدية 🎁",
+    "subtitle": "اختار الستيل اللي يعجبك وموديل السامسونغ تاعك. خوذ 2 بسعر أقل، وفي كل طلب زجاج حماية Magic HOCO Plus مجاناً.",
+    "heroBadge": "S23 · S24 · S25 Ultra",
+    "galleryTitle": "الهدية تاعك مع كل طلب",
+    "featuresTitle": "علاش هاد الانتيشوك؟",
+    "benefits": [
+      "🛡️ | حماية ضد الطيحات | الزوايا مقوّية وتحمي تيليفونك من الطيحات",
+      "📷 | حواف مرفوعة | الكاميرا والشاشة ما يلمسوش الطاولة",
+      "✨ | طباعة لامعة ما تتمسحش | الألوان تبقى كيما نهار الأول",
+      "📱 | Samsung S23 · S24 · S25 Ultra | قياس مضبوط لكل موديل",
+      "🎁 | زجاج حماية مجاناً | Magic HOCO Plus على قياس تيليفونك مع كل طلب"
+    ],
+    "offerTitle": "خوذ 2 ووفّر 💸",
+    "offerText": "انتيشوك واحد بـ 2500 دج، ولا 2 بـ 4500 دج. والزجاج هدية في الحالتين.",
+    "oldPrice": 3500,
+    "bundlePrice": 4500,
+    "gift": "زجاج حماية Magic HOCO Plus",
+    "designs": [
+      {
+        "id": "lion-dore",
+        "name": "الأسد الذهبي",
+        "photo": "01-lion-dore.jpg"
+      }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | اختار الموديل تاعك في الاستمارة: S23 Ultra ولا S24 Ultra ولا S25 Ultra.",
+      "الزجاج الهدية على قياس تيليفوني؟ | إيه، نبعثوه على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين.",
+      "كيفاش نتأكد من الطلب؟ | بعد ما تبعث الطلب نعيطولك باش نأكدو معاك قبل الإرسال."
+    ]
+  }
+}
