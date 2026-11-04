@@ -1,22 +1,32 @@
 {
   "productId": "coque-guess-4g",
   "slug": "guess",
-  "name": "Coque Guess 4G (originale)",
-  "title": "انتيشوك Guess الأصلي",
+  "name": "Coque Guess 4G",
+  "title": "انتيشوك Guess 4G",
   "extraPages": [
     {
       "slug": "guess-commande",
-      "title": "انتيشوك Guess 4G أصلي",
+      "title": "انتيشوك Guess 4G",
       "template": "simple"
     }
   ],
   "deviceType": "iphone",
   "models": [
-    "iphone-11", "iphone-11-pro", "iphone-11-pro-max",
-    "iphone-12", "iphone-12-pro", "iphone-12-pro-max",
-    "iphone-13", "iphone-13-pro", "iphone-13-pro-max",
-    "iphone-14", "iphone-14-pro", "iphone-14-pro-max",
-    "iphone-15-pro-max", "iphone-16-pro-max", "iphone-17-pro-max"
+    "iphone-11",
+    "iphone-11-pro",
+    "iphone-11-pro-max",
+    "iphone-12",
+    "iphone-12-pro",
+    "iphone-12-pro-max",
+    "iphone-13",
+    "iphone-13-pro",
+    "iphone-13-pro-max",
+    "iphone-14",
+    "iphone-14-pro",
+    "iphone-14-pro-max",
+    "iphone-15-pro-max",
+    "iphone-16-pro-max",
+    "iphone-17-pro-max"
   ],
   "price": 2900,
   "wholesalePrice": 0,
@@ -27,19 +37,19 @@
     "02-bordeaux.jpg",
     "03-rose.jpg",
     "04-gris.jpg",
-    "05-beige-dos.jpg"
+    "05-blanc.jpg"
   ],
-  "description": "انتيشوك Guess أصلي بنقشة 4G الشهيرة ولوغو Guess معدني ذهبي.\n\n• ظهر بملمس الجلد الصناعي المنقوش\n• حواف مرفوعة تحمي الكاميرا والشاشة\n• 4 ألوان: بيج، عنابي، وردي، رمادي\n\nمتوفر لـ iPhone 11 حتى 14 (كل الموديلات) و iPhone 15 Pro Max و 16 Pro Max و 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "description": "انتيشوك Guess بنقشة 4G الشهيرة ولوغو Guess معدني ذهبي.\n\n• ظهر بملمس الجلد الصناعي المنقوش\n• حواف مرفوعة تحمي الكاميرا والشاشة\n• 5 ألوان: بيج، عنابي، وردي، رمادي، أبيض\n\nمتوفر لـ iPhone 11 حتى iPhone 14 (كل الموديلات) و iPhone 15 Pro Max و iPhone 16 Pro Max و iPhone 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
   "landing": {
     "lang": "ar",
     "theme": "light",
     "accentColor": "#9c6b4e",
-    "topBanner": "✨ Guess أصلي · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
-    "badge": "Guess · أصلي",
+    "topBanner": "✨ Guess 4G · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "Guess · جديد",
     "headlineHighlight": "أناقة تحمي تيليفونك",
     "subtitle": "نقشة 4G الشهيرة ولوغو Guess معدني ذهبي. اختار اللون وموديل الآيفون تاعك، وادفع كي توصلك.",
-    "heroBadge": "Original",
-    "galleryTitle": "التفاصيل",
+    "heroBadge": "5 ألوان",
+    "galleryTitle": "",
     "featuresTitle": "علاش Guess؟",
     "designsTitle": "اختار اللون اللي يعجبك",
     "designLabel": "اللون",
@@ -50,15 +60,35 @@
       "📱 | موديلات كثيرة | من iPhone 11 حتى iPhone 17 Pro Max"
     ],
     "offerTitle": "الأناقة بسعر واحد 💎",
-    "offerText": "انتيشوك Guess أصلي بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
+    "offerText": "انتيشوك Guess بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
     "designs": [
-      { "id": "beige", "name": "بيج", "photo": "01-beige.jpg" },
-      { "id": "bordeaux", "name": "عنابي", "photo": "02-bordeaux.jpg" },
-      { "id": "rose", "name": "وردي", "photo": "03-rose.jpg" },
-      { "id": "gris", "name": "رمادي", "photo": "04-gris.jpg" }
+      {
+        "id": "beige",
+        "name": "بيج",
+        "photo": "01-beige.jpg"
+      },
+      {
+        "id": "bordeaux",
+        "name": "عنابي",
+        "photo": "02-bordeaux.jpg"
+      },
+      {
+        "id": "rose",
+        "name": "وردي",
+        "photo": "03-rose.jpg"
+      },
+      {
+        "id": "gris",
+        "name": "رمادي",
+        "photo": "04-gris.jpg"
+      },
+      {
+        "id": "blanc",
+        "name": "أبيض",
+        "photo": "05-blanc.jpg"
+      }
     ],
     "faq": [
-      "واش هو أصلي؟ | إيه، انتيشوك Guess أصلي.",
       "يناسب تيليفوني؟ | اختار الموديل تاعك في الاستمارة: iPhone 11 حتى 14 (كل الموديلات)، 15 Pro Max، 16 Pro Max و 17 Pro Max.",
       "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
       "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين.",
