@@ -356,7 +356,8 @@ export function AdminPage() {
         const current = p.photoGallery?.length ? p.photoGallery : p.photoUrl ? [p.photoUrl] : []
         const next = update(current)
         const designs = remap && p.landing?.designs?.length
-          ? p.landing.designs.map((d) => ({ ...d, photo: Math.max(0, remap(d.photo)) }))
+          // Un motif sans photo (pastille, -1) le reste ; si sa photo est supprimée il redevient une pastille
+          ? p.landing.designs.map((d) => ({ ...d, photo: d.photo < 0 ? -1 : remap(d.photo) }))
           : undefined
         return {
           ...p,
@@ -2110,6 +2111,13 @@ export function AdminPage() {
                                 className="mt-2 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20"
                               >
                                 + Ajouter un motif
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleProductLandingChange(p.id, { designs: (lp.designs ?? []).map((x) => ({ ...x, photo: -1 })) })}
+                                className="mt-2 ms-2 px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20"
+                              >
+                                Tous en pastilles de couleur
                               </button>
                               <p className="mt-1 text-[11px] text-brand-muted">Nouveau motif : enregistrez, puis réglez son stock dans « Gérer le stock » (motif × modèle).</p>
                             </div>
