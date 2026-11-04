@@ -2025,6 +2025,17 @@ export function AdminPage() {
                             <p className="text-[11px] text-brand-muted self-end">Pack : le prix du produit = prix du pack ; le client choisit un motif / une couleur par article.</p>
                           </div>
                           <div>
+                            <label className="block text-xs text-brand-muted mb-1">Détail du pack (section galerie) — une ligne chacun : emoji | titre | texte</label>
+                            <textarea
+                              value={(lp.packDetails ?? []).join('\n')}
+                              onChange={(e) => handleProductLandingChange(p.id, { packDetails: e.target.value.split('\n') })}
+                              rows={3}
+                              dir="auto"
+                              placeholder={'📱 | 2 انتيشوك سيليكون | 10 ألوان · سيليكون ناعم'}
+                              className={`${fieldCls} resize-y`}
+                            />
+                          </div>
+                          <div>
                             <label className="block text-xs text-brand-muted mb-1">Inclus dans chaque commande — une ligne : nom | modèles (vide = tous, ou plage iphone-x..iphone-14-pro-max)</label>
                             <textarea
                               value={(lp.includes ?? []).join('\n')}

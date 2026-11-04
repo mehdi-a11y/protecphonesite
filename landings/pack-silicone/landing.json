@@ -11,7 +11,9 @@
     }
   ],
   "deviceType": "iphone",
-  "models": ["iphone-x..iphone-17-pro-max"],
+  "models": [
+    "iphone-x..iphone-17-pro-max"
+  ],
   "price": 2900,
   "wholesalePrice": 0,
   "stock": 0,
@@ -20,7 +22,7 @@
     "01-incassable-magic-hoco-plus.jpg",
     "02-cables-borofone.jpg"
   ],
-  "description": "باك كامل باش تحمي تيليفونك وتشارجيه:\n\n• 2 انتيشوك سيليكون ناعم من الداخل، تختار اللونين اللي يعجبوك من 10 ألوان\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل Borofone: Lightning من iPhone X حتى 14 Pro Max، و Type-C من iPhone 15 حتى 17 Pro Max\n\nكل الباك بـ 2900 دج فقط، والدفع عند الاستلام.",
+  "description": "باك كامل باش تحمي تيليفونك وتشارجيه:\n\n• 2 انتيشوك سيليكون ناعم، تختار اللونين اللي يعجبوك من 10 ألوان\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل Borofone: Lightning من iPhone X حتى 14 Pro Max، و Type-C من iPhone 15 حتى 17 Pro Max\n\nكل الباك بـ 2900 دج فقط، والدفع عند الاستلام.",
   "landing": {
     "lang": "ar",
     "theme": "light",
@@ -36,7 +38,7 @@
     "designLabel": "اللون",
     "benefits": [
       "🎨 | 10 ألوان | اختار لونين: واحد للخدمة وواحد للخرجات",
-      "🧴 | سيليكون ناعم | ملمس مريح ومن الداخل قماش يحمي الظهر من الخدوش",
+      "🧴 | سيليكون ناعم | ملمس مريح في اليد ويحمي الظهر والجوانب",
       "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
       "🔌 | كابل الشحن المناسب | Lightning ولا Type-C حسب تيليفونك، نختاروه حنا",
       "💸 | كلش بـ 2900 دج | أرخص بزاف من كي تشريهم واحد بواحد"
@@ -51,16 +53,56 @@
       "كابل Borofone Type-C (iPhone 15 → 17 Pro Max) | iphone-15..iphone-17-pro-max"
     ],
     "designs": [
-      { "id": "gris-pierre", "name": "رمادي فاتح", "hex": "#c9c4bd" },
-      { "id": "blanc", "name": "أبيض", "hex": "#f1f1f4" },
-      { "id": "minuit", "name": "أسود ليلي", "hex": "#1f2230" },
-      { "id": "lilas", "name": "ليلكي", "hex": "#b89ac7" },
-      { "id": "prune", "name": "عنابي", "hex": "#8e2a52" },
-      { "id": "violet", "name": "بنفسجي", "hex": "#5a2a6e" },
-      { "id": "bleu", "name": "أزرق", "hex": "#2a3a8f" },
-      { "id": "fuchsia", "name": "فوشيا", "hex": "#c2289a" },
-      { "id": "rose-pale", "name": "وردي فاتح", "hex": "#ecd3dc" },
-      { "id": "rose", "name": "وردي", "hex": "#f2a7b8" }
+      {
+        "id": "gris-pierre",
+        "name": "رمادي فاتح",
+        "hex": "#c9c4bd"
+      },
+      {
+        "id": "blanc",
+        "name": "أبيض",
+        "hex": "#f1f1f4"
+      },
+      {
+        "id": "minuit",
+        "name": "أسود ليلي",
+        "hex": "#1f2230"
+      },
+      {
+        "id": "lilas",
+        "name": "ليلكي",
+        "hex": "#b89ac7"
+      },
+      {
+        "id": "prune",
+        "name": "عنابي",
+        "hex": "#8e2a52"
+      },
+      {
+        "id": "violet",
+        "name": "بنفسجي",
+        "hex": "#5a2a6e"
+      },
+      {
+        "id": "bleu",
+        "name": "أزرق",
+        "hex": "#2a3a8f"
+      },
+      {
+        "id": "fuchsia",
+        "name": "فوشيا",
+        "hex": "#c2289a"
+      },
+      {
+        "id": "rose-pale",
+        "name": "وردي فاتح",
+        "hex": "#ecd3dc"
+      },
+      {
+        "id": "rose",
+        "name": "وردي",
+        "hex": "#f2a7b8"
+      }
     ],
     "faq": [
       "واش الكابل اللي نديه؟ | نختاروه حسب تيليفونك: Lightning من iPhone X حتى 14 Pro Max، و Type-C من iPhone 15 حتى 17 Pro Max.",
@@ -68,6 +110,11 @@
       "نقدر نختار نفس اللون مرتين؟ | إيه، اختار اللونين اللي تحب، حتى ولو نفس اللون.",
       "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
       "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ],
+    "packDetails": [
+      "📱 | 2 انتيشوك سيليكون | تختار اللونين من 10 ألوان · سيليكون ناعم ومريح في اليد · يحمي الظهر والجوانب والكاميرا",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · إطار تركيب يسهّل اللصق بلا فقاعات · على قياس تيليفونك",
+      "🔌 | كابل شحن Borofone BX121 | كابل Lightning 2.4A لـ iPhone X حتى iPhone 14 Pro Max · كابل Type-C 3.0A لـ iPhone 15 حتى iPhone 17 Pro Max · الطول: 1 متر · نبعثو الكابل المناسب لتيليفونك"
     ]
   }
 }

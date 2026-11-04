@@ -121,6 +121,8 @@ export interface ProductLandingContent {
   /** Titre de la section des motifs et libellé du choix (ex. « اختار اللون » / « اللون » pour des couleurs) */
   designsTitle?: string;
   designLabel?: string;
+  /** Détail des articles du pack (section galerie), une ligne chacun : « emoji | titre | texte » */
+  packDetails?: string[];
   /** Pack : nombre fixe d'articles (ex. 2 coques) vendus au prix du produit, un motif/couleur par article */
   packSize?: number;
   /**

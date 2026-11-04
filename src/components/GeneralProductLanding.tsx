@@ -342,6 +342,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     .map((line) => line.split('|').map((x) => x.trim()))
     .filter(([q, a]) => q && a)
     .map(([q, ...a]) => ({ q, a: a.join(' | ') }))
+  const packDetails = (landing.packDetails ?? []).map(parseLandingBenefit).filter((f): f is NonNullable<typeof f> => f != null)
   const features = (landing.benefits ?? []).map(parseLandingBenefit).filter((f): f is NonNullable<typeof f> => f != null)
   const ctaText = landing.ctaText?.trim() || t.cta
   const summaryPhoto = (hasDesigns && designPhoto(slotDesign(0))) || heroPhoto
@@ -623,14 +624,39 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         )}
 
         {/* Galerie */}
-        {galleryPhotos.length > 0 && (
+        {(galleryPhotos.length > 0 || packDetails.length > 0) && (
           <section className="pt-12">
             {landing.galleryTitle && <h2 className="text-2xl font-extrabold text-center mb-5">{landing.galleryTitle}</h2>}
-            <div className="grid grid-cols-2 gap-3">
-              {galleryPhotos.map((url, i) => (
-                <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface)]" />
-              ))}
-            </div>
+            {/* Détail de chaque article (pack) : ce que le client reçoit exactement */}
+            {packDetails.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {packDetails.map((f, i) => (
+                  <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-[var(--lp-surface)] border-2 shadow-sm" style={{ borderColor: `${accent}40` }}>
+                    <span className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-extrabold text-white" style={{ backgroundColor: accent }}>
+                      {f.icon || i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-extrabold">{f.title}</p>
+                      {f.text && (
+                        // Une ligne par détail (séparés par « · ») : évite les mélanges arabe / latin illisibles
+                        <ul className="text-[var(--lp-muted)] text-sm mt-1 leading-relaxed space-y-0.5">
+                          {f.text.split(' · ').map((part, j) => (
+                            <li key={j} className="text-start">• {part}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {galleryPhotos.length > 0 && (
+              <div className={`grid gap-3 ${galleryPhotos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                {galleryPhotos.map((url, i) => (
+                  <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface)]" />
+                ))}
+              </div>
+            )}
           </section>
         )}
 
