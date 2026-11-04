@@ -28,18 +28,30 @@ export const IPHONE_MODELS = [
 export type IPhoneModelId = (typeof IPHONE_MODELS)[number]['id'];
 
 /**
- * Anciens iPhone (X → XS Max) : proposés seulement par les landings qui les listent
- * (pas dans le choix de modèle de la boutique, où il n'y a pas de coques pour eux).
+ * iPhone proposés seulement par les landings qui les listent (anciens X → XS Max et modèles Plus),
+ * pas dans le choix de modèle de la boutique, où il n'y a pas de coques pour eux.
  */
 export const LEGACY_IPHONE_MODELS = [
   { id: 'iphone-x', name: 'iPhone X', slug: 'iphone-x' },
   { id: 'iphone-xr', name: 'iPhone XR', slug: 'iphone-xr' },
   { id: 'iphone-xs', name: 'iPhone XS', slug: 'iphone-xs' },
   { id: 'iphone-xs-max', name: 'iPhone XS Max', slug: 'iphone-xs-max' },
+  { id: 'iphone-14-plus', name: 'iPhone 14 Plus', slug: 'iphone-14-plus' },
+  { id: 'iphone-15-plus', name: 'iPhone 15 Plus', slug: 'iphone-15-plus' },
+  { id: 'iphone-16-plus', name: 'iPhone 16 Plus', slug: 'iphone-16-plus' },
 ] as const;
 
-/** Tous les iPhone dans l'ordre de sortie (sert aux plages « iphone-x..iphone-14-pro-max »). */
-export const ALL_IPHONE_MODEL_IDS: string[] = [...LEGACY_IPHONE_MODELS, ...IPHONE_MODELS].map((m) => m.id)
+/** Tous les iPhone dans l'ordre de sortie (les Plus juste après le modèle de base). */
+export const ALL_IPHONE_MODELS: { id: string; name: string }[] = [
+  ...LEGACY_IPHONE_MODELS.filter((m) => !m.id.endsWith('-plus')),
+  ...IPHONE_MODELS.flatMap((m) => {
+    const plus = LEGACY_IPHONE_MODELS.find((x) => x.id === `${m.id}-plus`)
+    return plus ? [m, plus] : [m]
+  }),
+]
+
+/** Ids de ALL_IPHONE_MODELS (sert aux plages « iphone-x..iphone-14-pro-max »). */
+export const ALL_IPHONE_MODEL_IDS: string[] = ALL_IPHONE_MODELS.map((m) => m.id)
 
 export const SAMSUNG_ULTRA_MODELS = [
   { id: 's21-ultra', name: 'Samsung S21 Ultra', slug: 's21-ultra' },

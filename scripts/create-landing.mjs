@@ -25,8 +25,12 @@ const IPHONE_MODEL_IDS = ['11', '12', '13', '14', '15', '16', '17'].flatMap((n) 
   `iphone-${n}`, `iphone-${n}-pro`, `iphone-${n}-pro-max`,
 ])
 const SAMSUNG_MODEL_IDS = ['21', '22', '23', '24', '25', '26'].map((n) => `s${n}-ultra`)
-// Tous les iPhone dans l'ordre de sortie, pour les plages « iphone-x..iphone-14-pro-max »
-const ALL_IPHONE_MODEL_IDS = ['iphone-x', 'iphone-xr', 'iphone-xs', 'iphone-xs-max', ...IPHONE_MODEL_IDS]
+// Tous les iPhone dans l'ordre de sortie (Plus après le modèle de base), pour les plages « iphone-x..iphone-14-pro-max »
+const PLUS_MODELS = ['14', '15', '16']
+const ALL_IPHONE_MODEL_IDS = ['iphone-x', 'iphone-xr', 'iphone-xs', 'iphone-xs-max', ...IPHONE_MODEL_IDS.flatMap((id) => {
+  const n = id.match(/^iphone-(\d+)$/)?.[1]
+  return n && PLUS_MODELS.includes(n) ? [id, `${id}-plus`] : [id]
+})]
 
 function expandModels(list) {
   return list.flatMap((part) => {

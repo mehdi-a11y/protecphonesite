@@ -14,7 +14,7 @@ import {
   type Order,
 } from '../types'
 import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, getColorName, usesSectionLanding, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
-import { IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, type IPhoneModelId, type SamsungModelId } from '../data'
+import { IPHONE_MODELS, ALL_IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, type IPhoneModelId, type SamsungModelId } from '../data'
 import { GENERAL_MODEL_ID, generalCompatibleWith, getModelName, type DeviceType, type ProductLandingContent } from '../data'
 import type { Antichoc } from '../data'
 import {
@@ -1684,7 +1684,8 @@ export function AdminPage() {
                             onChange={(e) => handleCollectionsChange(p.id, e)}
                             className="w-full bg-brand-card border border-white/10 rounded px-2 py-1 h-[70px] text-xs focus:border-brand-accent focus:outline-none"
                           >
-                            {IPHONE_MODELS.map((m) => (
+                            {/* Produits à landing : tous les iPhone (X → XS Max, Plus), sinon ceux de la boutique */}
+                            {(usesSectionLanding(p) ? ALL_IPHONE_MODELS : IPHONE_MODELS).map((m) => (
                               <option key={m.id} value={m.id}>
                                 {m.name}
                               </option>

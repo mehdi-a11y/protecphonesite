@@ -21,6 +21,7 @@ const CONFIRMATEUR_EMAILS_DEFAULT = ['protecphonedz@gmail.com']
 /** Noms des modèles iPhone et Samsung (id → name) pour le libellé complet dans les emails. */
 const PHONE_NAMES = {
   'iphone-x': 'iPhone X', 'iphone-xr': 'iPhone XR', 'iphone-xs': 'iPhone XS', 'iphone-xs-max': 'iPhone XS Max',
+  'iphone-14-plus': 'iPhone 14 Plus', 'iphone-15-plus': 'iPhone 15 Plus', 'iphone-16-plus': 'iPhone 16 Plus',
   'iphone-11': 'iPhone 11', 'iphone-11-pro': 'iPhone 11 Pro', 'iphone-11-pro-max': 'iPhone 11 Pro Max',
   'iphone-12': 'iPhone 12', 'iphone-12-pro': 'iPhone 12 Pro', 'iphone-12-pro-max': 'iPhone 12 Pro Max',
   'iphone-13': 'iPhone 13', 'iphone-13-pro': 'iPhone 13 Pro', 'iphone-13-pro-max': 'iPhone 13 Pro Max',
