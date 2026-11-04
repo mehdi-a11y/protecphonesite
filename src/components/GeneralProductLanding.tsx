@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { Antichoc } from '../data'
-import { ANTICHOC_COLORS, GENERAL_MODEL_ID, getModelName, isVariantOrderable, parseLandingBenefit } from '../data'
+import { ANTICHOC_COLORS, GENERAL_MODEL_ID, getModelName, includedItemsFor, isVariantOrderable, parseLandingBenefit } from '../data'
+import type { LandingDesign } from '../data'
 import { getScreenProtectorUpsell } from '../data-screen-protector'
 import type { CartItem } from '../types'
 import { WILAYAS } from '../delivery'
@@ -73,6 +74,8 @@ const TEXTS = {
     giftEvery: 'مع كل طلب',
     badPhone: 'رقم الهاتف غير صحيح (مثال: 0555 12 34 56)',
     required: 'هذه الخانة مطلوبة',
+    packTitle: 'واش كاين في الباك؟',
+    included: 'مرفق',
     faqTitle: 'أسئلة شائعة',
     codNote: 'ما تخلّص والو دروك · تخلّص كي توصلك السلعة',
   },
@@ -129,6 +132,8 @@ const TEXTS = {
     giftEvery: 'avec chaque commande',
     badPhone: 'Numéro invalide (ex. 0555 12 34 56)',
     required: 'Champ obligatoire',
+    packTitle: 'Contenu du pack',
+    included: 'Inclus',
     faqTitle: 'Questions fréquentes',
     codNote: 'Rien à payer maintenant · paiement à la livraison',
   },
@@ -212,7 +217,9 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   // Motifs (coques à motifs) : chacun est une variante avec sa photo de la galerie
   const designs = useMemo(() => (landing.designs ?? []).filter((d) => d && d.id), [landing.designs])
   const hasDesigns = designs.length > 0
-  const bundlePrice = landing.bundlePrice && landing.bundlePrice > 0 ? landing.bundlePrice : 0
+  // Pack : nombre fixe d'articles (un motif / une couleur chacun) au prix du produit, sans offre « 1 ou 2 »
+  const packSize = landing.packSize && landing.packSize > 1 ? Math.min(landing.packSize, 6) : 0
+  const bundlePrice = !packSize && landing.bundlePrice && landing.bundlePrice > 0 ? landing.bundlePrice : 0
   const [designSlots, setDesignSlots] = useState<string[]>(['', ''])
   const [activeSlot, setActiveSlot] = useState(0)
 
@@ -242,14 +249,14 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   )
 
   useEffect(() => {
-    setQuantity(bundlePrice ? 2 : 1)
+    setQuantity(packSize || (bundlePrice ? 2 : 1))
     setHint('')
-    setDesignSlots(['', ''])
+    setDesignSlots(Array(Math.max(2, packSize)).fill(''))
     setActiveSlot(0)
     const firstOrderable = colorOptions.find((c) => isVariantOrderable(product, c.id, GENERAL_MODEL_ID))
     setSelectedColorId(colorOptions.length === 1 && firstOrderable ? firstOrderable.id : '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id, colorOptions, bundlePrice])
+  }, [product.id, colorOptions, bundlePrice, packSize])
 
   useEffect(() => {
     try {
@@ -272,19 +279,23 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const available = orderableModelIds.length > 0
   const modelOk = modelId !== '' && orderableModelIds.includes(modelId)
   // Avec l'offre « 2 = prix réduit », un motif par article ; sans offre, un seul motif pour toute la quantité
-  const slotCount = hasDesigns ? (bundlePrice ? quantity : 1) : 0
+  const slotCount = hasDesigns ? (packSize || bundlePrice ? quantity : 1) : 0
   const slotDesign = (i: number) => designSlots[Math.min(i, slotCount - 1)] ?? ''
   const colorOk = hasDesigns
     ? Array.from({ length: slotCount }, (_, i) => slotDesign(i)).every((id) => id !== '' && orderableColorIds.has(id))
     : colorOptions.length === 0 || (selectedColorId !== '' && orderableColorIds.has(selectedColorId))
   const bundleActive = bundlePrice > 0 && quantity === 2
-  const subtotal = bundleActive ? bundlePrice : product.price * quantity
+  const subtotal = packSize ? product.price : bundleActive ? bundlePrice : product.price * quantity
   const giftName = landing.gift?.trim() ?? ''
+  // Articles inclus (pack) : ceux qui dépendent du modèle (ex. câble Lightning ou USB-C) suivent le modèle choisi
+  const includedNames = includedItemsFor(landing.includes, modelId)
 
   const cart: CartItem[] = useMemo(() => {
     if (!available || !modelOk || !colorOk) return []
-    // Le total de la commande = somme des prix des articles : l'offre 2 est répartie sur les 2 coques
-    const unitPrices = bundleActive ? [bundlePrice - Math.floor(bundlePrice / 2), Math.floor(bundlePrice / 2)] : []
+    // Le total de la commande = somme des prix des articles : l'offre 2 (ou le prix du pack) est répartie sur les articles
+    const split = (total: number, n: number) =>
+      Array.from({ length: n }, (_, i) => Math.floor(total / n) + (i < total % n ? 1 : 0))
+    const unitPrices = packSize ? split(product.price, packSize) : bundleActive ? split(bundlePrice, 2) : []
     const items: CartItem[] = Array.from({ length: quantity }, (_, i) => ({
       antichoc: unitPrices.length ? { ...product, price: unitPrices[i] } : product,
       selectedPhoneId: modelId,
@@ -296,18 +307,34 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         : { ...product, id: `gift-${product.id}`, description: '', landing: undefined, photoGallery: undefined }
       items.push({ antichoc: { ...base, name: giftName, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
     }
+    includedNames.forEach((name, i) => {
+      // Le verre garde l'id de l'incassable pour que le confirmateur le reconnaisse
+      const base = /زجاج|incassable|verre|glass/i.test(name)
+        ? getScreenProtectorUpsell()
+        : { ...product, id: `inclus-${product.id}-${i}`, description: '', landing: undefined, photoGallery: undefined, photoUrl: '' }
+      items.push({ antichoc: { ...base, name, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
+    })
     return items
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available, modelOk, colorOk, quantity, product, selectedColorId, colorOptions.length, modelId, designSlots, bundleActive, bundlePrice, giftName, isPhone, hasDesigns])
+  }, [available, modelOk, colorOk, quantity, product, selectedColorId, colorOptions.length, modelId, designSlots, bundleActive, bundlePrice, giftName, isPhone, hasDesigns, packSize, includedNames.join('|')])
   const form = useCheckoutForm(cart)
 
   const photos = product.photoGallery?.length ? product.photoGallery : product.photoUrl ? [product.photoUrl] : []
   const heroPhoto = photos[0]
   const designPhoto = (id: string) => {
     const d = designs.find((x) => x.id === id)
-    return d ? photos[d.photo] ?? heroPhoto : undefined
+    return d && d.photo >= 0 ? photos[d.photo] : undefined
   }
+  /** Photo du motif, ou pastille de sa couleur s'il n'a pas de photo. */
+  const designVisual = (d: LandingDesign, cls: string) =>
+    d.photo >= 0 && photos[d.photo] ? (
+      <img src={photos[d.photo]} alt={d.name} loading="lazy" className={`${cls} object-cover`} />
+    ) : (
+      <span className={`${cls} block`} style={{ background: `linear-gradient(160deg, ${d.hex || '#94a3b8'} 55%, rgba(0,0,0,.25))` }} />
+    )
   const designPhotoIndexes = new Set(designs.map((d) => d.photo))
+  // Couleurs sans photo : grille compacte de pastilles au lieu de grandes cartes
+  const swatchesOnly = hasDesigns && !designs.some((d) => d.photo >= 0 && photos[d.photo])
   const galleryPhotos = photos.filter((_, i) => i > 0 && !designPhotoIndexes.has(i))
   const oldPrice = landing.oldPrice && landing.oldPrice > product.price ? landing.oldPrice : 0
   const discount = oldPrice ? Math.round((1 - product.price / oldPrice) * 100) : 0
@@ -325,7 +352,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     next[slot] = id
     setDesignSlots(next)
     const d = designs.find((x) => x.id === id)
-    if (d) setSelectedImageIndex(d.photo)
+    if (d && d.photo >= 0) setSelectedImageIndex(d.photo)
     const empty = Array.from({ length: slotCount }, (_, i) => i).find((i) => i !== slot && !next[i])
     setActiveSlot(empty ?? slot)
     setHint('')
@@ -387,8 +414,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       // Évite une 2e commande identique si le client reclique
       form.setName('')
       form.setPhone('')
-      setQuantity(bundlePrice ? 2 : 1)
-      setDesignSlots(['', ''])
+      setQuantity(packSize || (bundlePrice ? 2 : 1))
+      setDesignSlots(Array(Math.max(2, packSize)).fill(''))
       setActiveSlot(0)
     }
   }
@@ -406,6 +433,19 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       ))}
     </div>
   )
+
+  // Contenu du pack (avant le choix du modèle, on liste toutes les variantes, ex. les 2 câbles)
+  const packBox = packSize || landing.includes?.some((l) => l.trim()) ? (
+    <div className="p-4 rounded-2xl border border-[var(--lp-border-strong)] bg-[var(--lp-surface)] text-start">
+      <p className="font-extrabold mb-2">📦 {t.packTitle}</p>
+      <ul className="space-y-1.5 text-sm font-semibold">
+        {packSize > 0 && <li>✅ {t.pieces(packSize, isPhone)}{landing.designLabel ? ` · ${landing.designLabel}` : ''}</li>}
+        {includedItemsFor(landing.includes, '').map((name) => (
+          <li key={name}>✅ {name}</li>
+        ))}
+      </ul>
+    </div>
+  ) : null
 
   const giftBanner = giftName ? (
     <div className="flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed" style={{ borderColor: accent, backgroundColor: `${accent}14` }}>
@@ -490,7 +530,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
               <p className="mt-2 font-bold"><span style={{ color: accent }}>{t.pieces(2, isPhone)} : {fmt(bundlePrice)}</span></p>
             )}
             {landing.subtitle && <p className="text-[var(--lp-muted)] mt-3 leading-relaxed">{landing.subtitle}</p>}
-            {giftBanner && <div className="mt-4">{giftBanner}</div>}
+            {packBox && <div className="mt-4">{packBox}</div>}
+          {giftBanner && <div className="mt-4">{giftBanner}</div>}
             <p className="mt-3 text-sm font-semibold text-[var(--lp-muted)]">💵 {t.codNote}</p>
           </section>
         )}
@@ -536,6 +577,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           {bundlePrice > 0 && (
             <p className="mt-1 font-bold">{t.pieces(2, isPhone)} : <span style={{ color: accent }}>{fmt(bundlePrice)}</span></p>
           )}
+          {packBox && <div className="mt-4">{packBox}</div>}
           {giftBanner && <div className="mt-4">{giftBanner}</div>}
           <button
             type="button"
@@ -552,8 +594,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         {/* Motifs : un clic choisit le motif et descend au formulaire */}
         {hasDesigns && (
           <section className="pt-12">
-            <h2 className="text-2xl font-extrabold text-center mb-5">{t.designsTitle}</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <h2 className="text-2xl font-extrabold text-center mb-5">{landing.designsTitle?.trim() || t.designsTitle}</h2>
+            <div className={`grid gap-3 ${swatchesOnly ? 'grid-cols-5' : 'grid-cols-2'}`}>
               {designs.map((d) => (
                 <button
                   key={d.id}
@@ -565,11 +607,15 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                   }}
                   className="group text-start rounded-2xl overflow-hidden border border-[var(--lp-border)] bg-[var(--lp-surface)] shadow-sm"
                 >
-                  <img src={photos[d.photo] ?? heroPhoto} alt={d.name} loading="lazy" className="w-full aspect-[3/4] object-cover transition-transform group-hover:scale-105" />
-                  <span className="flex items-center justify-between gap-2 px-3 py-2">
-                    <span className="font-bold text-sm truncate">{d.name}</span>
-                    <span className="shrink-0 text-xs font-bold px-2 py-1 rounded-full text-white" style={{ backgroundColor: accent }}>{t.cta}</span>
-                  </span>
+                  {designVisual(d, `w-full ${swatchesOnly ? 'aspect-square' : 'aspect-[3/4]'} transition-transform group-hover:scale-105`)}
+                  {swatchesOnly ? (
+                    <span className="block px-1 py-1 text-[11px] font-bold text-center truncate">{d.name}</span>
+                  ) : (
+                    <span className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="font-bold text-sm truncate">{d.name}</span>
+                      <span className="shrink-0 text-xs font-bold px-2 py-1 rounded-full text-white" style={{ backgroundColor: accent }}>{t.cta}</span>
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -722,7 +768,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                     className={missing ? 'rounded-2xl p-2 -m-2 ring-2 ring-red-500/60' : ''}
                   >
                     <p className={`text-sm font-semibold mb-2 ${missing ? 'text-red-500' : ''}`}>
-                      {t.design}{slotCount > 1 ? ` ${slot + 1}` : ''} <span className="text-red-500">*</span>
+                      {landing.designLabel?.trim() || t.design}{slotCount > 1 ? ` ${slot + 1}` : ''} <span className="text-red-500">*</span>
                       {chosen && <span className="font-normal text-[var(--lp-faint)] ms-2">{chosen.name}</span>}
                     </p>
                     <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -740,7 +786,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                               on ? 'border-[var(--lp-accent)] ring-2 ring-[var(--lp-accent)]/40' : orderable ? 'border-[var(--lp-border-strong)]' : 'border-[var(--lp-border)] opacity-30 cursor-not-allowed'
                             }`}
                           >
-                            <img src={photos[d.photo] ?? heroPhoto} alt={d.name} loading="lazy" className="w-full aspect-[3/4] object-cover" />
+                            {designVisual(d, `w-full ${swatchesOnly ? 'aspect-square' : 'aspect-[3/4]'}`)}
                             <span className="block px-1 py-0.5 text-[10px] font-semibold truncate">{d.name}</span>
                           </button>
                         )
@@ -854,7 +900,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 </div>
               )}
 
-              <div className={`flex items-center justify-between ${bundlePrice > 0 ? 'hidden' : ''}`}>
+              <div className={`flex items-center justify-between ${bundlePrice > 0 || packSize > 0 ? 'hidden' : ''}`}>
                 <p className="text-sm font-semibold">{t.quantity}</p>
                 <div className="inline-flex items-center rounded-xl border border-[var(--lp-border-strong)] bg-[var(--lp-surface)]" dir="ltr">
                   <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-11 h-11 text-xl hover:bg-[var(--lp-surface-2)] rounded-l-xl" aria-label="-">−</button>
@@ -867,7 +913,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
               <div className="rounded-2xl bg-[var(--lp-surface-2)] p-4 space-y-2 text-sm">
                 <p className="font-bold mb-1">{t.summary}</p>
                 <div className="flex justify-between gap-2">
-                  <span className="truncate">{displayTitle} × {quantity}</span>
+                  <span className="truncate">{displayTitle}{packSize ? '' : ` × ${quantity}`}</span>
                   <span className="shrink-0">{fmt(subtotal)}</span>
                 </div>
                 {(hasDesigns || modelId !== GENERAL_MODEL_ID) && (
@@ -884,6 +930,12 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                     <span className="shrink-0">{t.free}</span>
                   </div>
                 )}
+                {modelId && includedNames.map((name) => (
+                  <div key={name} className="flex justify-between gap-2 font-semibold">
+                    <span className="truncate">✅ {name}</span>
+                    <span className="shrink-0 text-[var(--lp-muted)]">{t.included}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between gap-2 text-[var(--lp-muted)]">
                   <span>{t.shipping}</span>
                   <span>{form.wilaya ? fmt(form.deliveryPrice) : t.shippingTbd}</span>

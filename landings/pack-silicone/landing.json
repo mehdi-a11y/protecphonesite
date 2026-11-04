@@ -1,0 +1,73 @@
+{
+  "productId": "pack-silicone-2-incassable-cable",
+  "slug": "pack-silicone",
+  "name": "Pack 2 antichoc silicone + incassable Magic HOCO Plus + câble",
+  "title": "باك الحماية الكامل لتيليفونك",
+  "extraPages": [
+    {
+      "slug": "pack-silicone-commande",
+      "title": "باك 2 انتيشوك سيليكون + زجاج + كابل",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": ["iphone-x..iphone-17-pro-max"],
+  "price": 2900,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-incassable-magic-hoco-plus.jpg",
+    "02-cables-borofone.jpg"
+  ],
+  "description": "باك كامل باش تحمي تيليفونك وتشارجيه:\n\n• 2 انتيشوك سيليكون ناعم من الداخل، تختار اللونين اللي يعجبوك من 10 ألوان\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل Borofone: Lightning من iPhone X حتى 14 Pro Max، و Type-C من iPhone 15 حتى 17 Pro Max\n\nكل الباك بـ 2900 دج فقط، والدفع عند الاستلام.",
+  "landing": {
+    "lang": "ar",
+    "theme": "light",
+    "accentColor": "#c026d3",
+    "topBanner": "🔥 باك كامل بـ 2900 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "باك التوفير",
+    "headlineHighlight": "2 انتيشوك + زجاج + كابل",
+    "subtitle": "اختار 2 ألوان من 10، وخوذ معاهم زجاج حماية Magic HOCO Plus وكابل الشحن المناسب لتيليفونك. كلش بـ 2900 دج.",
+    "heroBadge": "iPhone X → 17 Pro Max",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار 2 ألوان من 10 🎨",
+    "designLabel": "اللون",
+    "benefits": [
+      "🎨 | 10 ألوان | اختار لونين: واحد للخدمة وواحد للخرجات",
+      "🧴 | سيليكون ناعم | ملمس مريح ومن الداخل قماش يحمي الظهر من الخدوش",
+      "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
+      "🔌 | كابل الشحن المناسب | Lightning ولا Type-C حسب تيليفونك، نختاروه حنا",
+      "💸 | كلش بـ 2900 دج | أرخص بزاف من كي تشريهم واحد بواحد"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "2 انتيشوك + زجاج + كابل بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 4500,
+    "packSize": 2,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus",
+      "كابل Borofone Lightning (iPhone X → 14 Pro Max) | iphone-x..iphone-14-pro-max",
+      "كابل Borofone Type-C (iPhone 15 → 17 Pro Max) | iphone-15..iphone-17-pro-max"
+    ],
+    "designs": [
+      { "id": "gris-pierre", "name": "رمادي فاتح", "hex": "#c9c4bd" },
+      { "id": "blanc", "name": "أبيض", "hex": "#f1f1f4" },
+      { "id": "minuit", "name": "أسود ليلي", "hex": "#1f2230" },
+      { "id": "lilas", "name": "ليلكي", "hex": "#b89ac7" },
+      { "id": "prune", "name": "عنابي", "hex": "#8e2a52" },
+      { "id": "violet", "name": "بنفسجي", "hex": "#5a2a6e" },
+      { "id": "bleu", "name": "أزرق", "hex": "#2a3a8f" },
+      { "id": "fuchsia", "name": "فوشيا", "hex": "#c2289a" },
+      { "id": "rose-pale", "name": "وردي فاتح", "hex": "#ecd3dc" },
+      { "id": "rose", "name": "وردي", "hex": "#f2a7b8" }
+    ],
+    "faq": [
+      "واش الكابل اللي نديه؟ | نختاروه حسب تيليفونك: Lightning من iPhone X حتى 14 Pro Max، و Type-C من iPhone 15 حتى 17 Pro Max.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "نقدر نختار نفس اللون مرتين؟ | إيه، اختار اللونين اللي تحب، حتى ولو نفس اللون.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}

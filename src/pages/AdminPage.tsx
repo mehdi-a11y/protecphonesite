@@ -1889,7 +1889,7 @@ export function AdminPage() {
                       const lp = p.landing ?? {}
                       const gallery = p.photoGallery?.length ? p.photoGallery : p.photoUrl ? [p.photoUrl] : []
                       const fieldCls = 'w-full px-3 py-2 rounded-lg bg-brand-dark border border-white/10 text-white text-sm focus:border-brand-accent focus:outline-none'
-                      const textFields: { key: 'brandName' | 'topBanner' | 'badge' | 'headlineHighlight' | 'subtitle' | 'heroBadge' | 'galleryTitle' | 'featuresTitle' | 'offerTitle' | 'offerText' | 'ctaText'; label: string; placeholder: string }[] = [
+                      const textFields: { key: 'brandName' | 'topBanner' | 'badge' | 'headlineHighlight' | 'subtitle' | 'heroBadge' | 'galleryTitle' | 'featuresTitle' | 'offerTitle' | 'offerText' | 'ctaText' | 'designsTitle' | 'designLabel'; label: string; placeholder: string }[] = [
                         { key: 'topBanner', label: 'Bandeau tout en haut', placeholder: 'Livraison 58 wilayas · Paiement à la livraison' },
                         { key: 'brandName', label: 'Nom de marque (vide = aucun)', placeholder: 'dailyhub' },
                         { key: 'badge', label: 'Pastille au-dessus du titre', placeholder: 'ابتكار HOCO الجديد' },
@@ -1901,6 +1901,8 @@ export function AdminPage() {
                         { key: 'offerTitle', label: 'Titre du bloc offre', placeholder: 'عرض حصري' },
                         { key: 'offerText', label: 'Texte du bloc offre', placeholder: 'اطلب الآن واستفد من السعر الخاص' },
                         { key: 'ctaText', label: 'Texte des boutons (vide = « اطلب الآن »)', placeholder: 'اطلب الآن قبل نفاذ الكمية' },
+                        { key: 'designsTitle', label: 'Titre de la section motifs / couleurs (vide = « اختار الستيل تاعك »)', placeholder: 'اختار اللون اللي يعجبك' },
+                        { key: 'designLabel', label: 'Libellé du choix dans le formulaire (vide = « التصميم »)', placeholder: 'اللون' },
                       ]
                       return (
                         <div className="space-y-3 rounded-lg border border-brand-accent/30 bg-brand-accent/5 p-3">
@@ -2007,6 +2009,32 @@ export function AdminPage() {
                               />
                             </div>
                           </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-brand-muted mb-1">Pack : nombre d’articles (vide = pas de pack)</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={6}
+                                value={lp.packSize ?? ''}
+                                onChange={(e) => handleProductLandingChange(p.id, { packSize: e.target.value ? Number(e.target.value) : undefined })}
+                                placeholder="2"
+                                className={fieldCls}
+                              />
+                            </div>
+                            <p className="text-[11px] text-brand-muted self-end">Pack : le prix du produit = prix du pack ; le client choisit un motif / une couleur par article.</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-brand-muted mb-1">Inclus dans chaque commande — une ligne : nom | modèles (vide = tous, ou plage iphone-x..iphone-14-pro-max)</label>
+                            <textarea
+                              value={(lp.includes ?? []).join('\n')}
+                              onChange={(e) => handleProductLandingChange(p.id, { includes: e.target.value.split('\n') })}
+                              rows={3}
+                              dir="auto"
+                              placeholder={'زجاج حماية Magic HOCO Plus\nكابل Lightning | iphone-x..iphone-14-pro-max\nكابل Type-C | iphone-15..iphone-17-pro-max'}
+                              className={`${fieldCls} resize-y`}
+                            />
+                          </div>
                           {p.deviceType !== 'general' && (
                             <div>
                               <label className="block text-xs text-brand-muted mb-1">Motifs — nom + photo (cliquez une miniature de la galerie)</label>
@@ -2014,7 +2042,17 @@ export function AdminPage() {
                                 {(lp.designs ?? []).map((d, di) => (
                                   <div key={d.id} className="rounded-lg border border-white/10 p-2 space-y-1.5">
                                     <div className="flex gap-2 items-center">
-                                      {gallery[d.photo] && <img src={gallery[d.photo]} alt="" className="w-10 h-12 object-cover rounded" />}
+                                      {gallery[d.photo] && d.photo >= 0 ? (
+                                        <img src={gallery[d.photo]} alt="" className="w-10 h-12 object-cover rounded" />
+                                      ) : (
+                                        <input
+                                          type="color"
+                                          value={d.hex || '#94a3b8'}
+                                          onChange={(e) => handleProductLandingChange(p.id, { designs: (lp.designs ?? []).map((x, j) => (j === di ? { ...x, hex: e.target.value } : x)) })}
+                                          className="w-10 h-12 rounded cursor-pointer bg-transparent"
+                                          title="Couleur de la pastille (motif sans photo)"
+                                        />
+                                      )}
                                       <input
                                         type="text"
                                         value={d.name}
@@ -2032,6 +2070,14 @@ export function AdminPage() {
                                       </button>
                                     </div>
                                     <div className="flex gap-1 overflow-x-auto">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleProductLandingChange(p.id, { designs: (lp.designs ?? []).map((x, j) => (j === di ? { ...x, photo: -1 } : x)) })}
+                                        className={`shrink-0 h-8 px-2 rounded text-[10px] border-2 ${d.photo < 0 ? 'border-brand-accent text-white' : 'border-white/10 text-brand-muted'}`}
+                                        title="Pas de photo : pastille de couleur"
+                                      >
+                                        Couleur
+                                      </button>
                                       {gallery.map((url, gi) => (
                                         <button
                                           key={gi}

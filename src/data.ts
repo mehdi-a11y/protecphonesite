@@ -27,6 +27,20 @@ export const IPHONE_MODELS = [
 
 export type IPhoneModelId = (typeof IPHONE_MODELS)[number]['id'];
 
+/**
+ * Anciens iPhone (X → XS Max) : proposés seulement par les landings qui les listent
+ * (pas dans le choix de modèle de la boutique, où il n'y a pas de coques pour eux).
+ */
+export const LEGACY_IPHONE_MODELS = [
+  { id: 'iphone-x', name: 'iPhone X', slug: 'iphone-x' },
+  { id: 'iphone-xr', name: 'iPhone XR', slug: 'iphone-xr' },
+  { id: 'iphone-xs', name: 'iPhone XS', slug: 'iphone-xs' },
+  { id: 'iphone-xs-max', name: 'iPhone XS Max', slug: 'iphone-xs-max' },
+] as const;
+
+/** Tous les iPhone dans l'ordre de sortie (sert aux plages « iphone-x..iphone-14-pro-max »). */
+export const ALL_IPHONE_MODEL_IDS: string[] = [...LEGACY_IPHONE_MODELS, ...IPHONE_MODELS].map((m) => m.id)
+
 export const SAMSUNG_ULTRA_MODELS = [
   { id: 's21-ultra', name: 'Samsung S21 Ultra', slug: 's21-ultra' },
   { id: 's22-ultra', name: 'Samsung S22 Ultra', slug: 's22-ultra' },
@@ -58,6 +72,7 @@ export function getModelName(modelId: string): string {
   return (
     SAMSUNG_ULTRA_MODELS.find((m) => m.id === modelId)?.name ??
     IPHONE_MODELS.find((m) => m.id === modelId)?.name ??
+    LEGACY_IPHONE_MODELS.find((m) => m.id === modelId)?.name ??
     modelId
   )
 }
@@ -103,14 +118,52 @@ export interface ProductLandingContent {
   gift?: string;
   /** Questions fréquentes, une ligne chacune : « question | réponse » */
   faq?: string[];
+  /** Titre de la section des motifs et libellé du choix (ex. « اختار اللون » / « اللون » pour des couleurs) */
+  designsTitle?: string;
+  designLabel?: string;
+  /** Pack : nombre fixe d'articles (ex. 2 coques) vendus au prix du produit, un motif/couleur par article */
+  packSize?: number;
+  /**
+   * Articles inclus dans chaque commande, une ligne chacun : « nom | modèles ».
+   * Modèles vides = pour tous ; sinon ids séparés par des virgules ou plage « iphone-x..iphone-14-pro-max ».
+   */
+  includes?: string[];
 }
 
 /** Un motif d'une coque : nom affiché et index de sa photo dans photoGallery. */
 export interface LandingDesign {
   id: string;
   name: string;
+  /** Index de la photo dans photoGallery (-1 = pas de photo : pastille de couleur) */
   photo: number;
+  /** Couleur de la pastille quand le motif n'a pas de photo (ex. #1e3a8a) */
+  hex?: string;
 }
+
+/** Développe « a..b » (plage dans l'ordre de sortie des iPhone) et les listes séparées par des virgules. */
+export function expandModelList(spec: string): string[] {
+  return spec
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .flatMap((part) => {
+      const [from, to] = part.split('..').map((x) => x.trim())
+      if (!to) return [from]
+      const i = ALL_IPHONE_MODEL_IDS.indexOf(from)
+      const j = ALL_IPHONE_MODEL_IDS.indexOf(to)
+      return i >= 0 && j >= i ? ALL_IPHONE_MODEL_IDS.slice(i, j + 1) : []
+    })
+}
+
+/** Articles inclus (pack) pour un modèle donné : « nom | modèles » → noms qui s'appliquent à ce modèle. */
+export function includedItemsFor(lines: string[] | undefined, modelId: string): string[] {
+  return (lines ?? [])
+    .map((line) => line.split('|').map((x) => x.trim()))
+    .filter(([name]) => name)
+    .filter(([, models]) => !models || !modelId || expandModelList(models).includes(modelId))
+    .map(([name]) => name)
+}
+
 
 /** Le produit a une landing page par sections (produit général, ou coque avec motifs). */
 export function usesSectionLanding(p: { deviceType?: string; landing?: ProductLandingContent } | null | undefined): boolean {

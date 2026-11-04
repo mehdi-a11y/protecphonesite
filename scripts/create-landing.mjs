@@ -25,6 +25,19 @@ const IPHONE_MODEL_IDS = ['11', '12', '13', '14', '15', '16', '17'].flatMap((n) 
   `iphone-${n}`, `iphone-${n}-pro`, `iphone-${n}-pro-max`,
 ])
 const SAMSUNG_MODEL_IDS = ['21', '22', '23', '24', '25', '26'].map((n) => `s${n}-ultra`)
+// Tous les iPhone dans l'ordre de sortie, pour les plages « iphone-x..iphone-14-pro-max »
+const ALL_IPHONE_MODEL_IDS = ['iphone-x', 'iphone-xr', 'iphone-xs', 'iphone-xs-max', ...IPHONE_MODEL_IDS]
+
+function expandModels(list) {
+  return list.flatMap((part) => {
+    const [from, to] = String(part).split('..').map((x) => x.trim())
+    if (!to) return [from]
+    const i = ALL_IPHONE_MODEL_IDS.indexOf(from)
+    const j = ALL_IPHONE_MODEL_IDS.indexOf(to)
+    if (i < 0 || j < i) throw new Error(`Plage de modèles invalide : ${part}`)
+    return ALL_IPHONE_MODEL_IDS.slice(i, j + 1)
+  })
+}
 
 function readEnvFile() {
   const envPath = join(root, '.env')
@@ -75,16 +88,17 @@ async function main() {
   const isSamsung = spec.deviceType === 'samsung'
   const isPhone = spec.deviceType === 'iphone' || isSamsung
   const modelIds = isPhone
-    ? (spec.models?.length ? spec.models : isSamsung ? SAMSUNG_MODEL_IDS : IPHONE_MODEL_IDS)
+    ? (spec.models?.length ? expandModels(spec.models) : isSamsung ? SAMSUNG_MODEL_IDS : IPHONE_MODEL_IDS)
     : [GENERAL_MODEL_ID]
 
   // Motifs : la photo est donnée par nom de fichier → index dans la galerie
   const landing = { ...(spec.landing || {}) }
   if (Array.isArray(landing.designs)) {
     landing.designs = landing.designs.map((d) => {
-      const photo = typeof d.photo === 'number' ? d.photo : (spec.photos || []).indexOf(d.photo)
-      if (photo < 0) throw new Error(`Photo du motif « ${d.name} » absente de "photos" : ${d.photo}`)
-      return { id: d.id, name: d.name, photo }
+      // Sans photo : pastille de la couleur « hex » (photo = -1), la photo peut être ajoutée ensuite dans l'admin
+      const photo = d.photo == null ? -1 : typeof d.photo === 'number' ? d.photo : (spec.photos || []).indexOf(d.photo)
+      if (d.photo != null && photo < 0) throw new Error(`Photo du motif « ${d.name} » absente de "photos" : ${d.photo}`)
+      return { id: d.id, name: d.name, photo, ...(d.hex ? { hex: d.hex } : {}) }
     })
   }
   const colorIds = landing.designs?.length ? landing.designs.map((d) => d.id) : (spec.colorIds?.length ? spec.colorIds : [])
