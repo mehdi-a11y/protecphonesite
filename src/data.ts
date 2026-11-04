@@ -135,6 +135,8 @@ export interface ProductLandingContent {
   designLabel?: string;
   /** Détail des articles du pack (section galerie), une ligne chacun : « emoji | titre | texte » */
   packDetails?: string[];
+  /** Ventes additionnelles proposées en case à cocher, une ligne chacune : « nom | prix » (DA) */
+  crossSells?: string[];
   /** Pack : nombre fixe d'articles (ex. 2 coques) vendus au prix du produit, un motif/couleur par article */
   packSize?: number;
   /**

@@ -75,6 +75,8 @@ const TEXTS = {
     badPhone: 'رقم الهاتف غير صحيح (مثال: 0555 12 34 56)',
     required: 'هذه الخانة مطلوبة',
     packTitle: 'واش كاين في الباك؟',
+    crossAdd: 'زيد',
+    crossOnly: 'غير بـ',
     included: 'مرفق',
     faqTitle: 'أسئلة شائعة',
     codNote: 'ما تخلّص والو دروك · تخلّص كي توصلك السلعة',
@@ -133,6 +135,8 @@ const TEXTS = {
     badPhone: 'Numéro invalide (ex. 0555 12 34 56)',
     required: 'Champ obligatoire',
     packTitle: 'Contenu du pack',
+    crossAdd: 'Ajouter',
+    crossOnly: 'pour seulement',
     included: 'Inclus',
     faqTitle: 'Questions fréquentes',
     codNote: 'Rien à payer maintenant · paiement à la livraison',
@@ -193,6 +197,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const [confirmed, setConfirmed] = useState<{ orderId: string } | null>(null)
   const [formVisible, setFormVisible] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
+  // Ventes additionnelles cochées (index dans landing.crossSells)
+  const [crossPicked, setCrossPicked] = useState<number[]>([])
   const formRef = useRef<HTMLElement>(null)
   const checkoutTracked = useRef(false)
 
@@ -289,6 +295,13 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   const giftName = landing.gift?.trim() ?? ''
   // Articles inclus (pack) : ceux qui dépendent du modèle (ex. câble Lightning ou USB-C) suivent le modèle choisi
   const includedNames = includedItemsFor(landing.includes, modelId)
+  // Ventes additionnelles : « nom | prix » (ex. « زجاج حماية Magic HOCO Plus | 900 »), ajoutées si le client coche
+  const crossSells = (landing.crossSells ?? [])
+    .map((line) => line.split('|').map((x) => x.trim()))
+    .map(([name, price]) => ({ name, price: Number(price) || 0 }))
+    .filter((c) => c.name && c.price > 0)
+  const crossTotal = crossPicked.reduce((sum, i) => sum + (crossSells[i]?.price ?? 0), 0)
+  const orderSubtotal = subtotal + crossTotal
 
   const cart: CartItem[] = useMemo(() => {
     if (!available || !modelOk || !colorOk) return []
@@ -314,9 +327,17 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         : { ...product, id: `inclus-${product.id}-${i}`, description: '', landing: undefined, photoGallery: undefined, photoUrl: '' }
       items.push({ antichoc: { ...base, name, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
     })
+    crossPicked.forEach((idx) => {
+      const c = crossSells[idx]
+      if (!c) return
+      const base = /زجاج|incassable|verre|glass/i.test(c.name)
+        ? getScreenProtectorUpsell()
+        : { ...product, id: `cross-${product.id}-${idx}`, description: '', landing: undefined, photoGallery: undefined, photoUrl: '' }
+      items.push({ antichoc: { ...base, name: c.name, price: c.price }, isUpsell: true, selectedPhoneId: modelId })
+    })
     return items
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [available, modelOk, colorOk, quantity, product, selectedColorId, colorOptions.length, modelId, designSlots, bundleActive, bundlePrice, giftName, isPhone, hasDesigns, packSize, includedNames.join('|')])
+  }, [available, modelOk, colorOk, quantity, product, selectedColorId, colorOptions.length, modelId, designSlots, bundleActive, bundlePrice, giftName, isPhone, hasDesigns, packSize, includedNames.join('|'), crossPicked.join(','), (landing.crossSells ?? []).join('\n')])
   const form = useCheckoutForm(cart)
 
   const photos = product.photoGallery?.length ? product.photoGallery : product.photoUrl ? [product.photoUrl] : []
@@ -365,10 +386,10 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     if (checkoutTracked.current) return
     checkoutTracked.current = true
     try {
-      trackAddToCart(product.name, [product.id], subtotal, 'DZD')
-      trackTikTokAddToCart(product.name, [product.id], subtotal, 'DZD')
-      trackInitiateCheckout(subtotal, 'DZD', quantity)
-      trackTikTokInitiateCheckout(subtotal, 'DZD', [product.id])
+      trackAddToCart(product.name, [product.id], orderSubtotal, 'DZD')
+      trackTikTokAddToCart(product.name, [product.id], orderSubtotal, 'DZD')
+      trackInitiateCheckout(orderSubtotal, 'DZD', quantity)
+      trackTikTokInitiateCheckout(orderSubtotal, 'DZD', [product.id])
     } catch {
       // ignore pixel errors
     }
@@ -418,6 +439,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       setQuantity(packSize || (bundlePrice ? 2 : 1))
       setDesignSlots(Array(Math.max(2, packSize)).fill(''))
       setActiveSlot(0)
+      setCrossPicked([])
     }
   }
 
@@ -852,6 +874,27 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 </div>
               )}
 
+              {crossSells.map((c, idx) => {
+                const on = crossPicked.includes(idx)
+                return (
+                  <label
+                    key={idx}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed cursor-pointer transition-colors ${on ? 'border-[var(--lp-accent)] bg-[var(--lp-accent)]/10' : 'border-[var(--lp-border-strong)] bg-[var(--lp-surface)]'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => setCrossPicked((prev) => (on ? prev.filter((x) => x !== idx) : [...prev, idx]))}
+                      className="w-5 h-5 shrink-0 accent-[var(--lp-accent)]"
+                    />
+                    <span className="flex-1 text-sm font-bold leading-snug">
+                      {/زجاج|incassable|verre|glass/i.test(c.name) ? '🛡️ ' : '➕ '}
+                      {t.crossAdd} {c.name} {t.crossOnly} <span style={{ color: accent }}>{fmt(c.price)}</span>
+                    </span>
+                  </label>
+                )
+              })}
+
               <div data-invalid={err('name')}>
                 <label className={`block text-sm font-semibold mb-1 ${err('name') ? 'text-red-500' : ''}`}>{t.name}</label>
                 <input type="text" required value={form.name} onChange={(e) => form.setName(e.target.value)} className={fieldCls(err('name'))} />
@@ -962,13 +1005,19 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                     <span className="shrink-0 text-[var(--lp-muted)]">{t.included}</span>
                   </div>
                 ))}
+                {crossPicked.map((idx) => crossSells[idx] && (
+                  <div key={`cross-${idx}`} className="flex justify-between gap-2">
+                    <span className="truncate">➕ {crossSells[idx].name}</span>
+                    <span className="shrink-0">{fmt(crossSells[idx].price)}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between gap-2 text-[var(--lp-muted)]">
                   <span>{t.shipping}</span>
                   <span>{form.wilaya ? fmt(form.deliveryPrice) : t.shippingTbd}</span>
                 </div>
                 <div className="flex justify-between gap-2 pt-2 border-t border-[var(--lp-border-strong)] text-base font-extrabold">
                   <span>{t.total}</span>
-                  <span style={{ color: accent }}>{fmt(subtotal + (form.wilaya ? form.deliveryPrice : 0))}</span>
+                  <span style={{ color: accent }}>{fmt(orderSubtotal + (form.wilaya ? form.deliveryPrice : 0))}</span>
                 </div>
               </div>
 
@@ -979,7 +1028,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 className="w-full py-4 rounded-2xl text-white font-extrabold text-lg shadow-lg transition-opacity disabled:opacity-60"
                 style={{ backgroundColor: accent }}
               >
-                {form.isSubmitting ? t.sending : `${t.submit} · ${fmt(subtotal + (form.wilaya ? form.deliveryPrice : 0))}`}
+                {form.isSubmitting ? t.sending : `${t.submit} · ${fmt(orderSubtotal + (form.wilaya ? form.deliveryPrice : 0))}`}
               </button>
             </form>
           )}
