@@ -37,9 +37,10 @@
     "02-bordeaux.jpg",
     "03-rose.jpg",
     "04-gris.jpg",
-    "05-blanc.jpg"
+    "05-marron.jpg",
+    "06-beige-dos.jpg"
   ],
-  "description": "انتيشوك Guess بنقشة 4G الشهيرة ولوغو Guess معدني ذهبي.\n\n• ظهر بملمس الجلد الصناعي المنقوش\n• حواف مرفوعة تحمي الكاميرا والشاشة\n• 5 ألوان: بيج، عنابي، وردي، رمادي، أبيض\n\nمتوفر لـ iPhone 11 حتى iPhone 14 (كل الموديلات) و iPhone 15 Pro Max و iPhone 16 Pro Max و iPhone 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "description": "انتيشوك Guess بنقشة 4G الشهيرة ولوغو Guess معدني ذهبي.\n\n• ظهر بملمس الجلد الصناعي المنقوش\n• حواف مرفوعة تحمي الكاميرا والشاشة\n• 5 ألوان: بيج، عنابي، وردي، رمادي، بني\n\nمتوفر لـ iPhone 11 حتى iPhone 14 (كل الموديلات) و iPhone 15 Pro Max و iPhone 16 Pro Max و iPhone 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
   "landing": {
     "lang": "ar",
     "theme": "light",
@@ -83,9 +84,9 @@
         "photo": "04-gris.jpg"
       },
       {
-        "id": "blanc",
-        "name": "أبيض",
-        "photo": "05-blanc.jpg"
+        "id": "marron",
+        "name": "بني",
+        "photo": "05-marron.jpg"
       }
     ],
     "faq": [
