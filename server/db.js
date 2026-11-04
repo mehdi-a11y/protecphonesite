@@ -1,6 +1,15 @@
 /**
  * Base de données partagée : PostgreSQL si DATABASE_URL est défini, sinon stockage en mémoire.
  */
+import { createHash } from 'crypto'
+
+/** Empreinte courte des images d'un produit : change dès qu'une photo change (casse le cache navigateur). */
+function imagesVersion(photoUrl, gallery) {
+  const h = createHash('md5')
+  h.update(String(photoUrl || ''))
+  for (const g of gallery || []) h.update('|').update(String(g || ''))
+  return h.digest('hex').slice(0, 10)
+}
 
 const ORDER_STATUSES = [
   'none', 'tentative1', 'tentative2', 'tentative3', 'callback',
@@ -85,6 +94,9 @@ async function runMigrations() {
     `).catch(() => {})
     await client.query(`
       ALTER TABLE products ADD COLUMN IF NOT EXISTS landing_content JSONB DEFAULT '{}'
+    `).catch(() => {})
+    await client.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS images_version TEXT DEFAULT ''
     `).catch(() => {})
     await client.query(`
       CREATE TABLE IF NOT EXISTS delivery_prices (
@@ -512,19 +524,22 @@ export async function dbGetProducts() {
 // remplacées par des URLs vers /api/products/:id/photo (mises en cache par le navigateur).
 const LIGHT_PRODUCT_COLUMNS = `id, name, description, price, wholesale_price, quantity,
   variant_stocks, variant_available_at_supplier, color_ids, device_type,
-  compatible_with, compatible_with_samsung, landing_content,
+  compatible_with, compatible_with_samsung, landing_content, images_version,
   CASE WHEN image LIKE 'data:%' THEN '' ELSE image END AS image,
   (photo_url IS NOT NULL AND photo_url <> '') AS has_photo,
   CASE WHEN jsonb_typeof(photo_gallery) = 'array' THEN jsonb_array_length(photo_gallery) ELSE 0 END AS gallery_count`
 
 /** Champs image "légers" : URLs vers /api/products/:id/photo au lieu des data URLs base64. */
-function lightImageFields(id, hasPhoto, galleryCount) {
+function lightImageFields(id, hasPhoto, galleryCount, version) {
   const base = `/api/products/${encodeURIComponent(id)}/photo`
+  // v = version des images : l'URL change quand une photo change, sinon le navigateur garde l'ancienne (cache 1 an)
+  const v = version ? `v=${encodeURIComponent(version)}` : ''
+  const main = v ? `${base}?${v}` : base
   const gallery = galleryCount > 0
-    ? Array.from({ length: galleryCount }, (_, i) => `${base}?i=${i}`)
-    : (hasPhoto ? [base] : [])
+    ? Array.from({ length: galleryCount }, (_, i) => `${base}?i=${i}${v ? `&${v}` : ''}`)
+    : (hasPhoto ? [main] : [])
   return {
-    photoUrl: (hasPhoto || galleryCount > 0) ? base : '',
+    photoUrl: (hasPhoto || galleryCount > 0) ? main : '',
     photoGallery: gallery.length ? gallery : undefined,
   }
 }
@@ -536,7 +551,7 @@ function rowToLightProduct(r) {
   return {
     ...full,
     image: isDataUrl(r.image) ? '' : (r.image || ''),
-    ...lightImageFields(r.id, r.has_photo === true, Number(r.gallery_count) || 0),
+    ...lightImageFields(r.id, r.has_photo === true, Number(r.gallery_count) || 0, r.images_version || ''),
   }
 }
 
@@ -546,7 +561,7 @@ function fullProductToLight(p) {
   return {
     ...p,
     image: isDataUrl(p.image) ? '' : (p.image || ''),
-    ...lightImageFields(p.id, Boolean(p.photoUrl), gallery.length),
+    ...lightImageFields(p.id, Boolean(p.photoUrl), gallery.length, imagesVersion(p.photoUrl, gallery)),
   }
 }
 
@@ -612,10 +627,10 @@ export async function dbSaveProduct(product) {
   if (pool) {
     const r = productToRow(product)
     await pool.query(
-      `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, device_type, compatible_with, compatible_with_samsung, landing_content)
-       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13,$14::jsonb,$15::jsonb,$16::jsonb)
-       ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, device_type=$13, compatible_with=$14::jsonb, compatible_with_samsung=$15::jsonb, landing_content=$16::jsonb`,
-      [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), r.device_type || 'iphone', JSON.stringify(r.compatible_with), JSON.stringify(r.compatible_with_samsung || []), JSON.stringify(r.landing_content || {})]
+      `INSERT INTO products (id, name, description, price, wholesale_price, quantity, variant_stocks, variant_available_at_supplier, image, photo_url, photo_gallery, color_ids, device_type, compatible_with, compatible_with_samsung, landing_content, images_version)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13,$14::jsonb,$15::jsonb,$16::jsonb,$17)
+       ON CONFLICT (id) DO UPDATE SET name=$2, description=$3, price=$4, wholesale_price=$5, quantity=$6, variant_stocks=$7::jsonb, variant_available_at_supplier=$8::jsonb, image=$9, photo_url=$10, photo_gallery=$11::jsonb, color_ids=$12::jsonb, device_type=$13, compatible_with=$14::jsonb, compatible_with_samsung=$15::jsonb, landing_content=$16::jsonb, images_version=$17`,
+      [r.id, r.name, r.description, r.price, r.wholesale_price, r.quantity, JSON.stringify(r.variant_stocks || {}), JSON.stringify(r.variant_available_at_supplier || {}), r.image, r.photo_url, JSON.stringify(r.photo_gallery || []), JSON.stringify(r.color_ids || []), r.device_type || 'iphone', JSON.stringify(r.compatible_with), JSON.stringify(r.compatible_with_samsung || []), JSON.stringify(r.landing_content || {}), imagesVersion(r.photo_url, r.photo_gallery)]
     )
     return
   }
