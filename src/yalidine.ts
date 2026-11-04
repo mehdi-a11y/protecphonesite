@@ -7,7 +7,7 @@
 import type { Order } from './types'
 import { getOrders, setOrderStatus } from './types'
 import { getWilayaName } from './delivery'
-import { formatOrderItemLabel } from './data'
+import { groupOrderLines } from './data'
 import { authFetch } from './api'
 
 const YALIDINE_CREDENTIALS_KEY = 'protecphone_yalidine_credentials'
@@ -55,8 +55,8 @@ function orderToParcelPayload(order: Order): YalidineParcelPayload {
   const wilayaName = order.wilaya ? getWilayaName(order.wilaya) : 'Alger'
   // Yalidine exige un nom de commune valide. On utilise la commune choisie (order.address) ou le nom de la wilaya en secours.
   const communeName = order.address?.trim() || wilayaName
-  const productList = order.items
-    .map((i) => formatOrderItemLabel(i))
+  const productList = groupOrderLines(order.items)
+    .map((line) => line.label)
     .join(', ')
 
   const isStopdesk = order.deliveryType === 'yalidine'

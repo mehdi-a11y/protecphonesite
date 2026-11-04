@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getOrders, setOrderStatus, updateOrder, updateOrderYalidine, isConfirmateurAuthenticated, loginConfirmateur, logoutConfirmateur, type Order, type CartItem } from '../types'
 import { createParcelOnYalidine, syncOrdersWithYalidine } from '../yalidine'
-import { formatOrderItemLabel, IPHONE_MODELS, ANTICHOC_COLORS, getColorName, normalizeProduct, getModelName, type Antichoc, type IPhoneModelId } from '../data'
+import { groupOrderLines, IPHONE_MODELS, ANTICHOC_COLORS, getColorName, normalizeProduct, getModelName, type Antichoc, type IPhoneModelId } from '../data'
 import { getScreenProtectorUpsell, getSmartFoldUpsell, getNanoPopUpsell, getCardHolderMagSafeUpsell } from '../data-screen-protector'
 import { apiGetProducts, AUTH_EXPIRED_EVENT } from '../api'
 
@@ -610,13 +610,10 @@ export function ConfirmPage() {
 
             <div className="pt-3 border-t border-white/10 space-y-1">
               <p className="text-sm text-brand-muted mb-1">Articles</p>
-              {selectedOrder.items.map((item) => (
-                <div
-                  key={item.antichoc.id + (item.selectedPhoneId ?? '') + (item.selectedColorId ?? '') + (item.isUpsell ? '-upsell' : '')}
-                  className="flex justify-between text-sm text-white"
-                >
-                  <span>{formatOrderItemLabel(item)}</span>
-                  <span>{item.antichoc.price} DA</span>
+              {groupOrderLines(selectedOrder.items).map((line, i) => (
+                <div key={i} className="flex justify-between gap-3 text-sm text-white">
+                  <span>{line.label}</span>
+                  <span className="shrink-0">{line.price} DA</span>
                 </div>
               ))}
               <div className="flex justify-between font-semibold text-brand-accent mt-1">

@@ -13,7 +13,7 @@ import {
   logoutAdmin,
   type Order,
 } from '../types'
-import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, getColorName, usesSectionLanding, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, formatOrderItemLabel } from '../data'
+import { getAllAntichocs, loadProducts, saveProducts, ANTICHOCS, ANTICHOC_COLORS, getColorName, usesSectionLanding, variantKey, getVariantStock, needToBuyVariantFromSupplier, isVariantBlockedNoSupplier, groupOrderLines } from '../data'
 import { IPHONE_MODELS, ALL_IPHONE_MODELS, SAMSUNG_ULTRA_MODELS, type IPhoneModelId, type SamsungModelId } from '../data'
 import { GENERAL_MODEL_ID, generalCompatibleWith, getModelName, type DeviceType, type ProductLandingContent } from '../data'
 import type { Antichoc } from '../data'
@@ -1508,7 +1508,7 @@ export function AdminPage() {
                   </div>
                   <p className="text-emerald-400 text-sm mb-1">Toutes les lignes en stock (stock &gt; 0)</p>
                   <p className="text-white/90 text-sm mb-2">
-                    {(order.items || []).map((item) => formatOrderItemLabel(item)).join(' · ')}
+                    {groupOrderLines(order.items || []).map((line) => line.label).join(' · ')}
                   </p>
                   <div className="pt-3 border-t border-white/10">
                     <button type="button" onClick={() => setTab('commandes')} className="text-brand-accent text-sm hover:underline">Voir la commande</button>
@@ -3766,10 +3766,10 @@ function OrderCard({
         <p className="text-brand-muted text-xs">Livraison : {order.deliveryPrice} DA</p>
       )}
       <div className="mt-2 pt-2 border-t border-white/10">
-        {order.items.map((item) => (
-          <div key={item.antichoc.id + (item.selectedPhoneId ?? '') + (item.selectedColorId ?? '')} className="flex justify-between text-sm text-white">
-            <span>{formatOrderItemLabel(item)}</span>
-            <span>{item.antichoc.price} DA</span>
+        {groupOrderLines(order.items).map((line, i) => (
+          <div key={i} className="flex justify-between gap-3 text-sm text-white">
+            <span>{line.label}</span>
+            <span className="shrink-0">{line.price} DA</span>
           </div>
         ))}
         <div className="flex justify-between font-semibold text-brand-accent mt-1">

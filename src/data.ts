@@ -390,6 +390,63 @@ export function formatOrderItemLabel(item: {
   return variant ? `${name} — ${variant}${suffix}` : `${name}${suffix}`
 }
 
+type OrderLineItem = Parameters<typeof formatOrderItemLabel>[0] & { antichoc: { id: string; price?: number } }
+
+/** Nom court d'un article offert / inclus, pour la ligne groupée (ex. « incassable + câble Lightning »). */
+function shortExtraName(name: string): string {
+  if (/زجاج|incassable|verre|glass/i.test(name)) return 'incassable'
+  if (/lightning/i.test(name)) return 'câble Lightning'
+  if (/type-?c/i.test(name)) return 'câble Type-C'
+  return name
+}
+
+/**
+ * Lignes d'une commande pour l'affichage (admin, confirmateur, Yalidine) : les articles identiques
+ * d'un même modèle (pack, offre 2) et les articles offerts qui suivent sont regroupés sur une ligne :
+ * « Produit — iPhone 14 Pro Max — Couleur 1 — Couleur 2 — incassable + câble Lightning ».
+ */
+export function groupOrderLines(items: OrderLineItem[]): { label: string; price: number }[] {
+  const lines: { label: string; price: number }[] = []
+  let i = 0
+  while (i < items.length) {
+    const first = items[i]
+    if (first.isUpsell || !first.selectedPhoneId) {
+      lines.push({ label: formatOrderItemLabel(first), price: Number(first.antichoc.price) || 0 })
+      i++
+      continue
+    }
+    const group = [first]
+    while (
+      i + group.length < items.length &&
+      !items[i + group.length].isUpsell &&
+      items[i + group.length].antichoc.id === first.antichoc.id &&
+      items[i + group.length].selectedPhoneId === first.selectedPhoneId
+    ) group.push(items[i + group.length])
+    const extras: OrderLineItem[] = []
+    while (
+      i + group.length + extras.length < items.length &&
+      items[i + group.length + extras.length].isUpsell &&
+      Number(items[i + group.length + extras.length].antichoc.price) === 0 &&
+      items[i + group.length + extras.length].selectedPhoneId === first.selectedPhoneId
+    ) extras.push(items[i + group.length + extras.length])
+    if (group.length === 1 && extras.length === 0) {
+      lines.push({ label: formatOrderItemLabel(first), price: Number(first.antichoc.price) || 0 })
+      i++
+      continue
+    }
+    const model = first.selectedPhoneId !== GENERAL_MODEL_ID ? getModelName(first.selectedPhoneId) : ''
+    const variants = group.map((it) => (it.selectedColorId ? getColorName(it.selectedColorId, it.antichoc) : '')).filter(Boolean)
+    const extrasText = extras.map((it) => shortExtraName(it.antichoc.name)).join(' + ')
+    const parts = [group.length > 1 && !variants.length ? `${first.antichoc.name} × ${group.length}` : first.antichoc.name, model, ...variants, extrasText]
+    lines.push({
+      label: parts.filter(Boolean).join(' — '),
+      price: group.reduce((sum, it) => sum + (Number(it.antichoc.price) || 0), 0),
+    })
+    i += group.length + extras.length
+  }
+  return lines
+}
+
 const colors = ANTICHOC_COLORS
 const allIphoneIds: IPhoneModelId[] = IPHONE_MODELS.map((m) => m.id)
 
