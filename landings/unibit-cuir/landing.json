@@ -1,0 +1,68 @@
+{
+  "productId": "coque-unibit-cuir",
+  "slug": "unibit",
+  "name": "Coque Unibit simili-cuir",
+  "title": "انتيشوك Unibit بلمسة الجلد",
+  "extraPages": [
+    {
+      "slug": "unibit-commande",
+      "title": "انتيشوك Unibit",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-12", "iphone-12-pro", "iphone-12-pro-max",
+    "iphone-13", "iphone-13-pro", "iphone-13-pro-max",
+    "iphone-14", "iphone-14-pro", "iphone-14-pro-max",
+    "iphone-15-pro-max", "iphone-16-pro-max",
+    "iphone-17", "iphone-17-pro", "iphone-17-pro-max"
+  ],
+  "price": 3500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-orange.jpg",
+    "02-camel.jpg",
+    "03-beige.jpg",
+    "04-bleu.jpg",
+    "05-noir.jpg"
+  ],
+  "description": "انتيشوك Unibit بملمس يشبه الجلد ونقشة عصرية، مع إطار كاميرا بلون الانتيشوك.\n\n• ملمس فخم ومريح في اليد\n• إطار بارز حول الكاميرا يحميها من الخدوش\n• حواف مرفوعة تحمي الشاشة\n• 5 ألوان: برتقالي، كاميل، بيج، أزرق، أسود\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#f97316",
+    "topBanner": "🔥 جديد Unibit · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "Unibit · جديد",
+    "headlineHighlight": "ستيل يبان من بعيد",
+    "subtitle": "ملمس يشبه الجلد، نقشة عصرية وإطار كاميرا بلون الانتيشوك. اختار اللون وموديل الآيفون تاعك، وادفع كي توصلك.",
+    "heroBadge": "5 ألوان",
+    "featuresTitle": "علاش Unibit؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "✨ | ملمس يشبه الجلد | فخم ومريح في اليد",
+      "📷 | إطار حول الكاميرا | بارز وبلون الانتيشوك، يحمي العدسات من الخدوش",
+      "🛡️ | حواف مرفوعة | الشاشة ما تلمسش الطاولة",
+      "🎨 | 5 ألوان | برتقالي، كاميل، بيج، أزرق وأسود"
+    ],
+    "offerTitle": "بدّل ستيل تيليفونك 🔥",
+    "offerText": "انتيشوك Unibit بـ 3500 دج. استلم في دارك وادفع عند الاستلام.",
+    "crossSells": ["زجاج حماية Magic HOCO Plus | 900"],
+    "designs": [
+      { "id": "orange", "name": "برتقالي", "photo": "01-orange.jpg" },
+      { "id": "camel", "name": "كاميل", "photo": "02-camel.jpg" },
+      { "id": "beige", "name": "بيج", "photo": "03-beige.jpg" },
+      { "id": "bleu", "name": "أزرق", "photo": "04-bleu.jpg" },
+      { "id": "noir", "name": "أسود", "photo": "05-noir.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | اختار الموديل تاعك في الاستمارة، نبعثولك الانتيشوك على قياسه.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين.",
+      "كيفاش نتأكد من الطلب؟ | بعد ما تبعث الطلب نعيطولك باش نأكدو معاك قبل الإرسال."
+    ]
+  }
+}
