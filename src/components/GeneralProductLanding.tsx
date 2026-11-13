@@ -320,13 +320,17 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         : { ...product, id: `gift-${product.id}`, description: '', landing: undefined, photoGallery: undefined }
       items.push({ antichoc: { ...base, name: giftName, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
     }
-    includedNames.forEach((name, i) => {
-      // Le verre garde l'id de l'incassable pour que le confirmateur le reconnaisse
-      const base = /زجاج|incassable|verre|glass/i.test(name)
-        ? getScreenProtectorUpsell()
-        : { ...product, id: `inclus-${product.id}-${i}`, description: '', landing: undefined, photoGallery: undefined, photoUrl: '' }
-      items.push({ antichoc: { ...base, name, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
-    })
+    // Articles inclus : une fois par pack (packSize), sinon une fois par article commandé
+    const includeTimes = packSize ? 1 : quantity
+    for (let n = 0; n < includeTimes; n++) {
+      includedNames.forEach((name, i) => {
+        // Le verre garde l'id de l'incassable pour que le confirmateur le reconnaisse
+        const base = /زجاج|incassable|verre|glass/i.test(name)
+          ? getScreenProtectorUpsell()
+          : { ...product, id: `inclus-${product.id}-${i}`, description: '', landing: undefined, photoGallery: undefined, photoUrl: '' }
+        items.push({ antichoc: { ...base, name, price: 0 }, isUpsell: true, selectedPhoneId: modelId })
+      })
+    }
     crossPicked.forEach((idx) => {
       const c = crossSells[idx]
       if (!c) return
@@ -1001,7 +1005,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
                 )}
                 {modelId && includedNames.map((name) => (
                   <div key={name} className="flex justify-between gap-2 font-semibold">
-                    <span className="truncate">✅ {name}</span>
+                    <span className="truncate">✅ {name}{!packSize && quantity > 1 ? ` × ${quantity}` : ''}</span>
                     <span className="shrink-0 text-[var(--lp-muted)]">{t.included}</span>
                   </div>
                 ))}

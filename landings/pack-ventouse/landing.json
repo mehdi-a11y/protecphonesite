@@ -1,0 +1,85 @@
+{
+  "productId": "pack-antichoc-ventouse",
+  "slug": "pack-ventouse",
+  "name": "Pack antichoc ventouse + incassable + câble",
+  "title": "صوّر وانت يديك حرّين",
+  "extraPages": [
+    {
+      "slug": "pack-ventouse-commande",
+      "title": "باك انتيشوك بالمصاصات + زجاج + كابل",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-12-pro", "iphone-12-pro-max",
+    "iphone-13..iphone-13-pro-max",
+    "iphone-14", "iphone-14-pro", "iphone-14-pro-max",
+    "iphone-15", "iphone-15-pro", "iphone-15-pro-max",
+    "iphone-16", "iphone-16-pro", "iphone-16-pro-max",
+    "iphone-17", "iphone-17-pro", "iphone-17-pro-max"
+  ],
+  "price": 3500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-rose.jpg",
+    "02-bleu.jpg",
+    "03-orange.jpg",
+    "04-beige.jpg",
+    "05-blanc.jpg",
+    "06-gris.jpg",
+    "07-noir.jpg"
+  ],
+  "description": "باك كامل: انتيشوك بالمصاصات + زجاج حماية + كابل شحن، كلش بـ 3500 دج.\n\n• انتيشوك سيليكون ناعم، فيه مصاصات في الظهر تلصق بيهم تيليفونك على المرايا، الزليج ولا الزجاج وتصوّر بلا ما تشدّو\n• حماية للعدسات حول الكاميرا\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل شحن Borofone: Lightning لـ iPhone 12 Pro حتى iPhone 14 Pro Max، و Type-C لـ iPhone 15 حتى iPhone 17 Pro Max\n• 7 ألوان: وردي، أزرق، برتقالي، بيج، أبيض، رمادي، أسود\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "light",
+    "accentColor": "#db2777",
+    "topBanner": "🔥 باك كامل بـ 3500 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "باك التوفير",
+    "headlineHighlight": "انتيشوك بالمصاصات + زجاج + كابل",
+    "subtitle": "لصّق تيليفونك على المرايا ولا الزجاج وصوّر فيديوهاتك بلا ما تشدّو. ومعاه زجاج حماية وكابل شحن على قياس تيليفونك.",
+    "heroBadge": "7 ألوان",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🤳 | مصاصات في الظهر | لصّق تيليفونك على المرايا، الزليج ولا الزجاج وصوّر يديك حرّين",
+      "🎥 | مثالي للفيديوهات | تيك توك، سيلفي، ماكياج ولا ريسيتات في الكوزينة",
+      "📷 | حماية للعدسات | حلقات حول الكاميرا تحميها من الخدوش",
+      "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
+      "🔌 | كابل شحن Borofone | Lightning ولا Type-C حسب تيليفونك، نختاروه حنا"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك بالمصاصات | سيليكون ناعم ومريح في اليد · مصاصات في الظهر تلصق في المرايا والزجاج · حماية للعدسات حول الكاميرا · 7 ألوان تختار منهم",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · إطار تركيب يسهّل اللصق بلا فقاعات · على قياس تيليفونك",
+      "🔌 | كابل شحن Borofone BX121 | كابل Lightning لـ iPhone 12 Pro حتى iPhone 14 Pro Max · كابل Type-C لـ iPhone 15 حتى iPhone 17 Pro Max · الطول: 1 متر"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "انتيشوك + زجاج + كابل بـ 3500 دج. استلم في دارك وادفع عند الاستلام.",
+    "includes": [
+      "زجاج حماية Magic HOCO Plus",
+      "كابل Borofone Lightning | iphone-12-pro..iphone-14-pro-max",
+      "كابل Borofone Type-C | iphone-15..iphone-17-pro-max"
+    ],
+    "designs": [
+      { "id": "rose", "name": "وردي", "photo": "01-rose.jpg" },
+      { "id": "bleu", "name": "أزرق", "photo": "02-bleu.jpg" },
+      { "id": "orange", "name": "برتقالي", "photo": "03-orange.jpg" },
+      { "id": "beige", "name": "بيج", "photo": "04-beige.jpg" },
+      { "id": "blanc", "name": "أبيض", "photo": "05-blanc.jpg" },
+      { "id": "gris", "name": "رمادي", "photo": "06-gris.jpg" },
+      { "id": "noir", "name": "أسود", "photo": "07-noir.jpg" }
+    ],
+    "faq": [
+      "المصاصات يلصقو في واش؟ | في الأسطح الملساء: المرايا، الزجاج، الزليج والبلاستيك الأملس.",
+      "واش الكابل اللي نديه؟ | نختاروه حسب تيليفونك: Lightning لـ iPhone 12 Pro حتى 14 Pro Max، و Type-C لـ iPhone 15 حتى 17 Pro Max.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}

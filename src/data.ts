@@ -438,7 +438,13 @@ export function groupOrderLines(items: OrderLineItem[]): { label: string; price:
     }
     const model = first.selectedPhoneId !== GENERAL_MODEL_ID ? getModelName(first.selectedPhoneId) : ''
     const variants = group.map((it) => (it.selectedColorId ? getColorName(it.selectedColorId, it.antichoc) : '')).filter(Boolean)
-    const extrasText = extras.map((it) => shortExtraName(it.antichoc.name)).join(' + ')
+    // Articles offerts regroupés avec leur nombre (ex. « 2× incassable + 2× câble Lightning »)
+    const extraCounts = new Map<string, number>()
+    for (const it of extras) {
+      const short = shortExtraName(it.antichoc.name)
+      extraCounts.set(short, (extraCounts.get(short) ?? 0) + 1)
+    }
+    const extrasText = [...extraCounts].map(([name, n]) => (n > 1 ? `${n}× ${name}` : name)).join(' + ')
     const parts = [group.length > 1 && !variants.length ? `${first.antichoc.name} × ${group.length}` : first.antichoc.name, model, ...variants, extrasText]
     lines.push({
       label: parts.filter(Boolean).join(' — '),
