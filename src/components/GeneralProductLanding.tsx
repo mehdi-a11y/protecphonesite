@@ -257,7 +257,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   useEffect(() => {
     setQuantity(packSize || (bundlePrice ? 2 : 1))
     setHint('')
-    setDesignSlots(Array(Math.max(2, packSize)).fill(''))
+    setDesignSlots(Array(Math.max(2, packSize)).fill(designs.length === 1 ? designs[0].id : ''))
     setActiveSlot(0)
     const firstOrderable = colorOptions.find((c) => isVariantOrderable(product, c.id, GENERAL_MODEL_ID))
     setSelectedColorId(colorOptions.length === 1 && firstOrderable ? firstOrderable.id : '')
@@ -441,7 +441,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
       form.setName('')
       form.setPhone('')
       setQuantity(packSize || (bundlePrice ? 2 : 1))
-      setDesignSlots(Array(Math.max(2, packSize)).fill(''))
+      setDesignSlots(Array(Math.max(2, packSize)).fill(designs.length === 1 ? designs[0].id : ''))
       setActiveSlot(0)
       setCrossPicked([])
     }
@@ -462,14 +462,21 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
   )
 
   // Contenu du pack (avant le choix du modèle, on liste toutes les variantes, ex. les 2 câbles)
-  const packBox = packSize || landing.includes?.some((l) => l.trim()) ? (
+  // Avec un détail du pack, on liste ses articles (titres) ; sinon les articles inclus
+  const packBox = packSize || packDetails.length > 0 || landing.includes?.some((l) => l.trim()) ? (
     <div className="p-4 rounded-2xl border border-[var(--lp-border-strong)] bg-[var(--lp-surface)] text-start">
       <p className="font-extrabold mb-2">📦 {t.packTitle}</p>
       <ul className="space-y-1.5 text-sm font-semibold">
-        {packSize > 0 && <li>✅ {t.pieces(packSize, isPhone)}{landing.designLabel ? ` · ${landing.designLabel}` : ''}</li>}
-        {includedItemsFor(landing.includes, '').map((name) => (
-          <li key={name}>✅ {name}</li>
-        ))}
+        {packDetails.length > 0
+          ? packDetails.map((f, i) => <li key={i}>✅ {f.title}</li>)
+          : (
+            <>
+              {packSize > 0 && <li>✅ {t.pieces(packSize, isPhone)}{landing.designLabel ? ` · ${landing.designLabel}` : ''}</li>}
+              {includedItemsFor(landing.includes, '').map((name) => (
+                <li key={name}>✅ {name}</li>
+              ))}
+            </>
+          )}
       </ul>
     </div>
   ) : null
@@ -618,8 +625,8 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
           {trustStrip}
         </section>
 
-        {/* Motifs : un clic choisit le motif et descend au formulaire */}
-        {hasDesigns && (
+        {/* Motifs : un clic choisit le motif et descend au formulaire (inutile s'il n'y en a qu'un) */}
+        {designs.length > 1 && (
           <section className="pt-12">
             <h2 className="text-2xl font-extrabold text-center mb-5">{landing.designsTitle?.trim() || t.designsTitle}</h2>
             <div className={`grid gap-3 ${swatchesOnly ? 'grid-cols-5' : 'grid-cols-2'}`}>
