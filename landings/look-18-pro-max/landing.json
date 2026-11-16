@@ -1,0 +1,56 @@
+{
+  "productId": "coque-look-18-pro-max",
+  "slug": "look-18-pro-max",
+  "name": "Coque look iPhone 18 Pro Max + incassable offert",
+  "title": "خلّي تيليفونك يبان كيما iPhone 18 Pro Max",
+  "extraPages": [
+    {
+      "slug": "look-18-pro-max-commande",
+      "title": "انتيشوك لوك iPhone 18 Pro Max + زجاج هدية",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": ["iphone-11..iphone-17-pro-max"],
+  "price": 2500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-bordeaux.jpg"
+  ],
+  "description": "انتيشوك بتصميم الكاميرا الجديد: يعطي لتيليفونك لوك iPhone 18 Pro Max.\n\n• بلوك كاميرا كبير يغطي ويحمي العدسات\n• زوايا مقوّية ضد الطيحات\n• ظهر شفاف ملوّن\n• متوفر من iPhone 11 حتى iPhone 17 Pro Max\n\n🎁 مع كل طلب: زجاج حماية Magic HOCO Plus مجاناً على قياس تيليفونك.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#e11d48",
+    "topBanner": "🎁 زجاج حماية مجاناً مع كل طلب · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "لوك جديد 🔥",
+    "headlineHighlight": "+ زجاج حماية هدية 🎁",
+    "subtitle": "انتيشوك بتصميم الكاميرا الجديد يعطي لتيليفونك ستيل iPhone 18 Pro Max، ويحميه من الطيحات. ومع كل طلب زجاج Magic HOCO Plus مجاناً.",
+    "heroBadge": "iPhone 11 → 17 Pro Max",
+    "galleryTitle": "التفاصيل",
+    "featuresTitle": "علاش هاد الانتيشوك؟",
+    "designsTitle": "اللون",
+    "designLabel": "اللون",
+    "benefits": [
+      "🔥 | لوك iPhone 18 Pro Max | بلوك كاميرا كبير يبدّل ستيل تيليفونك",
+      "📷 | حماية الكاميرا | البلوك يغطي العدسات ويحميهم من الخدوش",
+      "🛡️ | زوايا مقوّية | تمتص الصدمة كي يطيح تيليفونك",
+      "🎁 | زجاج حماية مجاناً | Magic HOCO Plus 9H على قياس تيليفونك مع كل طلب"
+    ],
+    "offerTitle": "لوك جديد + هدية 🎁",
+    "offerText": "انتيشوك لوك iPhone 18 Pro Max والزجاج هدية. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 3500,
+    "gift": "زجاج حماية Magic HOCO Plus",
+    "designs": [
+      { "id": "bordeaux", "name": "عنابي شفاف", "photo": "01-bordeaux.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | من iPhone 11 حتى iPhone 17 Pro Max، اختار الموديل تاعك في الاستمارة.",
+      "الزجاج الهدية على قياس تيليفوني؟ | إيه، نبعثوه على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
