@@ -1,0 +1,64 @@
+{
+  "productId": "pack-antichoc-incassable-cable-3en1",
+  "slug": "pack-3en1",
+  "name": "Pack antichoc + incassable + câble 3 en 1",
+  "title": "باك الحماية والشحن الكامل",
+  "extraPages": [
+    {
+      "slug": "pack-3en1-commande",
+      "title": "باك انتيشوك + زجاج + كابل 3 في 1",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": ["iphone-12-pro-max", "iphone-15-pro-max", "iphone-16-pro-max"],
+  "price": 2900,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-pack.jpg"
+  ],
+  "description": "باك كامل بـ 2900 دج:\n\n• انتيشوك بظهر مطفي (mat) وإطار كاميرا معدني\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل شحن 3 في 1 مضفور: Lightning + Type-C + Micro USB، تشارجي بيه كل التيليفونات في الدار\n\nمتوفر لـ iPhone 12 Pro Max و iPhone 15 Pro Max و iPhone 16 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#22c55e",
+    "topBanner": "🔥 باك كامل بـ 2900 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "باك التوفير",
+    "headlineHighlight": "انتيشوك + زجاج + كابل 3 في 1",
+    "subtitle": "احمي تيليفونك وشارجيه بكابل واحد لكل الأجهزة. كلش بـ 2900 دج.",
+    "heroBadge": "iPhone 12 · 15 · 16 Pro Max",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اللون",
+    "designLabel": "اللون",
+    "benefits": [
+      "📱 | انتيشوك بظهر مطفي | ما يبانوش فيه البصمات، وإطار معدني يحمي الكاميرا",
+      "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
+      "🔌 | كابل 3 في 1 | Lightning + Type-C + Micro USB: كابل واحد لكل التيليفونات",
+      "💸 | كلش بـ 2900 دج | أرخص بزاف من كي تشريهم واحد بواحد"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك بظهر مطفي | ظهر mat ما يبانوش فيه البصمات · إطار كاميرا معدني · حواف تحمي الشاشة",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك",
+      "🔌 | كابل شحن 3 في 1 | مضفور ومتين · فيه Lightning و Type-C و Micro USB · تشارجي بيه تيليفونك وتيليفونات العايلة"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "انتيشوك + زجاج + كابل 3 في 1 بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 3900,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus",
+      "كابل شحن 3 في 1"
+    ],
+    "designs": [
+      { "id": "vert-fonce", "name": "أخضر داكن", "photo": "01-pack.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 12 Pro Max و iPhone 15 Pro Max و iPhone 16 Pro Max.",
+      "الكابل يخدم مع واش؟ | فيه 3 رؤوس: Lightning للآيفون القديم، Type-C للآيفون الجديد وأغلب الأندرويد، و Micro USB.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
