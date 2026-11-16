@@ -1,0 +1,76 @@
+{
+  "productId": "kit-metal-pro-incassable",
+  "slug": "kit-metal-pro",
+  "name": "Kit métal look Pro (bumper + dos mat) + incassable",
+  "title": "بدّل لوك تيليفونك بكيت ميتال",
+  "extraPages": [
+    {
+      "slug": "kit-metal-pro-commande",
+      "title": "كيت ميتال: إطار + ظهر مطفي + زجاج حماية",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-12-pro-max",
+    "iphone-13-pro", "iphone-13-pro-max",
+    "iphone-14-pro", "iphone-14-pro-max",
+    "iphone-15-pro", "iphone-15-pro-max",
+    "iphone-16-pro", "iphone-16-pro-max",
+    "iphone-17-pro", "iphone-17-pro-max"
+  ],
+  "price": 3500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "00-trois-couleurs.jpg",
+    "01-argent.jpg",
+    "02-bordeaux.jpg",
+    "03-bleu.jpg"
+  ],
+  "description": "كيت ميتال يبدّل لوك تيليفونك كامل، كلش بـ 3500 دج:\n\n• إطار (bumper) ميتال يحمي الجوانب والزوايا\n• ظهر مطفي (mat) ببلوك كاميرا كبير، ما يبانوش فيه البصمات\n• حلقات ميتال تحمي عدسات الكاميرا\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• 3 ألوان: فضي، عنابي، أزرق\n\nمتوفر لـ iPhone 12 Pro Max، و iPhone 13 Pro حتى iPhone 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#60a5fa",
+    "topBanner": "🔥 الكيت الكامل بـ 3500 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "لوك جديد 🔥",
+    "headlineHighlight": "إطار ميتال + ظهر مطفي + زجاج حماية",
+    "subtitle": "كيت ميتال يعطي لتيليفونك لوك جديد ويحميه من كل جيهة: إطار ميتال، ظهر mat وحلقات للكاميرا، ومعاه زجاج Magic HOCO Plus.",
+    "heroBadge": "3 ألوان",
+    "galleryTitle": "واش كاين في الكيت",
+    "featuresTitle": "علاش هاد الكيت؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "✨ | لوك جديد | ظهر مطفي ببلوك كاميرا كبير يبدّل ستيل تيليفونك كامل",
+      "🔩 | إطار ميتال | يحمي الجوانب والزوايا من الطيحات والخدوش",
+      "📷 | حماية الكاميرا | حلقات ميتال على كل عدسة",
+      "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة، على قياس تيليفونك"
+    ],
+    "packDetails": [
+      "🔩 | إطار ميتال (bumper) | يحيط بالتيليفون · يحمي الجوانب والزوايا · بنفس لون الظهر",
+      "📱 | ظهر مطفي | فينيسيون mat ما يبانوش فيه البصمات · بلوك كاميرا كبير · حلقات ميتال تحمي العدسات",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك"
+    ],
+    "offerTitle": "الكيت الكامل بسعر واحد 💸",
+    "offerText": "إطار ميتال + ظهر مطفي + زجاج حماية بـ 3500 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 4500,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus"
+    ],
+    "designs": [
+      { "id": "argent", "name": "فضي", "photo": "01-argent.jpg" },
+      { "id": "bordeaux", "name": "عنابي", "photo": "02-bordeaux.jpg" },
+      { "id": "bleu", "name": "أزرق", "photo": "03-bleu.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 12 Pro Max، و iPhone 13 Pro حتى iPhone 17 Pro Max. اختار الموديل تاعك في الاستمارة.",
+      "واش كاين في الكيت؟ | إطار ميتال، ظهر مطفي بحلقات الكاميرا، وزجاج حماية Magic HOCO Plus.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
