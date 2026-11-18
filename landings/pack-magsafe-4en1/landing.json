@@ -1,0 +1,80 @@
+{
+  "productId": "pack-antichoc-magsafe-incassable-cable-4en1",
+  "slug": "pack-4en1",
+  "name": "Pack antichoc MagSafe renforcé + incassable + câble 4 en 1",
+  "title": "باك الحماية + كابل 4 في 1",
+  "extraPages": [
+    {
+      "slug": "pack-4en1-commande",
+      "title": "باك انتيشوك MagSafe + زجاج + كابل 4 في 1",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-11", "iphone-11-pro-max",
+    "iphone-12-pro-max",
+    "iphone-13", "iphone-13-pro-max",
+    "iphone-14", "iphone-14-pro-max",
+    "iphone-15-pro-max",
+    "iphone-16-pro-max",
+    "iphone-17-pro-max"
+  ],
+  "price": 2900,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-gris.jpg",
+    "02-noir.jpg",
+    "03-bleu.jpg",
+    "04-marron.jpg"
+  ],
+  "description": "باك كامل بـ 2900 دج:\n\n• انتيشوك بظهر مطفي شفاف وزوايا مقوّية ضد الطيحات\n• حلقة MagSafe تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية\n• حواف مرفوعة تحمي الكاميرا والشاشة\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل شحن 4 في 1 مضفور: يتركّب في USB ولا Type-C، ويشارجي Lightning ولا Type-C، شحن سريع حتى 65W\n• 4 ألوان: رمادي، أسود، أزرق، بني\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#f59e0b",
+    "topBanner": "🔥 3 حوايج بـ 2900 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "باك التوفير",
+    "headlineHighlight": "انتيشوك MagSafe + زجاج + كابل 4 في 1",
+    "subtitle": "انتيشوك بزوايا مقوّية وحلقة MagSafe، زجاج Magic HOCO Plus، وكابل 4 في 1 يشارجي بسرعة. كلش بـ 2900 دج.",
+    "heroBadge": "4 ألوان",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🛡️ | زوايا مقوّية | تمتص الصدمة كي يطيح تيليفونك",
+      "🧲 | حلقة MagSafe | تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية",
+      "📱 | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
+      "🔌 | كابل 4 في 1 | USB ولا Type-C من جيهة، Lightning ولا Type-C من جيهة أخرى",
+      "⚡ | شحن سريع | حتى 65W، يشارجي التيليفون والتابلات"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك MagSafe | ظهر مطفي شفاف ما يبانوش فيه البصمات · زوايا مقوّية ضد الطيحات · حلقة مغناطيسية · حواف مرفوعة تحمي الكاميرا",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك",
+      "🔌 | كابل شحن 4 في 1 | مضفور ومسطّح، ما يتعقدش · مدخل USB ولا Type-C · مخرج Lightning ولا Type-C · شحن سريع حتى 65W"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "انتيشوك + زجاج + كابل 4 في 1 بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 4000,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus",
+      "كابل شحن 4 في 1"
+    ],
+    "designs": [
+      { "id": "gris", "name": "رمادي", "photo": "01-gris.jpg" },
+      { "id": "noir", "name": "أسود", "photo": "02-noir.jpg" },
+      { "id": "bleu", "name": "أزرق", "photo": "03-bleu.jpg" },
+      { "id": "marron", "name": "بني", "photo": "04-marron.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 11، iPhone 11 Pro Max، iPhone 12 Pro Max، iPhone 13، iPhone 13 Pro Max، iPhone 14، iPhone 14 Pro Max، iPhone 15 Pro Max، iPhone 16 Pro Max و iPhone 17 Pro Max.",
+      "الكابل يخدم مع واش؟ | يتركّب في شارجور USB ولا Type-C، ويشارجي الآيفون (Lightning ولا Type-C) وأغلب الأندرويد.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
