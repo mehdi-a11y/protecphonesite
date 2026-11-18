@@ -1,0 +1,74 @@
+{
+  "productId": "pack-silicone-kit-look-18",
+  "slug": "pack-kit-18",
+  "name": "Pack antichoc silicone + kit look 18 Pro Max (dos + cadre)",
+  "title": "خلّي تيليفونك يبان كيما iPhone 18 Pro Max",
+  "extraPages": [
+    {
+      "slug": "pack-kit-18-commande",
+      "title": "باك: كيت لوك iPhone 18 Pro Max + انتيشوك سيليكون",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-12-pro-max",
+    "iphone-13-pro", "iphone-13-pro-max",
+    "iphone-14-pro", "iphone-14-pro-max",
+    "iphone-15-pro", "iphone-15-pro-max",
+    "iphone-16-pro", "iphone-16-pro-max",
+    "iphone-17-pro", "iphone-17-pro-max"
+  ],
+  "price": 4200,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "00-quatre-couleurs.jpg",
+    "01-bordeaux.jpg",
+    "02-bleu.jpg",
+    "03-noir.jpg",
+    "04-blanc.jpg"
+  ],
+  "description": "باك كامل يبدّل لوك تيليفونك ويحميه، كلش بـ 4200 دج:\n\n• ظهر جديد ببلوك كاميرا كبير يعطي لتيليفونك لوك iPhone 18 Pro Max\n• إطار ميتال بنفس اللون يحمي الجوانب\n• حلقات ميتال تحمي عدسات الكاميرا\n• انتيشوك سيليكون ناعم من فوق يحمي من الطيحات\n• 4 ألوان: عنابي، أزرق، أسود، أبيض\n\nمتوفر لـ iPhone 12 Pro Max، و iPhone 13 Pro حتى iPhone 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#e11d48",
+    "topBanner": "🔥 الباك الكامل بـ 4200 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "لوك جديد 🔥",
+    "headlineHighlight": "كيت لوك جديد + انتيشوك سيليكون",
+    "subtitle": "ظهر جديد وإطار ميتال يعطيو لتيليفونك ستيل iPhone 18 Pro Max، ومعاهم انتيشوك سيليكون يحميه من الطيحات.",
+    "heroBadge": "4 ألوان",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🔥 | لوك iPhone 18 Pro Max | ظهر جديد ببلوك كاميرا كبير يبدّل ستيل تيليفونك كامل",
+      "🔩 | إطار ميتال | بنفس لون الظهر، يحمي الجوانب والزوايا",
+      "📷 | حماية الكاميرا | حلقات ميتال على كل عدسة",
+      "🛡️ | انتيشوك سيليكون | ناعم ومريح في اليد، يمتص الصدمة كي يطيح تيليفونك"
+    ],
+    "packDetails": [
+      "📱 | ظهر لوك iPhone 18 Pro Max | بلوك كاميرا كبير · فينيسيون mat · حلقات ميتال تحمي العدسات",
+      "🔩 | إطار ميتال | يحيط بالتيليفون · يحمي الجوانب والزوايا · بنفس لون الظهر",
+      "🛡️ | انتيشوك سيليكون | ناعم من الداخل · يحمي من الطيحات والخدوش · بنفس لون الكيت"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "ظهر لوك جديد + إطار ميتال + انتيشوك سيليكون بـ 4200 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 5500,
+    "designs": [
+      { "id": "bordeaux", "name": "عنابي", "photo": "01-bordeaux.jpg" },
+      { "id": "bleu", "name": "أزرق", "photo": "02-bleu.jpg" },
+      { "id": "noir", "name": "أسود", "photo": "03-noir.jpg" },
+      { "id": "blanc", "name": "أبيض", "photo": "04-blanc.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 12 Pro Max، و iPhone 13 Pro حتى iPhone 17 Pro Max. اختار الموديل تاعك في الاستمارة.",
+      "واش كاين في الباك؟ | ظهر لوك iPhone 18 Pro Max، إطار ميتال، وانتيشوك سيليكون، كلهم بنفس اللون.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
