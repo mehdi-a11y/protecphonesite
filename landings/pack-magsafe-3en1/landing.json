@@ -1,0 +1,79 @@
+{
+  "productId": "pack-antichoc-magsafe-lentilles-cable-3en1",
+  "slug": "pack-magsafe",
+  "name": "Pack antichoc MagSafe + lentilles + incassable + câble 3 en 1",
+  "title": "باك الحماية الكاملة + كابل 3 في 1",
+  "extraPages": [
+    {
+      "slug": "pack-magsafe-commande",
+      "title": "باك انتيشوك MagSafe + زجاج + كابل 3 في 1",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": ["iphone-11..iphone-16-pro-max"],
+  "price": 2900,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-vert.jpg",
+    "02-titane.jpg",
+    "03-violet.jpg",
+    "04-orange.jpg",
+    "05-bleu-ciel.jpg",
+    "06-bleu-marine.jpg",
+    "07-noir.jpg"
+  ],
+  "description": "باك كامل بـ 2900 دج:\n\n• انتيشوك شفاف بإطار ملوّن، فيه حلقة MagSafe وحامل في الكاميرا يوقّف التيليفون\n• حماية العدسات: حلقات ميتال على كل عدسة\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل شحن 3 في 1 مضفور 100W: Lightning + Type-C + Micro USB\n• 7 ألوان: أخضر، رمادي تيتان، بنفسجي، برتقالي، أزرق سماوي، أزرق ملكي، أسود\n\nمتوفر من iPhone 11 حتى iPhone 16 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#f97316",
+    "topBanner": "🔥 4 حوايج بـ 2900 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "باك التوفير",
+    "headlineHighlight": "انتيشوك + حماية الكاميرا + زجاج + كابل 3 في 1",
+    "subtitle": "انتيشوك MagSafe بحامل في الكاميرا وحماية للعدسات، زجاج Magic HOCO Plus وكابل شحن 3 في 1. كلش بـ 2900 دج.",
+    "heroBadge": "7 ألوان",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🧲 | حلقة MagSafe | تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية",
+      "📐 | حامل في الكاميرا | يوقّف تيليفونك باش تتفرج فيديوهات يديك حرّين",
+      "📷 | حماية العدسات | حلقات ميتال على كل عدسة ضد الخدوش",
+      "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
+      "🔌 | كابل 3 في 1 | Lightning + Type-C + Micro USB: كابل واحد لكل التيليفونات"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك MagSafe | ظهر شفاف ما يصفارش · إطار ملوّن يمتص الصدمة · حلقة مغناطيسية MagSafe · حامل في الكاميرا يوقّف التيليفون",
+      "📷 | حماية العدسات | حلقات ميتال بنفس لون الانتيشوك · تحمي كل عدسة من الخدوش",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك",
+      "🔌 | كابل شحن 3 في 1 | مضفور ومتين · 100W · فيه Lightning و Type-C و Micro USB"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "انتيشوك + حماية الكاميرا + زجاج + كابل 3 في 1 بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 4200,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus",
+      "كابل شحن 3 في 1"
+    ],
+    "designs": [
+      { "id": "vert", "name": "أخضر", "photo": "01-vert.jpg" },
+      { "id": "titane", "name": "رمادي تيتان", "photo": "02-titane.jpg" },
+      { "id": "violet", "name": "بنفسجي", "photo": "03-violet.jpg" },
+      { "id": "orange", "name": "برتقالي", "photo": "04-orange.jpg" },
+      { "id": "bleu-ciel", "name": "أزرق سماوي", "photo": "05-bleu-ciel.jpg" },
+      { "id": "bleu-marine", "name": "أزرق ملكي", "photo": "06-bleu-marine.jpg" },
+      { "id": "noir", "name": "أسود", "photo": "07-noir.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | من iPhone 11 حتى iPhone 16 Pro Max، اختار الموديل تاعك في الاستمارة.",
+      "الكابل يخدم مع واش؟ | فيه 3 رؤوس: Lightning للآيفون، Type-C للآيفون الجديد وأغلب الأندرويد، و Micro USB.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
