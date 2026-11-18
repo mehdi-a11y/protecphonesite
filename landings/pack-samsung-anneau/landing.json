@@ -1,0 +1,70 @@
+{
+  "productId": "pack-samsung-antichoc-anneau-cable",
+  "slug": "pack-samsung-ultra",
+  "name": "Pack Samsung Ultra : antichoc anneau magnétique + câble Type-C",
+  "title": "باك Samsung Ultra: انتيشوك بالحلقة + كابل",
+  "extraPages": [
+    {
+      "slug": "pack-samsung-ultra-commande",
+      "title": "باك Samsung Ultra: انتيشوك بالحلقة + كابل Type-C",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "samsung",
+  "models": ["s21-ultra", "s22-ultra", "s23-ultra", "s24-ultra", "s25-ultra", "s26-ultra"],
+  "price": 2900,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-bleu-nuit.jpg",
+    "02-bordeaux.jpg",
+    "03-noir.jpg",
+    "04-rose.jpg",
+    "05-gris.jpg"
+  ],
+  "description": "باك لـ Samsung Ultra بـ 2900 دج:\n\n• انتيشوك سيليكون ناعم بلمسة mat\n• حلقة مغناطيسية تدور وتولّي حامل: وقّف تيليفونك بالطول ولا بالعرض\n• تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية\n• إطار ميتال حول الكاميرا يحمي العدسات\n• كابل شحن Borofone BX121 Type-C، 3A، طول 1 متر\n• 5 ألوان: أزرق ليلي، عنابي، أسود، وردي، رمادي\n\nمتوفر لـ Samsung S21 Ultra حتى S26 Ultra.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#8b5cf6",
+    "topBanner": "🔥 الباك بـ 2900 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "جديد لـ Samsung Ultra",
+    "headlineHighlight": "انتيشوك بالحلقة المغناطيسية + كابل Type-C",
+    "subtitle": "انتيشوك ناعم بحلقة مغناطيسية تولّي حامل، وإطار ميتال يحمي الكاميرا، ومعاه كابل شحن Type-C. كلش بـ 2900 دج.",
+    "heroBadge": "Samsung S21 Ultra → S26 Ultra",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🧲 | حلقة مغناطيسية | تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية تاع الطوموبيل",
+      "📐 | حامل مدمج | الحلقة تدور وتوقّف تيليفونك بالطول ولا بالعرض باش تتفرج",
+      "📷 | حماية الكاميرا | إطار ميتال حول العدسات يحميهم من الخدوش",
+      "🔌 | كابل Type-C | Borofone 3A يشارجي بسرعة، طول 1 متر"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك بالحلقة | سيليكون ناعم بلمسة mat · حلقة مغناطيسية تدور وتولّي حامل · إطار ميتال حول الكاميرا · حواف تحمي الشاشة",
+      "🔌 | كابل شحن Borofone BX121 | USB-A إلى Type-C · 3A شحن سريع · الطول: 1 متر"
+    ],
+    "offerTitle": "الباك بسعر واحد 💸",
+    "offerText": "انتيشوك بالحلقة + كابل Type-C بـ 2900 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 3900,
+    "includes": [
+      "كابل Borofone Type-C"
+    ],
+    "designs": [
+      { "id": "bleu-nuit", "name": "أزرق ليلي", "photo": "01-bleu-nuit.jpg" },
+      { "id": "bordeaux", "name": "عنابي", "photo": "02-bordeaux.jpg" },
+      { "id": "noir", "name": "أسود", "photo": "03-noir.jpg" },
+      { "id": "rose", "name": "وردي", "photo": "04-rose.jpg" },
+      { "id": "gris", "name": "رمادي", "photo": "05-gris.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ Samsung S21 Ultra، S22 Ultra، S23 Ultra، S24 Ultra، S25 Ultra و S26 Ultra.",
+      "الحلقة تخدم مع الشارجور اللاسلكي؟ | إيه، الحلقة مغناطيسية وتخدم مع الشارجور اللاسلكي والحوامل المغناطيسية.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
