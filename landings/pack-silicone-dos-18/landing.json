@@ -1,0 +1,77 @@
+{
+  "productId": "pack-silicone-dos-look-18-incassable",
+  "slug": "pack-look-18",
+  "name": "Pack antichoc silicone + dos look 18 Pro Max + incassable",
+  "title": "خلّي تيليفونك يبان كيما iPhone 18 Pro Max",
+  "extraPages": [
+    {
+      "slug": "pack-look-18-commande",
+      "title": "باك: ظهر لوك iPhone 18 Pro Max + انتيشوك سيليكون + زجاج",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-13-pro", "iphone-13-pro-max",
+    "iphone-14-pro", "iphone-14-pro-max",
+    "iphone-15-pro-max",
+    "iphone-16-pro-max",
+    "iphone-17-pro-max"
+  ],
+  "price": 3500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "00-quatre-couleurs.jpg",
+    "01-noir.jpg",
+    "02-blanc.jpg",
+    "03-bleu-ciel.jpg",
+    "04-bordeaux.jpg"
+  ],
+  "description": "باك كامل يبدّل لوك تيليفونك ويحميه، كلش بـ 3500 دج:\n\n• ظهر جديد ببلوك كاميرا كبير يعطي لتيليفونك لوك iPhone 18 Pro Max\n• حلقات ميتال تحمي عدسات الكاميرا\n• انتيشوك سيليكون ناعم بنفس اللون يحمي من الطيحات\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• 4 ألوان: أسود، أبيض، أزرق سماوي، عنابي\n\nمتوفر لـ iPhone 13 Pro، 13 Pro Max، 14 Pro، 14 Pro Max، 15 Pro Max، 16 Pro Max و 17 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#e11d48",
+    "topBanner": "🔥 الباك الكامل بـ 3500 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "لوك جديد 🔥",
+    "headlineHighlight": "ظهر لوك جديد + انتيشوك سيليكون + زجاج",
+    "subtitle": "ظهر جديد يعطي لتيليفونك ستيل iPhone 18 Pro Max، ومعاه انتيشوك سيليكون بنفس اللون وزجاج Magic HOCO Plus. كلش بـ 3500 دج.",
+    "heroBadge": "4 ألوان",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🔥 | لوك iPhone 18 Pro Max | ظهر ببلوك كاميرا كبير يبدّل ستيل تيليفونك كامل",
+      "📷 | حماية الكاميرا | حلقات ميتال على كل عدسة ضد الخدوش",
+      "🛡️ | انتيشوك سيليكون | ناعم ومريح في اليد، يمتص الصدمة كي يطيح تيليفونك",
+      "📱 | زجاج Magic HOCO Plus 9H | يحمي الشاشة، على قياس تيليفونك"
+    ],
+    "packDetails": [
+      "📱 | ظهر لوك iPhone 18 Pro Max | بلوك كاميرا كبير · فينيسيون mat · حلقات ميتال تحمي العدسات",
+      "🛡️ | انتيشوك سيليكون | بنفس لون الظهر · ناعم من الداخل · يحمي من الطيحات والخدوش",
+      "🔰 | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "ظهر لوك جديد + انتيشوك سيليكون + زجاج حماية بـ 3500 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 4500,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus"
+    ],
+    "designs": [
+      { "id": "noir", "name": "أسود", "photo": "01-noir.jpg" },
+      { "id": "blanc", "name": "أبيض", "photo": "02-blanc.jpg" },
+      { "id": "bleu-ciel", "name": "أزرق سماوي", "photo": "03-bleu-ciel.jpg" },
+      { "id": "bordeaux", "name": "عنابي", "photo": "04-bordeaux.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 13 Pro، 13 Pro Max، 14 Pro، 14 Pro Max، 15 Pro Max، 16 Pro Max و 17 Pro Max.",
+      "واش كاين في الباك؟ | ظهر لوك iPhone 18 Pro Max بحلقات الكاميرا، انتيشوك سيليكون بنفس اللون، وزجاج حماية Magic HOCO Plus.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
