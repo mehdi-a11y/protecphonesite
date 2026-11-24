@@ -65,10 +65,14 @@ export function LandingStep({ onNext, onGoToIphonePage, onGoToSamsungPage }: Pro
         <div className="w-full max-w-6xl mx-auto px-4 py-12 sm:py-16">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-800/90 via-brand-card to-brand-dark border border-white/10 min-h-[320px] sm:min-h-[380px] flex flex-col sm:flex-row items-center justify-between gap-8 sm:gap-12 p-8 sm:p-12">
             {/* Fond décoratif */}
-            <div className="absolute inset-0 opacity-30">
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-brand-accent/10 blur-3xl" />
-              <div className="absolute left-1/4 top-0 w-48 h-48 rounded-full bg-brand-gold/5 blur-2xl" />
-            </div>
+            {/* Dégradés simples au lieu de filtres « blur » (zones noires sur iPhone) */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle at 90% 50%, rgba(0,212,170,.10) 0, transparent 45%), radial-gradient(circle at 30% 0%, rgba(245,181,70,.05) 0, transparent 35%)',
+              }}
+            />
 
             <div className="relative z-10 text-center sm:text-left max-w-xl">
               <p className="text-brand-accent font-semibold tracking-widest uppercase text-xs sm:text-sm mb-3">
@@ -117,7 +121,7 @@ export function LandingStep({ onNext, onGoToIphonePage, onGoToSamsungPage }: Pro
             </div>
 
             {/* Bloc visuel côté droit (placeholder style produit) */}
-            <div className="relative z-10 hidden md:flex items-center justify-center w-56 h-56 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+            <div className="relative z-10 hidden md:flex items-center justify-center w-56 h-56 rounded-2xl bg-white/5 border border-white/10">
               <span className="text-6xl opacity-50">📱</span>
             </div>
           </div>
