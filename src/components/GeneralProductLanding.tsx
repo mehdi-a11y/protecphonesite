@@ -153,12 +153,12 @@ function themeVars(dark: boolean, accent: string): Record<string, string> {
     ? {
         page: `radial-gradient(120% 60% at 50% 0%, ${accent}26 0%, #0b0b0f 55%, #0b0b0f 100%)`,
         surface: '#16161d', surface2: '#1f1f28', text: '#f8fafc', muted: '#cbd5e1', faint: '#94a3b8',
-        border: '#262631', borderStrong: '#34343f', bar: 'rgba(11,11,15,.88)', shadow: 'rgba(0,0,0,.55)', ink: accent,
+        border: '#262631', borderStrong: '#34343f', bar: '#0b0b0f', shadow: 'rgba(0,0,0,.55)', ink: accent, base: '#0b0b0f',
       }
     : {
         page: 'linear-gradient(180deg, #f0f9ff 0%, #ffffff 35%, #ffffff 100%)',
         surface: '#ffffff', surface2: '#f8fafc', text: '#0f172a', muted: '#475569', faint: '#94a3b8',
-        border: '#f1f5f9', borderStrong: '#e2e8f0', bar: 'rgba(255,255,255,.9)', shadow: 'rgba(226,232,240,.6)', ink: '#0f172a',
+        border: '#f1f5f9', borderStrong: '#e2e8f0', bar: '#ffffff', shadow: 'rgba(226,232,240,.6)', ink: '#0f172a', base: '#ffffff',
       }
   return {
     '--lp-accent': accent,
@@ -172,7 +172,12 @@ function themeVars(dark: boolean, accent: string): Record<string, string> {
     '--lp-bar': palette.bar,
     '--lp-shadow': palette.shadow,
     '--lp-ink': palette.ink,
-    background: palette.page,
+    // Dégradé limité au haut de la page (un dégradé sur toute la hauteur fait planter
+    // l'affichage dans le navigateur Instagram / Facebook sur iPhone : zones noires)
+    backgroundColor: palette.base,
+    backgroundImage: palette.page,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '100% 900px',
     colorScheme: dark ? 'dark' : 'light',
   }
 }
@@ -517,7 +522,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
         {landing.topBanner?.trim() || t.defaultBanner}
       </div>
       {landing.brandName && (
-        <header className="px-4 h-12 flex items-center justify-center border-b border-[var(--lp-border)] bg-[var(--lp-bar)] backdrop-blur">
+        <header className="px-4 h-12 flex items-center justify-center border-b border-[var(--lp-border)] bg-[var(--lp-bar)]">
           <span className="font-extrabold text-lg tracking-tight">{landing.brandName}</span>
         </header>
       )}
@@ -1089,7 +1094,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
 
       {/* Barre fixe */}
       {available && !formVisible && !confirmed && (
-        <div className="fixed bottom-0 inset-x-0 z-40 p-3 bg-[var(--lp-bar)] backdrop-blur border-t border-[var(--lp-border)]">
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 bg-[var(--lp-bar)] border-t border-[var(--lp-border)]">
           <div className="max-w-xl mx-auto flex items-center gap-3">
             <div className="shrink-0 leading-tight">
               <p className="text-lg font-extrabold" style={{ color: accent }}>{fmt(product.price)}</p>
@@ -1098,7 +1103,7 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
             <button
               type="button"
               onClick={scrollToForm}
-              className="lp-pulse flex-1 py-3.5 rounded-2xl text-white font-extrabold text-lg shadow-xl"
+              className="flex-1 py-3.5 rounded-2xl text-white font-extrabold text-lg"
               style={{ backgroundColor: accent }}
             >
               {ctaText}

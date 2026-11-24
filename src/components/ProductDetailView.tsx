@@ -358,7 +358,7 @@ export function ProductDetailView({
       </main>
 
       {/* Barre fixe "Commander maintenant" (toujours visible) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-brand-dark/95 backdrop-blur">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-brand-dark">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs text-brand-muted truncate">
