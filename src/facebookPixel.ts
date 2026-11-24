@@ -30,21 +30,48 @@ const PIXEL_IDS = getPixelIds()
 
 let loaded = false
 
-function loadPixel(): void {
-  if (loaded || PIXEL_IDS.length === 0 || typeof document === 'undefined') return
-  loaded = true
+let scriptInjected = false
 
-  const initCalls = PIXEL_IDS.map((id) => `fbq('init','${id}');`).join('')
-  const snippet = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/fr_FR/fbevents.js');${initCalls}fbq('track','PageView');`
-  const script = document.createElement('script')
-  script.textContent = snippet
-  document.head.appendChild(script)
+/**
+ * File d'attente fbq (sans réseau) : les événements sont mémorisés tout de suite,
+ * puis envoyés quand le script Facebook arrive (voir loadFacebookPixelScript).
+ */
+function createQueue(): void {
+  if (loaded || PIXEL_IDS.length === 0 || typeof window === 'undefined') return
+  loaded = true
+  if (!window.fbq) {
+    // Même file d'attente que le snippet officiel de Meta
+    const n = function (...args: unknown[]) {
+      const self = n as unknown as { callMethod?: (...a: unknown[]) => void; queue: unknown[] }
+      if (self.callMethod) self.callMethod(...args)
+      else self.queue.push(args)
+    } as unknown as Record<string, unknown> & ((action: string, ...args: unknown[]) => void)
+    n.push = n
+    n.loaded = true
+    n.version = '2.0'
+    n.queue = []
+    window.fbq = n
+    if (!window._fbq) window._fbq = n
+  }
+  for (const id of PIXEL_IDS) window.fbq!('init', id)
+  window.fbq!('track', 'PageView')
 }
 
-/** Initialise le(s) pixel(s) au chargement de l'app (à appeler une fois, ex. dans main.tsx). */
+/** Initialise le(s) pixel(s) au chargement de l'app : file d'attente seulement, aucun script lourd. */
 export function initFacebookPixel(): void {
   if (PIXEL_IDS.length === 0) return
-  loadPixel()
+  createQueue()
+}
+
+/** Télécharge le script Facebook (à appeler une fois la page affichée) : il envoie les événements en attente. */
+export function loadFacebookPixelScript(): void {
+  if (PIXEL_IDS.length === 0 || scriptInjected || typeof document === 'undefined') return
+  createQueue()
+  scriptInjected = true
+  const s = document.createElement('script')
+  s.async = true
+  s.src = 'https://connect.facebook.net/fr_FR/fbevents.js'
+  document.head.appendChild(s)
 }
 
 /** Envoie un événement à tous les pixels initialisés (no-op si aucun pixel configuré). */

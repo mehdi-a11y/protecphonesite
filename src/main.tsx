@@ -6,6 +6,8 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { App } from './App.tsx'
 import { ProductPageWrapper } from './pages/ProductPageWrapper'
 import './index.css'
+import { initFacebookPixel, loadFacebookPixelScript } from './facebookPixel'
+import { initTikTokPixel, loadTikTokPixelScript } from './tiktokPixel'
 
 // Lazy load des pages lourdes pour accélérer le premier affichage
 const AdminPage = lazy(() => import('./pages/AdminPage.tsx').then((m) => ({ default: m.AdminPage })))
@@ -18,19 +20,20 @@ const CollectionPage = lazy(() => import('./pages/CollectionPage.tsx').then((m) 
 
 // Test : ?nopixel=1 dans l'URL désactive tous les pixels (pour comparer l'affichage sur iPhone)
 const noPixel = typeof location !== 'undefined' && /[?&]nopixel=1\b/.test(location.search)
-// Pixels chargés après le premier rendu pour ne pas bloquer l’affichage
-if (noPixel) {
-  // aucun pixel
-} else if (typeof requestIdleCallback !== 'undefined') {
-  requestIdleCallback(() => {
-    import('./facebookPixel').then((m) => m.initFacebookPixel())
-    import('./tiktokPixel').then((m) => m.initTikTokPixel())
-  }, { timeout: 2000 })
-} else {
-  setTimeout(() => {
-    import('./facebookPixel').then((m) => m.initFacebookPixel())
-    import('./tiktokPixel').then((m) => m.initTikTokPixel())
-  }, 500)
+// Pixels : la file d'attente est créée tout de suite (aucun événement perdu), mais les scripts
+// Facebook / TikTok, lourds sur iPhone, ne sont téléchargés qu'une fois la page affichée.
+if (!noPixel) {
+  initFacebookPixel()
+  initTikTokPixel()
+  const loadScripts = () => {
+    loadFacebookPixelScript()
+    loadTikTokPixelScript()
+  }
+  const afterLoad = () => setTimeout(loadScripts, 2500)
+  if (document.readyState === 'complete') afterLoad()
+  else window.addEventListener('load', afterLoad, { once: true })
+  // Le client quitte ou met la page en arrière-plan avant : on envoie quand même
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') loadScripts() }, { once: true })
 }
 
 function PageFallback() {
