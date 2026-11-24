@@ -16,8 +16,12 @@ const ConfirmPage = lazy(() => import('./pages/ConfirmPage.tsx').then((m) => ({ 
 const ProductLandingPage = lazy(() => import('./pages/ProductLandingPage.tsx').then((m) => ({ default: m.ProductLandingPage })))
 const CollectionPage = lazy(() => import('./pages/CollectionPage.tsx').then((m) => ({ default: m.CollectionPage })))
 
+// Test : ?nopixel=1 dans l'URL désactive tous les pixels (pour comparer l'affichage sur iPhone)
+const noPixel = typeof location !== 'undefined' && /[?&]nopixel=1\b/.test(location.search)
 // Pixels chargés après le premier rendu pour ne pas bloquer l’affichage
-if (typeof requestIdleCallback !== 'undefined') {
+if (noPixel) {
+  // aucun pixel
+} else if (typeof requestIdleCallback !== 'undefined') {
   requestIdleCallback(() => {
     import('./facebookPixel').then((m) => m.initFacebookPixel())
     import('./tiktokPixel').then((m) => m.initTikTokPixel())
