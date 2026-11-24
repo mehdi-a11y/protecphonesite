@@ -51,6 +51,7 @@ const TEXTS = {
     unavailable: 'هذا المنتج غير متوفر حالياً',
     pickColor: 'اختر اللون',
     fillForm: 'يرجى ملء جميع الخانات',
+    sendError: 'ما وصلناش الطلب بسبب مشكل في الأنترنت. عاود اضغط على الزر، ما يتسجلش مرتين.',
     successTitle: 'تم إرسال طلبك بنجاح!',
     successText: 'سنتصل بك قريباً لتأكيد الطلب.',
     orderNumber: 'رقم الطلب',
@@ -111,6 +112,7 @@ const TEXTS = {
     unavailable: 'Ce produit est momentanément indisponible.',
     pickColor: 'Choisissez une couleur',
     fillForm: 'Veuillez remplir tous les champs',
+    sendError: "La commande n'a pas pu être envoyée (connexion). Réappuyez sur le bouton : elle ne sera pas enregistrée deux fois.",
     successTitle: 'Commande envoyée !',
     successText: 'Nous vous appellerons bientôt pour confirmer.',
     orderNumber: 'N° commande',
@@ -434,7 +436,13 @@ export function GeneralProductLanding({ product, title, template = 'full' }: Pro
     setHint('')
     setShowErrors(false)
     trackCheckoutOnce()
-    const result = await form.submit()
+    let result: Awaited<ReturnType<typeof form.submit>> = null
+    try {
+      result = await form.submit()
+    } catch {
+      setHint(t.sendError)
+      return
+    }
     if (result) {
       setConfirmed({ orderId: result.orderId })
       // Évite une 2e commande identique si le client reclique

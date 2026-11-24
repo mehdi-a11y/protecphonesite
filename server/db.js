@@ -189,6 +189,28 @@ export async function dbGetOrders() {
   return memoryOrders.slice()
 }
 
+/** Commandes créées depuis moins de `hours` heures (détection des doublons). */
+export async function dbGetRecentOrders(hours) {
+  if (pool) {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE created_at > now() - ($1::int * interval '1 hour') ORDER BY created_at DESC",
+      [hours]
+    )
+    return rows.map(rowToOrder)
+  }
+  const since = Date.now() - hours * 3600 * 1000
+  return memoryOrders.filter((o) => new Date(o.createdAt).getTime() > since)
+}
+
+/** Une commande par id (null si absente). */
+export async function dbGetOrderById(id) {
+  if (pool) {
+    const { rows } = await pool.query('SELECT * FROM orders WHERE id = $1', [id])
+    return rows[0] ? rowToOrder(rows[0]) : null
+  }
+  return memoryOrders.find((o) => o.id === id) ?? null
+}
+
 export async function dbSaveOrder(order) {
   const row = orderToRow(order)
   if (pool) {

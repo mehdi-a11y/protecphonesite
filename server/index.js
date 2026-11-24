@@ -22,6 +22,8 @@ import {
   initDb,
   dbGetOrders,
   dbSaveOrder,
+  dbGetRecentOrders,
+  dbGetOrderById,
   dbSetOrderStatus,
   dbSetOrderAchatDone,
   dbSetOrderDepotDone,
@@ -875,12 +877,41 @@ app.post('/api/email/test', requireAdmin, async (_req, res) => {
   res.status(500).json({ ok: false, error: result.error, code: result.code })
 })
 
+/** Téléphone algérien normalisé (0XXXXXXXXX) pour comparer deux commandes. */
+function normalizePhone(p) {
+  const digits = String(p || '').replace(/\D/g, '').replace(/^00213|^213/, '0')
+  return digits.startsWith('0') ? digits : '0' + digits
+}
+function samePhone(a, b) {
+  const na = normalizePhone(a)
+  return na.length >= 10 && na === normalizePhone(b)
+}
+/** Contenu d'une commande (produits principaux + modèle + couleur), indépendant de l'ordre. */
+function orderSignature(o) {
+  return (Array.isArray(o.items) ? o.items : [])
+    .filter((it) => !it?.isUpsell)
+    .map((it) => [it?.antichoc?.id, it?.selectedPhoneId || it?.selectedSamsungId || '', it?.selectedColorId || ''].join('|'))
+    .sort()
+    .join('#')
+}
+
 app.post('/api/orders', async (req, res) => {
   try {
     const a = req.body
     const order = apiToOrder(a)
     if (!order.id || !order.confirmationCode) {
       return res.status(400).json({ error: 'id et confirmationCode requis' })
+    }
+    // Même envoi reçu deux fois (double clic, réseau lent, nouvel essai) : on renvoie la commande déjà enregistrée
+    const sameId = await dbGetOrderById(order.id)
+    if (sameId) return res.status(200).json({ ...orderToApi(sameId), duplicate: true })
+    // Même client qui recommande exactement la même chose dans les 24 h : pas de 2e commande
+    const twin = (await dbGetRecentOrders(24)).find(
+      (o) => o.status !== 'cancelled' && samePhone(o.phone, order.phone) && orderSignature(o) === orderSignature(order),
+    )
+    if (twin) {
+      console.log('[Commande] Doublon ignoré', order.id, '→ déjà', twin.id)
+      return res.status(200).json({ ...orderToApi(twin), duplicate: true })
     }
     await dbSaveOrder(order)
     notifyN8nNewOrder(order).catch((err) => console.error('[n8n] Notification commande', order.id, 'échouée:', err.message))

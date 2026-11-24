@@ -37,8 +37,12 @@ export function CheckoutStep({ cart, onBack, onConfirm }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const result = await submit()
-    if (result) onConfirm(result.orderId, result.confirmationCode)
+    try {
+      const result = await submit()
+      if (result) onConfirm(result.orderId, result.confirmationCode)
+    } catch {
+      alert("La commande n'a pas pu être envoyée (connexion). Réappuyez sur le bouton : elle ne sera pas enregistrée deux fois.")
+    }
   }
 
   return (

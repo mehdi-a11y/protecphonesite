@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { isVariantOrderable } from '../data'
 import { saveOrder } from '../types'
 import type { CartItem, DeliveryType } from '../types'
@@ -29,6 +29,8 @@ export function useCheckoutForm(cart: CartItem[]) {
   const [selectedStopdeskName, setSelectedStopdeskName] = useState('')
   const [selectedStopdeskCommune, setSelectedStopdeskCommune] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submittingRef = useRef(false)
+  const pendingRef = useRef<{ orderId: string; confirmationCode: string } | null>(null)
 
   useEffect(() => {
     if (!wilaya) {
@@ -102,11 +104,16 @@ export function useCheckoutForm(cart: CartItem[]) {
 
   /** Enregistre la commande. Renvoie { orderId, confirmationCode } ou null si non envoyable. */
   const submit = async (): Promise<{ orderId: string; confirmationCode: string } | null> => {
-    if (!canSubmitOrder || isSubmitting) return null
+    // Verrou immédiat (le state React n'est pas encore à jour lors d'un double tap rapide)
+    if (!canSubmitOrder || submittingRef.current) return null
+    submittingRef.current = true
     setIsSubmitting(true)
     try {
-      const orderId = 'CMD-' + Date.now()
-      const confirmationCode = generateConfirmationCode()
+      // Même id si le client réessaie après une erreur réseau : le serveur ne crée pas de 2e commande
+      if (!pendingRef.current) {
+        pendingRef.current = { orderId: 'CMD-' + Date.now(), confirmationCode: generateConfirmationCode() }
+      }
+      const { orderId, confirmationCode } = pendingRef.current
       const finalCart: CartItem[] = [...cart]
       await saveOrder({
         id: orderId,
@@ -125,11 +132,17 @@ export function useCheckoutForm(cart: CartItem[]) {
           ? { yalidineStopdeskId: selectedStopdeskId, yalidineStopdeskName: selectedStopdeskName }
           : {}),
       })
-      trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
-      await identifyTikTokUser(phone)
-      trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+      pendingRef.current = null
+      try {
+        trackPurchase(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+        await identifyTikTokUser(phone)
+        trackTikTokCompletePayment(total, 'DZD', orderId, finalCart.map((i) => i.antichoc.id))
+      } catch {
+        // Un pixel bloqué ne doit pas faire croire au client que sa commande a échoué
+      }
       return { orderId, confirmationCode }
     } finally {
+      submittingRef.current = false
       setIsSubmitting(false)
     }
   }
