@@ -1,0 +1,79 @@
+{
+  "productId": "pack-antichoc-fume-incassable-cable",
+  "slug": "pack-fume",
+  "name": "Pack antichoc fumé MagSafe + incassable + câble",
+  "title": "باك انتيشوك فيمي + زجاج + كابل",
+  "extraPages": [
+    {
+      "slug": "pack-fume-commande",
+      "title": "باك انتيشوك فيمي MagSafe + زجاج + كابل",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-11",
+    "iphone-12-pro", "iphone-12-pro-max",
+    "iphone-13", "iphone-13-pro",
+    "iphone-14", "iphone-14-pro", "iphone-14-pro-max",
+    "iphone-15-pro", "iphone-15-pro-max"
+  ],
+  "price": 2500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-noir.jpg",
+    "02-violet.jpg",
+    "03-vert.jpg",
+    "04-bleu.jpg"
+  ],
+  "description": "باك كامل بـ 2500 دج:\n\n• انتيشوك بظهر فيمي (fumé) مطفي، ما يبانوش فيه البصمات\n• حلقة MagSafe تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية\n• إطار ملوّن ميتاليك حول الكاميرا وحماية للعدسات\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n• كابل شحن Borofone: Lightning من iPhone 11 حتى iPhone 14 Pro Max، و Type-C لـ iPhone 15 Pro و 15 Pro Max\n• 4 ألوان: أسود، بنفسجي، أخضر، أزرق\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#3b82f6",
+    "topBanner": "🔥 3 حوايج بـ 2500 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "باك التوفير",
+    "headlineHighlight": "انتيشوك فيمي MagSafe + زجاج + كابل",
+    "subtitle": "انتيشوك بظهر فيمي أنيق وحلقة MagSafe، ومعاه زجاج Magic HOCO Plus وكابل شحن على قياس تيليفونك. كلش بـ 2500 دج.",
+    "heroBadge": "4 ألوان",
+    "galleryTitle": "واش كاين في الباك",
+    "featuresTitle": "علاش هاد الباك؟",
+    "designsTitle": "اختار اللون اللي يعجبك",
+    "designLabel": "اللون",
+    "benefits": [
+      "🖤 | ظهر فيمي أنيق | مطفي ونص شفاف، ما يبانوش فيه البصمات",
+      "🧲 | حلقة MagSafe | تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية",
+      "📷 | حماية الكاميرا | إطار ميتاليك ملوّن وحماية لكل عدسة",
+      "🛡️ | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الطيحات والخدوش",
+      "🔌 | كابل Borofone | Lightning ولا Type-C حسب تيليفونك، نختاروه حنا"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك فيمي MagSafe | ظهر فيمي مطفي · حواف ملوّنة تمتص الصدمة · حلقة مغناطيسية · إطار ميتاليك حول الكاميرا وحماية للعدسات",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك",
+      "🔌 | كابل شحن Borofone BX121 | Lightning من iPhone 11 حتى iPhone 14 Pro Max · Type-C لـ iPhone 15 Pro و 15 Pro Max · الطول: 1 متر"
+    ],
+    "offerTitle": "الباك الكامل بسعر واحد 💸",
+    "offerText": "انتيشوك + زجاج + كابل بـ 2500 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 3500,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus",
+      "كابل Borofone Lightning | iphone-11..iphone-14-pro-max",
+      "كابل Borofone Type-C | iphone-15-pro, iphone-15-pro-max"
+    ],
+    "designs": [
+      { "id": "noir", "name": "أسود", "photo": "01-noir.jpg" },
+      { "id": "violet", "name": "بنفسجي", "photo": "02-violet.jpg" },
+      { "id": "vert", "name": "أخضر", "photo": "03-vert.jpg" },
+      { "id": "bleu", "name": "أزرق", "photo": "04-bleu.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 11، 12 Pro، 12 Pro Max، 13، 13 Pro، 14، 14 Pro، 14 Pro Max، 15 Pro و 15 Pro Max.",
+      "واش الكابل اللي نديه؟ | نختاروه حسب تيليفونك: Lightning من iPhone 11 حتى iPhone 14 Pro Max، و Type-C لـ iPhone 15 Pro و 15 Pro Max.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
