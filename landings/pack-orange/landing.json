@@ -1,0 +1,68 @@
+{
+  "productId": "pack-antichoc-orange-magsafe-incassable",
+  "slug": "pack-orange",
+  "name": "Pack antichoc orange MagSafe + incassable",
+  "title": "انتيشوك أورونج MagSafe + زجاج حماية",
+  "extraPages": [
+    {
+      "slug": "pack-orange-commande",
+      "title": "باك انتيشوك أورونج MagSafe + زجاج",
+      "template": "simple"
+    }
+  ],
+  "deviceType": "iphone",
+  "models": [
+    "iphone-11", "iphone-11-pro", "iphone-11-pro-max",
+    "iphone-12-pro-max",
+    "iphone-13", "iphone-13-pro-max",
+    "iphone-16-pro-max"
+  ],
+  "price": 2500,
+  "wholesalePrice": 0,
+  "stock": 0,
+  "availableFromSupplier": true,
+  "photos": [
+    "01-orange.jpg"
+  ],
+  "description": "باك بـ 2500 دج:\n\n• انتيشوك أورونج نص شفاف بزوايا مقوّية ضد الطيحات\n• بلوك كاميرا كبير بلوك جديد، وحماية لكل عدسة\n• حلقة MagSafe تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية\n• زجاج حماية Magic HOCO Plus 9H على قياس تيليفونك\n\nمتوفر لـ iPhone 11، 11 Pro، 11 Pro Max، 12 Pro Max، 13، 13 Pro Max و 16 Pro Max.\n\nالدفع عند الاستلام، التوصيل لـ 58 ولاية.",
+  "landing": {
+    "lang": "ar",
+    "theme": "dark",
+    "accentColor": "#f97316",
+    "topBanner": "🔥 انتيشوك + زجاج بـ 2500 دج · التوصيل لـ 58 ولاية · الدفع عند الاستلام",
+    "badge": "لون يلفت الأنظار 🧡",
+    "headlineHighlight": "انتيشوك أورونج MagSafe + زجاج حماية",
+    "subtitle": "لون أورونج يبان من بعيد، زوايا مقوّية ضد الطيحات وبلوك كاميرا بلوك جديد. ومعاه زجاج Magic HOCO Plus على قياس تيليفونك.",
+    "heroBadge": "iPhone 11 → 16 Pro Max",
+    "galleryTitle": "التفاصيل",
+    "featuresTitle": "علاش هاد الانتيشوك؟",
+    "designsTitle": "اللون",
+    "designLabel": "اللون",
+    "benefits": [
+      "🧡 | لون يلفت الأنظار | أورونج نص شفاف، ستيل مختلف على الكل",
+      "🛡️ | زوايا مقوّية | تمتص الصدمة كي يطيح تيليفونك",
+      "📷 | حماية الكاميرا | بلوك كبير وحماية لكل عدسة",
+      "🧲 | حلقة MagSafe | تخدم مع الشارجور اللاسلكي والحوامل المغناطيسية",
+      "📱 | زجاج Magic HOCO Plus 9H | يحمي الشاشة من الكسر والخدوش"
+    ],
+    "packDetails": [
+      "📱 | انتيشوك أورونج MagSafe | نص شفاف مطفي · زوايا مقوّية ضد الطيحات · بلوك كاميرا كبير وحماية العدسات · حلقة مغناطيسية",
+      "🛡️ | زجاج حماية Magic HOCO Plus | صلابة 9H · طبقة ضد البصمات · وضوح عالي · على قياس تيليفونك"
+    ],
+    "offerTitle": "الباك بسعر واحد 💸",
+    "offerText": "انتيشوك أورونج MagSafe + زجاج حماية بـ 2500 دج. استلم في دارك وادفع عند الاستلام.",
+    "oldPrice": 3500,
+    "includes": [
+      "زجاج حماية Magic HOCO Plus"
+    ],
+    "designs": [
+      { "id": "orange", "name": "أورونج", "photo": "01-orange.jpg" }
+    ],
+    "faq": [
+      "يناسب تيليفوني؟ | متوفر لـ iPhone 11، 11 Pro، 11 Pro Max، 12 Pro Max، 13، 13 Pro Max و 16 Pro Max.",
+      "الزجاج على قياس تيليفوني؟ | إيه، نبعثو الزجاج على قياس الموديل اللي تختارو.",
+      "كيفاش نخلّص؟ | تخلّص كي توصلك السلعة، الدفع عند الاستلام.",
+      "توصلو لولايتي؟ | نوصلو لـ 58 ولاية، للدار ولا لمكتب ياليدين."
+    ]
+  }
+}
